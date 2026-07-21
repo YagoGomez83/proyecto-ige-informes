@@ -1,0 +1,69 @@
+@page "/camaras"
+@attribute [Authorize]
+@using IGE.Informes.Application.Camaras.Queries.ListarCamaras
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Cámaras · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Cámaras</h1>
+    <a class="btn-primary" href="camaras/nueva">Nueva Cámara</a>
+</div>
+
+@if (_camaras is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_camaras.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay cámaras cargadas.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Código</th>
+                    <th class="label-md">Tipo</th>
+                    <th class="label-md">Ubicación</th>
+                    <th class="label-md"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var camara in _camaras)
+                {
+                    <tr>
+                        <td class="mono-data">@camara.Codigo</td>
+                        <td class="body-md">@(camara.Tipo == Domain.Entities.TipoCamara.Domo ? "Domo" : "LPR")</td>
+                        <td>
+                            @if (camara.PendienteDeUbicacion)
+                            {
+                                <StatusChip Texto="Pendiente de ubicación" Semantica="ChipSemantica.Warning" />
+                            }
+                            else
+                            {
+                                <StatusChip Texto="Completa" Semantica="ChipSemantica.Safe" />
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a class="btn-secondary" href="@($"camaras/{camara.Id}")">Ver</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<CamaraResumenDto>? _camaras;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _camaras = await Sender.Send(new ListarCamarasQuery());
+    }
+}

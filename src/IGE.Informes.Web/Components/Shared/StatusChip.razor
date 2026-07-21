@@ -1,0 +1,17 @@
+<span class="status-chip status-chip--@Semantica.ToString().ToLowerInvariant()">@Texto</span>
+
+@code {
+    /// <summary>
+    /// Texto a mostrar dentro del chip (ej. "Pendiente", "Positivo").
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Texto { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Color semántico ya resuelto — ver ChipSemantica para el mapeo
+    /// oficial de Estado/Resultado de dominio a color (skill ige-design-system,
+    /// sección 3). No elegir el color a mano en cada página.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public ChipSemantica Semantica { get; set; }
+}

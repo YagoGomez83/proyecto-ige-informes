@@ -1,0 +1,19 @@
+@if (!string.IsNullOrEmpty(DisplayMessage))
+{
+    var cssClass = DisplayMessage.StartsWith("Error", StringComparison.Ordinal) ? "danger" : "success";
+
+    <div class="alert alert-@cssClass" role="alert">
+        @DisplayMessage
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? DisplayMessage =>
+        Message ?? HttpContext?.Request.Cookies[Account.IdentityRedirectManager.StatusCookieName];
+}

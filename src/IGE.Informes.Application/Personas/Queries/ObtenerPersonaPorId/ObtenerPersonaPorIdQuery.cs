@@ -1,0 +1,7 @@
+using IGE.Informes.Application.Common.Security;
+using MediatR;
+
+namespace IGE.Informes.Application.Personas.Queries.ObtenerPersonaPorId;
+
+[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
+public sealed record ObtenerPersonaPorIdQuery(Guid PersonaId) : IRequest<PersonaDto?>;

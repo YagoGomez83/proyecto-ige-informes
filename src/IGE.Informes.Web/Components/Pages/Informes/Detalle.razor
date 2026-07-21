@@ -1,0 +1,62 @@
+@page "/informes/{InformeId:guid}"
+@attribute [Authorize]
+@using IGE.Informes.Application.Informes.Queries.ObtenerInformePorId
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Detalle de Informe · IGE 4.0</PageTitle>
+
+@if (!_cargado)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_informe is null)
+{
+    <p class="body-md">No se encontró el informe solicitado.</p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="headline-md mb-1 mono-data">@_informe.IdRegistro</h1>
+            @if (_informe.Estado == EstadoInforme.Publicado)
+            {
+                <StatusChip Texto="Publicado" Semantica="ChipSemantica.Safe" />
+            }
+            else
+            {
+                <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
+            }
+        </div>
+        <a class="btn-secondary" href="@($"casos/{_informe.CasoAnalisisId}")">Ver Caso de origen</a>
+    </div>
+
+    <div class="card">
+        <h2 class="headline-sm mb-2">Datos generales</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3 label-md">Fecha de análisis</dt>
+            <dd class="col-sm-9 body-md">@_informe.FechaAnalisis.ToString("dd/MM/yyyy")</dd>
+
+            <dt class="col-sm-3 label-md">Relato</dt>
+            <dd class="col-sm-9 body-md">@(_informe.Relato ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">PDF</dt>
+            <dd class="col-sm-9 body-md">@(_informe.PdfPath ?? "Pendiente de carga")</dd>
+        </dl>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid InformeId { get; set; }
+
+    private InformeDto? _informe;
+    private bool _cargado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
+        _cargado = true;
+    }
+}

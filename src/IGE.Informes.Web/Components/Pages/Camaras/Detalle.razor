@@ -1,0 +1,147 @@
+@page "/camaras/{CamaraId:guid}"
+@attribute [Authorize]
+@using IGE.Informes.Application.Camaras.Commands.CambiarTipoCamara
+@using IGE.Informes.Application.Camaras.Commands.CompletarUbicacionCamara
+@using IGE.Informes.Application.Camaras.Queries.ObtenerCamaraPorId
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Detalle de Cámara · IGE 4.0</PageTitle>
+
+@if (!_cargado)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_camara is null)
+{
+    <p class="body-md">No se encontró la cámara solicitada.</p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="headline-md mb-1 mono-data">@_camara.Codigo</h1>
+            @if (_camara.Ubicacion is null)
+            {
+                <StatusChip Texto="Pendiente de ubicación" Semantica="ChipSemantica.Warning" />
+            }
+            else
+            {
+                <StatusChip Texto="Completa" Semantica="ChipSemantica.Safe" />
+            }
+        </div>
+        <a class="btn-secondary" href="camaras">Volver al listado</a>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Datos generales</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3 label-md">Tipo</dt>
+            <dd class="col-sm-9 body-md">@(_camara.Tipo == TipoCamara.Domo ? "Domo" : "LPR (Lector de Patentes)")</dd>
+
+            <dt class="col-sm-3 label-md">Ubicación</dt>
+            <dd class="col-sm-9 body-md">@(_camara.Ubicacion ?? "—")</dd>
+        </dl>
+    </div>
+
+    @if (_camara.Ubicacion is null)
+    {
+        <div class="card mb-3">
+            <h2 class="headline-sm mb-2">Completar ubicación</h2>
+            <div class="d-flex align-items-end gap-2">
+                <div class="flex-grow-1">
+                    <input class="form-control" @bind="_ubicacion" placeholder="Ej: Av. Illia y San Martín" />
+                </div>
+                <button type="button" class="btn-primary" @onclick="CompletarUbicacionAsync" disabled="@_procesando">Guardar</button>
+            </div>
+        </div>
+    }
+
+    <div class="card">
+        <h2 class="headline-sm mb-2">Cambiar tipo</h2>
+        <div class="d-flex align-items-end gap-2">
+            <select class="form-control" @bind="_tipoSeleccionado">
+                <option value="@TipoCamara.Domo">Domo</option>
+                <option value="@TipoCamara.Lpr">LPR (Lector de Patentes)</option>
+            </select>
+            <button type="button" class="btn-secondary" @onclick="CambiarTipoAsync" disabled="@_procesando">Confirmar</button>
+        </div>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid CamaraId { get; set; }
+
+    private CamaraDto? _camara;
+    private bool _cargado;
+    private string _ubicacion = string.Empty;
+    private TipoCamara _tipoSeleccionado;
+    private string? _errorMessage;
+    private bool _procesando;
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        _camara = await Sender.Send(new ObtenerCamaraPorIdQuery(CamaraId));
+        _cargado = true;
+
+        if (_camara is not null)
+        {
+            _tipoSeleccionado = _camara.Tipo;
+        }
+    }
+
+    private async Task CompletarUbicacionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_ubicacion))
+        {
+            _errorMessage = "La ubicación es obligatoria.";
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new CompletarUbicacionCamaraCommand(CamaraId, _ubicacion));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo completar la ubicación.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task CambiarTipoAsync()
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new CambiarTipoCamaraCommand(CamaraId, _tipoSeleccionado));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo cambiar el tipo de la cámara.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+}

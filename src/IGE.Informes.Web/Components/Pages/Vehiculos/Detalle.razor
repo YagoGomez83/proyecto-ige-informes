@@ -1,0 +1,213 @@
+@page "/vehiculos/{VehiculoId:guid}"
+@attribute [Authorize]
+@using IGE.Informes.Application.CategoriasAlerta.Queries.ListarCategoriasAlerta
+@using IGE.Informes.Application.Vehiculos.Commands.AsignarCategoriaAlerta
+@using IGE.Informes.Application.Vehiculos.Commands.CambiarEstadoVehiculo
+@using IGE.Informes.Application.Vehiculos.Commands.DarDeBajaVehiculo
+@using IGE.Informes.Application.Vehiculos.Queries.ObtenerVehiculoPorId
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Detalle de Vehículo · IGE 4.0</PageTitle>
+
+@if (!_cargado)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_vehiculo is null)
+{
+    <p class="body-md">No se encontró el vehículo solicitado.</p>
+}
+else
+{
+    var estadoChip = VehiculoChips.Para(_vehiculo.Estado);
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="headline-md mb-1">@_vehiculo.Marca @_vehiculo.Modelo</h1>
+            <StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" />
+        </div>
+        <a class="btn-secondary" href="vehiculos">Volver al listado</a>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Datos generales</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3 label-md">Dominio</dt>
+            <dd class="col-sm-9 mono-data">@(_vehiculo.Dominio ?? "—") (@_vehiculo.DominioCerteza)</dd>
+
+            <dt class="col-sm-3 label-md">Color</dt>
+            <dd class="col-sm-9 body-md">@_vehiculo.Color</dd>
+
+            <dt class="col-sm-3 label-md">Acción a realizar</dt>
+            <dd class="col-sm-9 body-md">@(_vehiculo.AccionARealizar == AccionARealizar.Detener ? "Detener" : "Identificar")</dd>
+
+            <dt class="col-sm-3 label-md">Avisar a</dt>
+            <dd class="col-sm-9 body-md">@_vehiculo.AvisarA</dd>
+
+            <dt class="col-sm-3 label-md">Características</dt>
+            <dd class="col-sm-9 body-md">@(_vehiculo.Caracteristicas ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">Fecha de baja</dt>
+            <dd class="col-sm-9 body-md">@(_vehiculo.FechaBaja?.ToString("dd/MM/yyyy") ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">Categorías de alerta</dt>
+            <dd class="col-sm-9 body-md">
+                @if (_vehiculo.CategoriasAlertaIds.Count == 0)
+                {
+                    <span>—</span>
+                }
+                else
+                {
+                    @string.Join(", ", _vehiculo.CategoriasAlertaIds
+                        .Select(id => _categoriasAlerta?.FirstOrDefault(c => c.Id == id)?.Nombre ?? "—"))
+                }
+            </dd>
+        </dl>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Cambiar estado</h2>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn-primary" @onclick="MarcarIdentificadoAsync"
+                    disabled="@(_procesando || _vehiculo.Estado == EstadoVehiculo.Identificado)">
+                Marcar Identificado
+            </button>
+            <button type="button" class="btn-secondary" @onclick="MarcarVigenteAsync"
+                    disabled="@(_procesando || _vehiculo.Estado == EstadoVehiculo.Vigente)">
+                Marcar Vigente
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Asignar categoría de alerta</h2>
+        <div class="d-flex align-items-end gap-2">
+            <div class="flex-grow-1">
+                <select class="form-control" @bind="_categoriaSeleccionadaId">
+                    <option value="">Seleccionar...</option>
+                    @if (_categoriasAlerta is not null)
+                    {
+                        @foreach (var categoria in _categoriasAlerta)
+                        {
+                            <option value="@categoria.Id">@categoria.Nombre</option>
+                        }
+                    }
+                </select>
+            </div>
+            <button type="button" class="btn-secondary" @onclick="AsignarCategoriaAsync" disabled="@_procesando">Asignar</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="headline-sm mb-2">Dar de baja (fin de vigilancia activa)</h2>
+        <div class="d-flex align-items-end gap-2">
+            <div>
+                <label class="label-md" for="fechaBaja">Fecha de baja</label>
+                <input id="fechaBaja" type="date" class="form-control" @bind="_fechaBaja" />
+            </div>
+            <button type="button" class="btn-secondary" @onclick="DarDeBajaAsync" disabled="@_procesando">Confirmar baja</button>
+        </div>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid VehiculoId { get; set; }
+
+    private VehiculoDto? _vehiculo;
+    private bool _cargado;
+    private IReadOnlyCollection<CategoriaAlertaDto>? _categoriasAlerta;
+    private string? _categoriaSeleccionadaId;
+    private DateTime _fechaBaja = DateTime.Today;
+    private string? _errorMessage;
+    private bool _procesando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categoriasAlerta = await Sender.Send(new ListarCategoriasAlertaQuery());
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _vehiculo = await Sender.Send(new ObtenerVehiculoPorIdQuery(VehiculoId));
+        _cargado = true;
+    }
+
+    private async Task MarcarIdentificadoAsync() => await CambiarEstadoAsync(EstadoVehiculo.Identificado);
+
+    private async Task MarcarVigenteAsync() => await CambiarEstadoAsync(EstadoVehiculo.Vigente);
+
+    private async Task CambiarEstadoAsync(EstadoVehiculo nuevoEstado)
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new CambiarEstadoVehiculoCommand(VehiculoId, nuevoEstado));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo cambiar el estado del vehículo.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task AsignarCategoriaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_categoriaSeleccionadaId))
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new AsignarCategoriaAlertaCommand(VehiculoId, Guid.Parse(_categoriaSeleccionadaId)));
+            _categoriaSeleccionadaId = null;
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo asignar la categoría de alerta.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task DarDeBajaAsync()
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new DarDeBajaVehiculoCommand(VehiculoId, DateOnly.FromDateTime(_fechaBaja)));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo dar de baja el vehículo.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+}

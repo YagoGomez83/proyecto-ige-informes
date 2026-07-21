@@ -1,0 +1,15 @@
+bin/
+obj/
+*.user
+
+.vs/
+.vscode/
+
+appsettings.Development.json
+appsettings.*.local.json
+docker/.env
+
+*.log
+
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

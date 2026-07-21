@@ -1,0 +1,22 @@
+@page "/informes"
+@page "/alertas"
+@page "/busqueda"
+@page "/configuracion"
+@attribute [Authorize]
+@inject NavigationManager NavigationManager
+
+<PageTitle>Próximamente · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-2">@Titulo</h1>
+<p class="body-md">Esta sección todavía no está disponible — se habilita en una fase posterior del proyecto.</p>
+
+@code {
+    private string Titulo => new Uri(NavigationManager.Uri).AbsolutePath switch
+    {
+        "/informes" => "Informes",
+        "/alertas" => "Alertas",
+        "/busqueda" => "Búsqueda",
+        "/configuracion" => "Configuración",
+        _ => "Próximamente",
+    };
+}

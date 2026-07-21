@@ -1,0 +1,133 @@
+@page "/casos/nuevo"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using FluentValidation
+@using IGE.Informes.Application.CasosAnalisis.Commands.RegistrarCaso
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.TiposIncidente.Queries.ListarTiposIncidente
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nuevo Caso · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Nuevo Caso de Análisis</h1>
+
+<div class="card" style="max-width: 640px;">
+    <EditForm Model="_input" OnValidSubmit="RegistrarAsync" FormName="nuevo-caso">
+        <DataAnnotationsValidator />
+
+        @if (_errorMessage is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="fecha">Fecha</label>
+            <InputDate id="fecha" class="form-control" @bind-Value="_input.Fecha" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="dependencia">Dependencia / jurisdicción del llamado</label>
+            <InputSelect id="dependencia" class="form-control" @bind-Value="_input.DependenciaId">
+                <option value="">Seleccionar...</option>
+                @if (_dependencias is not null)
+                {
+                    @foreach (var dependencia in _dependencias)
+                    {
+                        <option value="@dependencia.Id">@dependencia.Nombre</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="tipoIncidente">Código de Incidente</label>
+            <InputSelect id="tipoIncidente" class="form-control" @bind-Value="_input.TipoIncidenteId">
+                <option value="">Seleccionar...</option>
+                @if (_tiposIncidente is not null)
+                {
+                    @foreach (var tipoIncidente in _tiposIncidente)
+                    {
+                        <option value="@tipoIncidente.Id">@tipoIncidente.Codigo - @tipoIncidente.Descripcion</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="nroLlamado911">N° de llamado 911 (opcional)</label>
+            <InputText id="nroLlamado911" class="form-control mono-data" @bind-Value="_input.NroLlamado911" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="observaciones">Observaciones</label>
+            <InputTextArea id="observaciones" class="form-control" rows="4" @bind-Value="_input.Observaciones" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Caso</button>
+            <a class="btn-secondary" href="casos">Cancelar</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly InputModel _input = new();
+    private IReadOnlyCollection<DependenciaDto>? _dependencias;
+    private IReadOnlyCollection<TipoIncidenteDto>? _tiposIncidente;
+    private string? _errorMessage;
+    private bool _guardando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+        _tiposIncidente = await Sender.Send(new ListarTiposIncidenteQuery());
+    }
+
+    private async Task RegistrarAsync()
+    {
+        _errorMessage = null;
+        _guardando = true;
+
+        try
+        {
+            var casoId = await Sender.Send(new RegistrarCasoCommand(
+                DateOnly.FromDateTime(_input.Fecha),
+                Guid.Parse(_input.DependenciaId!),
+                Guid.Parse(_input.TipoIncidenteId!),
+                string.IsNullOrWhiteSpace(_input.NroLlamado911) ? null : _input.NroLlamado911,
+                string.IsNullOrWhiteSpace(_input.Observaciones) ? null : _input.Observaciones));
+
+            NavigationManager.NavigateTo($"casos/{casoId}");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo registrar el caso. Verificá los datos e intentá de nuevo.";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "La fecha es obligatoria.")]
+        public DateTime Fecha { get; set; } = DateTime.Today;
+
+        [Required(ErrorMessage = "La Dependencia es obligatoria.")]
+        public string? DependenciaId { get; set; }
+
+        [Required(ErrorMessage = "El Código de Incidente es obligatorio.")]
+        public string? TipoIncidenteId { get; set; }
+
+        public string? NroLlamado911 { get; set; }
+
+        public string? Observaciones { get; set; }
+    }
+}

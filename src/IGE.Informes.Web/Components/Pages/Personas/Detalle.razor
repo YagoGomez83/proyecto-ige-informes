@@ -1,0 +1,161 @@
+@page "/personas/{PersonaId:guid}"
+@attribute [Authorize]
+@using IGE.Informes.Application.Personas.Commands.CambiarRolPersona
+@using IGE.Informes.Application.Personas.Commands.IdentificarPersona
+@using IGE.Informes.Application.Personas.Queries.ObtenerPersonaPorId
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Detalle de Persona · IGE 4.0</PageTitle>
+
+@if (!_cargado)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_persona is null)
+{
+    <p class="body-md">No se encontró la persona solicitada.</p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="headline-md mb-1">@(_persona.Nombre ?? "Persona sin identificar")</h1>
+            @if (_persona.Nombre is not null)
+            {
+                <StatusChip Texto="Identificada" Semantica="ChipSemantica.Safe" />
+            }
+            else
+            {
+                <StatusChip Texto="Sin identificar" Semantica="ChipSemantica.Neutral" />
+            }
+        </div>
+        <a class="btn-secondary" href="personas">Volver al listado</a>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Datos generales</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3 label-md">DNI</dt>
+            <dd class="col-sm-9 mono-data">@(_persona.Dni ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">Rol</dt>
+            <dd class="col-sm-9 body-md">@_persona.Rol</dd>
+
+            <dt class="col-sm-3 label-md">Características</dt>
+            <dd class="col-sm-9 body-md">@(_persona.Caracteristicas ?? "—")</dd>
+        </dl>
+    </div>
+
+    @if (_persona.Nombre is null)
+    {
+        <div class="card mb-3">
+            <h2 class="headline-sm mb-2">Identificar persona</h2>
+            <div class="mb-2">
+                <label class="label-md" for="nombreIdentificar">Nombre</label>
+                <input id="nombreIdentificar" class="form-control" @bind="_nombreIdentificar" />
+            </div>
+            <div class="mb-2">
+                <label class="label-md" for="dniIdentificar">DNI (opcional)</label>
+                <input id="dniIdentificar" class="form-control mono-data" @bind="_dniIdentificar" />
+            </div>
+            <button type="button" class="btn-primary" @onclick="IdentificarAsync" disabled="@_procesando">Confirmar identificación</button>
+        </div>
+    }
+
+    <div class="card">
+        <h2 class="headline-sm mb-2">Cambiar rol</h2>
+        <div class="d-flex align-items-end gap-2">
+            <select class="form-control" @bind="_rolSeleccionado">
+                <option value="@RolPersona.Denunciante">Denunciante</option>
+                <option value="@RolPersona.Damnificado">Damnificado</option>
+                <option value="@RolPersona.Sospechoso">Sospechoso</option>
+                <option value="@RolPersona.ConductorIdentificado">Conductor identificado</option>
+                <option value="@RolPersona.Testigo">Testigo</option>
+            </select>
+            <button type="button" class="btn-secondary" @onclick="CambiarRolAsync" disabled="@_procesando">Confirmar</button>
+        </div>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid PersonaId { get; set; }
+
+    private PersonaDto? _persona;
+    private bool _cargado;
+    private string _nombreIdentificar = string.Empty;
+    private string _dniIdentificar = string.Empty;
+    private RolPersona _rolSeleccionado;
+    private string? _errorMessage;
+    private bool _procesando;
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        _persona = await Sender.Send(new ObtenerPersonaPorIdQuery(PersonaId));
+        _cargado = true;
+
+        if (_persona is not null)
+        {
+            _rolSeleccionado = _persona.Rol;
+        }
+    }
+
+    private async Task IdentificarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nombreIdentificar))
+        {
+            _errorMessage = "El nombre es obligatorio para identificar a la persona.";
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new IdentificarPersonaCommand(
+                PersonaId,
+                _nombreIdentificar,
+                string.IsNullOrWhiteSpace(_dniIdentificar) ? null : _dniIdentificar));
+
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo identificar a la persona.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task CambiarRolAsync()
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new CambiarRolPersonaCommand(PersonaId, _rolSeleccionado));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo cambiar el rol de la persona.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+}

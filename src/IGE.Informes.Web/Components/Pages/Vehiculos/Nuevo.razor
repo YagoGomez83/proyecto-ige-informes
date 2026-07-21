@@ -1,0 +1,176 @@
+@page "/vehiculos/nuevo"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using FluentValidation
+@using IGE.Informes.Application.CategoriasAlerta.Queries.ListarCategoriasAlerta
+@using IGE.Informes.Application.Vehiculos.Commands.RegistrarVehiculo
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nuevo Vehículo · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Nuevo Vehículo</h1>
+
+<div class="card" style="max-width: 640px;">
+    <EditForm Model="_input" OnValidSubmit="RegistrarAsync" FormName="nuevo-vehiculo">
+        <DataAnnotationsValidator />
+
+        @if (_errorMessage is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="marca">Marca</label>
+            <InputText id="marca" class="form-control" @bind-Value="_input.Marca" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="modelo">Modelo</label>
+            <InputText id="modelo" class="form-control" @bind-Value="_input.Modelo" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="color">Color</label>
+            <InputText id="color" class="form-control" @bind-Value="_input.Color" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="dominio">Dominio (opcional, formato libre)</label>
+            <InputText id="dominio" class="form-control mono-data" @bind-Value="_input.Dominio" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="dominioCerteza">Certeza del dominio</label>
+            <InputSelect id="dominioCerteza" class="form-control" @bind-Value="_input.DominioCerteza">
+                <option value="@CertezaDominio.Confirmado">Confirmado</option>
+                <option value="@CertezaDominio.Parcial">Parcial</option>
+                <option value="@CertezaDominio.Incierto">Incierto</option>
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="accionARealizar">Acción a realizar</label>
+            <InputSelect id="accionARealizar" class="form-control" @bind-Value="_input.AccionARealizar">
+                <option value="@AccionARealizar.Detener">Detener</option>
+                <option value="@AccionARealizar.Identificar">Identificar</option>
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="avisarA">Avisar a</label>
+            <InputText id="avisarA" class="form-control" @bind-Value="_input.AvisarA" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md">Categorías de alerta</label>
+            @if (_categoriasAlerta is not null)
+            {
+                @foreach (var categoria in _categoriasAlerta)
+                {
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="@($"categoria-{categoria.Id}")"
+                               checked="@_input.CategoriasAlertaIds.Contains(categoria.Id)"
+                               @onchange="@(e => AlternarCategoria(categoria.Id, (bool)e.Value!))" />
+                        <label class="form-check-label body-sm" for="@($"categoria-{categoria.Id}")">@categoria.Nombre</label>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="caracteristicas">Características (opcional)</label>
+            <InputTextArea id="caracteristicas" class="form-control" rows="3" @bind-Value="_input.Caracteristicas" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Vehículo</button>
+            <a class="btn-secondary" href="vehiculos">Cancelar</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly InputModel _input = new();
+    private IReadOnlyCollection<CategoriaAlertaDto>? _categoriasAlerta;
+    private string? _errorMessage;
+    private bool _guardando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categoriasAlerta = await Sender.Send(new ListarCategoriasAlertaQuery());
+    }
+
+    private void AlternarCategoria(Guid categoriaId, bool marcada)
+    {
+        if (marcada)
+        {
+            _input.CategoriasAlertaIds.Add(categoriaId);
+        }
+        else
+        {
+            _input.CategoriasAlertaIds.Remove(categoriaId);
+        }
+    }
+
+    private async Task RegistrarAsync()
+    {
+        _errorMessage = null;
+        _guardando = true;
+
+        try
+        {
+            var vehiculoId = await Sender.Send(new RegistrarVehiculoCommand(
+                _input.Marca,
+                _input.Modelo,
+                _input.Color,
+                _input.DominioCerteza,
+                _input.AccionARealizar,
+                _input.AvisarA,
+                string.IsNullOrWhiteSpace(_input.Dominio) ? null : _input.Dominio,
+                string.IsNullOrWhiteSpace(_input.Caracteristicas) ? null : _input.Caracteristicas,
+                _input.CategoriasAlertaIds));
+
+            NavigationManager.NavigateTo($"vehiculos/{vehiculoId}");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo registrar el vehículo. Verificá los datos e intentá de nuevo.";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "La marca es obligatoria.")]
+        public string Marca { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El modelo es obligatorio.")]
+        public string Modelo { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El color es obligatorio.")]
+        public string Color { get; set; } = string.Empty;
+
+        public string? Dominio { get; set; }
+
+        public CertezaDominio DominioCerteza { get; set; } = CertezaDominio.Incierto;
+
+        public AccionARealizar AccionARealizar { get; set; } = AccionARealizar.Detener;
+
+        [Required(ErrorMessage = "El dato de a quién avisar es obligatorio.")]
+        public string AvisarA { get; set; } = string.Empty;
+
+        public string? Caracteristicas { get; set; }
+
+        public List<Guid> CategoriasAlertaIds { get; } = [];
+    }
+}

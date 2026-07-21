@@ -1,0 +1,102 @@
+@page "/Account/LoginWith2fa"
+
+@using System.ComponentModel.DataAnnotations
+@using IGE.Informes.Application.Common.Interfaces
+@using IGE.Informes.Infrastructure.Identity
+@using Microsoft.AspNetCore.Identity
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IAuditLogger AuditLogger
+@inject IdentityRedirectManager RedirectManager
+@inject Microsoft.Extensions.Logging.ILogger<LoginWith2fa> Logger
+
+<PageTitle>Verificación en dos pasos</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <div class="card">
+            <h1 class="headline-md mb-2">Verificación en dos pasos</h1>
+            <p class="body-sm mb-3">Ingresá el código de tu aplicación de autenticación.</p>
+
+            <StatusMessage Message="@message" />
+
+            <EditForm Model="Input" method="post" OnValidSubmit="OnValidSubmitAsync" FormName="login-with-2fa">
+                <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+                <input type="hidden" name="RememberMe" value="@RememberMe" />
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.TwoFactorCode" class="form-control mono-data" autocomplete="off" />
+                    <label>Código de autenticación</label>
+                    <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
+                </div>
+                <div class="checkbox mb-3">
+                    <label>
+                        <InputCheckbox @bind-Value="Input.RememberMachine" />
+                        Recordar este equipo
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Verificar</button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? message;
+    private ApplicationUser twoFactorUser = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    private bool RememberMe { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await SignInManager.GetTwoFactorAuthenticationUserAsync();
+
+        if (user is null)
+        {
+            RedirectManager.RedirectTo("Account/Login");
+        }
+
+        twoFactorUser = user;
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var authenticatorCode = Input.TwoFactorCode!.Replace(" ", string.Empty).Replace("-", string.Empty);
+
+        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(
+            authenticatorCode, RememberMe, Input.RememberMachine);
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("Usuario {UserId} verificó 2FA correctamente.", twoFactorUser.Id);
+            await AuditLogger.RegistrarAccesoAsync("Login", nameof(ApplicationUser), twoFactorUser.Id);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("Usuario {UserId} bloqueado tras intentos fallidos de 2FA.", twoFactorUser.Id);
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            message = "Error: código de autenticación inválido.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [StringLength(7, ErrorMessage = "El {0} debe tener al menos {2} caracteres.", MinimumLength = 6)]
+        public string? TwoFactorCode { get; set; }
+
+        public bool RememberMachine { get; set; }
+    }
+}

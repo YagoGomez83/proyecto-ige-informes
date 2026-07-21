@@ -1,0 +1,119 @@
+@page "/Account/Manage/EnableAuthenticator"
+@attribute [Authorize]
+
+@using System.ComponentModel.DataAnnotations
+@using System.Globalization
+@using System.Text
+@using System.Text.Encodings.Web
+@using IGE.Informes.Infrastructure.Identity
+@using Microsoft.AspNetCore.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+@inject UrlEncoder UrlEncoder
+
+<PageTitle>Configurar autenticador</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card">
+            <h1 class="headline-md mb-3">Configurar aplicación de autenticación</h1>
+
+            <StatusMessage Message="@message" />
+
+            @if (sharedKey is not null)
+            {
+                <div class="mb-3">
+                    <p class="body-sm">Escaneá el código QR o ingresá esta clave manualmente en tu app de autenticación (Google Authenticator, Authy, etc.):</p>
+                    <code class="mono-data">@sharedKey</code>
+                </div>
+
+                <EditForm Model="Input" method="post" OnValidSubmit="OnValidSubmitAsync" FormName="send-code">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+                    <div class="form-floating mb-3">
+                        <InputText @bind-Value="Input.Code" class="form-control mono-data" autocomplete="off" placeholder="Código de 6 dígitos" />
+                        <label>Código de verificación</label>
+                        <ValidationMessage For="() => Input.Code" class="text-danger" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Verificar y activar</button>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+    private string? sharedKey;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        await LoadSharedKeyAsync();
+    }
+
+    private async Task LoadSharedKeyAsync()
+    {
+        var unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
+        if (string.IsNullOrEmpty(unformattedKey))
+        {
+            await UserManager.ResetAuthenticatorKeyAsync(user);
+            unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
+        }
+
+        sharedKey = FormatKey(unformattedKey!);
+    }
+
+    private string FormatKey(string unformattedKey)
+    {
+        var result = new StringBuilder();
+        var currentPosition = 0;
+        while (currentPosition + 4 < unformattedKey.Length)
+        {
+            result.Append(unformattedKey.AsSpan(currentPosition, 4)).Append(' ');
+            currentPosition += 4;
+        }
+        if (currentPosition < unformattedKey.Length)
+        {
+            result.Append(unformattedKey.AsSpan(currentPosition));
+        }
+
+        return result.ToString().ToLowerInvariant();
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var verificationCode = Input.Code.Replace(" ", string.Empty).Replace("-", string.Empty);
+
+        var is2faTokenValid = await UserManager.VerifyTwoFactorTokenAsync(
+            user, UserManager.Options.Tokens.AuthenticatorTokenProvider, verificationCode);
+
+        if (!is2faTokenValid)
+        {
+            message = "Error: código de verificación inválido.";
+            return;
+        }
+
+        await UserManager.SetTwoFactorEnabledAsync(user, true);
+        RedirectManager.RedirectToWithStatus(
+            "Account/Manage/EnableAuthenticator",
+            "2FA activado correctamente.",
+            HttpContext);
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [StringLength(7, ErrorMessage = "El {0} debe tener al menos {2} caracteres.", MinimumLength = 6)]
+        public string Code { get; set; } = "";
+    }
+}

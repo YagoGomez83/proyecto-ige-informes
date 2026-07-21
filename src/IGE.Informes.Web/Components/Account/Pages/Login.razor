@@ -1,0 +1,119 @@
+@page "/Account/Login"
+
+@using System.ComponentModel.DataAnnotations
+@using IGE.Informes.Application.Common.Interfaces
+@using IGE.Informes.Infrastructure.Identity
+@using Microsoft.AspNetCore.Identity
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IAuditLogger AuditLogger
+@inject IdentityRedirectManager RedirectManager
+@inject Microsoft.Extensions.Logging.ILogger<Login> Logger
+
+<PageTitle>Iniciar sesión</PageTitle>
+
+<div class="login-screen">
+    <div class="login-brand">
+        <div class="login-brand-icon" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5l-8-3Z" fill="currentColor" />
+            </svg>
+        </div>
+        <h1 class="login-brand-title">IGE 4.0</h1>
+        <p class="login-brand-subtitle label-md">Surveillance Analytics</p>
+    </div>
+
+    <div class="card login-card">
+        <h2 class="headline-sm mb-1">Bienvenido</h2>
+        <p class="body-sm mb-3">Ingrese sus credenciales para acceder al portal institucional.</p>
+
+        <StatusMessage Message="@errorMessage" />
+
+        <EditForm Model="Input" method="post" OnValidSubmit="LoginUserAsync" FormName="login">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+
+            <label class="label-md login-field-label">Correo electrónico</label>
+            <div class="mb-3">
+                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" placeholder="usuario@institucion.gob" />
+                <ValidationMessage For="() => Input.Email" class="text-danger" />
+            </div>
+
+            <label class="label-md login-field-label">Contraseña</label>
+            <div class="mb-3">
+                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="••••••••" />
+                <ValidationMessage For="() => Input.Password" class="text-danger" />
+            </div>
+
+            <div class="checkbox mb-3">
+                <label class="body-sm">
+                    <InputCheckbox @bind-Value="Input.RememberMe" />
+                    Recordarme en este dispositivo
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Ingresar</button>
+        </EditForm>
+
+        <div class="login-footer-note label-md">Acceso seguro SSL</div>
+    </div>
+
+    <p class="body-sm login-copyright">
+        © @DateTime.UtcNow.Year Instituto de Gestión de Emergencias. Sistema de Análisis de Vigilancia.
+    </p>
+</div>
+
+@code {
+    private string? errorMessage;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private async Task LoginUserAsync()
+    {
+        var result = await SignInManager.PasswordSignInAsync(
+            Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+
+        if (result.RequiresTwoFactor)
+        {
+            RedirectManager.RedirectTo(
+                "Account/LoginWith2fa",
+                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+        }
+        else if (result.IsLockedOut)
+        {
+            var lockedUser = await UserManager.FindByEmailAsync(Input.Email);
+            Logger.LogWarning("Usuario bloqueado por intentos fallidos: {UserId}", lockedUser?.Id);
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else if (result.Succeeded)
+        {
+            var user = await UserManager.FindByEmailAsync(Input.Email);
+            await AuditLogger.RegistrarAccesoAsync("Login", nameof(ApplicationUser), user?.Id);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else
+        {
+            errorMessage = "Error: credenciales inválidas.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        public string Password { get; set; } = "";
+
+        public bool RememberMe { get; set; }
+    }
+}

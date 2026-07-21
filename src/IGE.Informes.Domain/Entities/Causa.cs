@@ -1,0 +1,40 @@
+namespace IGE.Informes.Domain.Entities;
+
+/// <summary>
+/// Expediente judicial/policial de la Dependencia solicitante de un
+/// Informe — no del IGE 4.0. Pertenece al Informe, no al CasoAnalisis.
+/// </summary>
+public sealed class Causa
+{
+    public Guid Id { get; private set; }
+    public string Caratula { get; private set; } = string.Empty;
+    public string NroPiezaSumarial { get; private set; } = string.Empty;
+    public string CircunscripcionJudicial { get; private set; } = string.Empty;
+
+    private Causa()
+    {
+    }
+
+    public Causa(string caratula, string nroPiezaSumarial, string circunscripcionJudicial)
+    {
+        if (string.IsNullOrWhiteSpace(caratula))
+        {
+            throw new ArgumentException("La carátula de la Causa es obligatoria.", nameof(caratula));
+        }
+
+        if (string.IsNullOrWhiteSpace(nroPiezaSumarial))
+        {
+            throw new ArgumentException("El N° de pieza sumarial es obligatorio.", nameof(nroPiezaSumarial));
+        }
+
+        if (string.IsNullOrWhiteSpace(circunscripcionJudicial))
+        {
+            throw new ArgumentException("La circunscripción judicial es obligatoria.", nameof(circunscripcionJudicial));
+        }
+
+        Id = Guid.NewGuid();
+        Caratula = caratula;
+        NroPiezaSumarial = nroPiezaSumarial;
+        CircunscripcionJudicial = circunscripcionJudicial;
+    }
+}

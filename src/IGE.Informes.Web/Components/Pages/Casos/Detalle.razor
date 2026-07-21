@@ -1,0 +1,281 @@
+@page "/casos/{CasoId:guid}"
+@attribute [Authorize]
+@using IGE.Informes.Application.CasosAnalisis.Commands.CerrarCaso
+@using IGE.Informes.Application.CasosAnalisis.Commands.VincularVehiculoTexto
+@using IGE.Informes.Application.CasosAnalisis.Queries.ObtenerCasoPorId
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.Informes.Commands.GenerarInformeDesdeCaso
+@using IGE.Informes.Application.Informes.Queries.ListarInformesPorCaso
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Detalle de Caso · IGE 4.0</PageTitle>
+
+@if (!_cargado)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_caso is null)
+{
+    <p class="body-md">No se encontró el caso solicitado.</p>
+}
+else
+{
+    var estadoChip = CasoAnalisisChips.Para(_caso.Estado);
+    var resultadoChip = CasoAnalisisChips.Para(_caso.Resultado);
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="headline-md mb-1">Caso @_caso.Fecha.ToString("dd/MM/yyyy")</h1>
+            <div class="d-flex gap-2">
+                <StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" />
+                <StatusChip Texto="@resultadoChip.Texto" Semantica="resultadoChip.Semantica" />
+            </div>
+        </div>
+        <a class="btn-secondary" href="casos">Volver al listado</a>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Datos generales</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3 label-md">N° Llamado 911</dt>
+            <dd class="col-sm-9 mono-data">@(_caso.NroLlamado911 ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">Observaciones</dt>
+            <dd class="col-sm-9 body-md">@(_caso.Observaciones ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">Vehículo involucrado</dt>
+            <dd class="col-sm-9 body-md">@(_caso.VehiculoInvolucradoTexto ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">Cámaras analizadas</dt>
+            <dd class="col-sm-9 body-md">@(_caso.CamarasAnalizadasTexto ?? "—")</dd>
+        </dl>
+    </div>
+
+    @if (_caso.Estado != EstadoCaso.Cerrado)
+    {
+        <div class="card mb-3">
+            <h2 class="headline-sm mb-2">Cerrar Caso</h2>
+            <div class="d-flex align-items-end gap-2">
+                <div>
+                    <label class="label-md" for="resultado">Resultado</label>
+                    <select id="resultado" class="form-control" @bind="_resultadoSeleccionado">
+                        <option value="@ResultadoCaso.Positivo">Positivo</option>
+                        <option value="@ResultadoCaso.Negativo">Negativo</option>
+                        <option value="@ResultadoCaso.Revision">Revisión</option>
+                    </select>
+                </div>
+                <button type="button" class="btn-primary" @onclick="CerrarCasoAsync" disabled="@_procesando">Confirmar</button>
+            </div>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Vincular vehículo (sin ficha de catálogo)</h2>
+        <div class="d-flex align-items-end gap-2">
+            <div class="flex-grow-1">
+                <label class="label-md" for="vehiculoTexto">Descripción libre</label>
+                <input id="vehiculoTexto" class="form-control" @bind="_vehiculoTexto" placeholder="Ej: Sedán oscuro, dominio incierto" />
+            </div>
+            <button type="button" class="btn-secondary" @onclick="VincularVehiculoAsync" disabled="@_procesando">Vincular</button>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Informes generados</h2>
+
+        @if (_informes is null)
+        {
+            <p class="body-md mb-0">Cargando...</p>
+        }
+        else if (_informes.Count == 0)
+        {
+            <p class="body-md mb-0">Todavía ninguna Dependencia solicitó un Informe sobre este caso.</p>
+        }
+        else
+        {
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th class="label-md">ID Registro</th>
+                        <th class="label-md">Fecha</th>
+                        <th class="label-md">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var informe in _informes)
+                    {
+                        <tr>
+                            <td class="mono-data">@informe.IdRegistro</td>
+                            <td class="body-md">@informe.FechaAnalisis.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @if (informe.Estado == EstadoInforme.Publicado)
+                                {
+                                    <StatusChip Texto="Publicado" Semantica="ChipSemantica.Safe" />
+                                }
+                                else
+                                {
+                                    <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        <hr />
+
+        <h3 class="headline-sm mb-2">Generar Informe a pedido de una Dependencia</h3>
+        <div class="mb-3">
+            <label class="label-md" for="dependenciaDestino">Dependencia solicitante</label>
+            <select id="dependenciaDestino" class="form-control" @bind="_generarInforme.DependenciaDestinoId">
+                <option value="">Seleccionar...</option>
+                @if (_dependencias is not null)
+                {
+                    @foreach (var dependencia in _dependencias)
+                    {
+                        <option value="@dependencia.Id">@dependencia.Nombre</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="label-md" for="causaCaratula">Carátula de la Causa</label>
+            <input id="causaCaratula" class="form-control" @bind="_generarInforme.CausaCaratula" placeholder="Ej: N.N. s/Robo" />
+        </div>
+        <div class="mb-3">
+            <label class="label-md" for="causaPiezaSumarial">N° de pieza sumarial</label>
+            <input id="causaPiezaSumarial" class="form-control mono-data" @bind="_generarInforme.CausaNroPiezaSumarial" placeholder="Ej: 7070029/26" />
+        </div>
+        <div class="mb-3">
+            <label class="label-md" for="causaCircunscripcion">Circunscripción judicial</label>
+            <input id="causaCircunscripcion" class="form-control" @bind="_generarInforme.CausaCircunscripcionJudicial" />
+        </div>
+        <button type="button" class="btn-primary" @onclick="GenerarInformeAsync" disabled="@_procesando">Generar Informe</button>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid CasoId { get; set; }
+
+    private CasoAnalisisDto? _caso;
+    private bool _cargado;
+    private ResultadoCaso _resultadoSeleccionado = ResultadoCaso.Positivo;
+    private string _vehiculoTexto = string.Empty;
+    private string? _errorMessage;
+    private bool _procesando;
+    private IReadOnlyCollection<InformeResumenDto>? _informes;
+    private IReadOnlyCollection<DependenciaDto>? _dependencias;
+    private readonly GenerarInformeInputModel _generarInforme = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _caso = await Sender.Send(new ObtenerCasoPorIdQuery(CasoId));
+        _informes = await Sender.Send(new ListarInformesPorCasoQuery(CasoId));
+        _cargado = true;
+    }
+
+    private async Task CerrarCasoAsync()
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new CerrarCasoCommand(CasoId, _resultadoSeleccionado));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo cerrar el caso.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task VincularVehiculoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_vehiculoTexto))
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new VincularVehiculoTextoCommand(CasoId, _vehiculoTexto));
+            _vehiculoTexto = string.Empty;
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo vincular el vehículo.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task GenerarInformeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_generarInforme.DependenciaDestinoId)
+            || string.IsNullOrWhiteSpace(_generarInforme.CausaCaratula)
+            || string.IsNullOrWhiteSpace(_generarInforme.CausaNroPiezaSumarial)
+            || string.IsNullOrWhiteSpace(_generarInforme.CausaCircunscripcionJudicial))
+        {
+            _errorMessage = "Completá la Dependencia solicitante y los datos de la Causa.";
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            var informeId = await Sender.Send(new GenerarInformeDesdeCasoCommand(
+                CasoId,
+                Guid.Parse(_generarInforme.DependenciaDestinoId),
+                _generarInforme.CausaCaratula,
+                _generarInforme.CausaNroPiezaSumarial,
+                _generarInforme.CausaCircunscripcionJudicial));
+
+            NavigationManager.NavigateTo($"informes/{informeId}");
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo generar el Informe.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private sealed class GenerarInformeInputModel
+    {
+        public string? DependenciaDestinoId { get; set; }
+        public string CausaCaratula { get; set; } = string.Empty;
+        public string CausaNroPiezaSumarial { get; set; } = string.Empty;
+        public string CausaCircunscripcionJudicial { get; set; } = string.Empty;
+    }
+}

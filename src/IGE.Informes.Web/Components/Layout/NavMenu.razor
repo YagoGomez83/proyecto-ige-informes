@@ -1,0 +1,92 @@
+<div class="sidebar-brand">
+    <span class="sidebar-brand-title">IGE 4.0</span>
+    <span class="sidebar-brand-subtitle label-md">Investigation Portal</span>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable">
+    <nav class="nav flex-column" onclick="document.querySelector('.navbar-toggler').click()">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-grid-nav-menu" aria-hidden="true"></span> Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="casos">
+                <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Casos de Análisis
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="informes">
+                <span class="bi bi-file-nav-menu" aria-hidden="true"></span> Informes
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="vehiculos">
+                <span class="bi bi-car-nav-menu" aria-hidden="true"></span> Vehículos
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="personas">
+                <span class="bi bi-people-nav-menu" aria-hidden="true"></span> Personas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="alertas">
+                <span class="bi bi-bell-nav-menu" aria-hidden="true"></span> Alertas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="busqueda">
+                <span class="bi bi-search-nav-menu" aria-hidden="true"></span> Búsqueda
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="configuracion">
+                <span class="bi bi-gear-nav-menu" aria-hidden="true"></span> Configuración
+            </NavLink>
+        </div>
+    </nav>
+
+    <AuthorizeView>
+        <Authorized>
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar">@Iniciales(context.User.Identity?.Name)</div>
+                <div class="sidebar-user-info">
+                    <span class="sidebar-user-name">@(context.User.Identity?.Name ?? "Usuario")</span>
+                    <span class="sidebar-user-role label-md">@(context.User.IsInRole("Admin") ? "Administrador" : context.User.IsInRole("Supervisor") ? "Supervisor" : "Analista")</span>
+                </div>
+                <form action="Account/Logout" method="post" class="sidebar-user-logout">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="returnUrl" value="" />
+                    <button type="submit" class="sidebar-user-logout-btn" title="Cerrar sesión">
+                        <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span>
+                    </button>
+                </form>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="Account/Login">
+                    <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Iniciar sesión
+                </NavLink>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    private static string Iniciales(string? nombre)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            return "?";
+        }
+
+        var partes = nombre.Split(new[] { ' ', '@', '.' }, StringSplitOptions.RemoveEmptyEntries);
+        return partes.Length >= 2
+            ? $"{partes[0][0]}{partes[1][0]}".ToUpperInvariant()
+            : nombre[0].ToString().ToUpperInvariant();
+    }
+}

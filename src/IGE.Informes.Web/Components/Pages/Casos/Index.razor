@@ -1,0 +1,65 @@
+@page "/casos"
+@attribute [Authorize]
+@using IGE.Informes.Application.CasosAnalisis.Queries.ListarCasos
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Casos de Análisis · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Casos de Análisis</h1>
+    <a class="btn-primary" href="casos/nuevo">Nuevo Caso</a>
+</div>
+
+@if (_casos is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_casos.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay casos cargados.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Fecha</th>
+                    <th class="label-md">Estado</th>
+                    <th class="label-md">Resultado</th>
+                    <th class="label-md"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var caso in _casos)
+                {
+                    var estadoChip = CasoAnalisisChips.Para(caso.Estado);
+                    var resultadoChip = CasoAnalisisChips.Para(caso.Resultado);
+
+                    <tr>
+                        <td class="body-md">@caso.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td><StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" /></td>
+                        <td><StatusChip Texto="@resultadoChip.Texto" Semantica="resultadoChip.Semantica" /></td>
+                        <td class="text-end">
+                            <a class="btn-secondary" href="@($"casos/{caso.Id}")">Ver</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<CasoAnalisisResumenDto>? _casos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _casos = await Sender.Send(new ListarCasosQuery());
+    }
+}

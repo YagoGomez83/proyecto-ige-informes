@@ -1,0 +1,91 @@
+@page "/camaras/nueva"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using FluentValidation
+@using IGE.Informes.Application.Camaras.Commands.RegistrarCamara
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nueva Cámara · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Nueva Cámara</h1>
+
+<div class="card" style="max-width: 480px;">
+    <EditForm Model="_input" OnValidSubmit="RegistrarAsync" FormName="nueva-camara">
+        <DataAnnotationsValidator />
+
+        @if (_errorMessage is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="codigo">Código</label>
+            <InputText id="codigo" class="form-control mono-data" @bind-Value="_input.Codigo" placeholder="Ej: SL 18" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="tipo">Tipo</label>
+            <InputSelect id="tipo" class="form-control" @bind-Value="_input.Tipo">
+                <option value="@TipoCamara.Domo">Domo</option>
+                <option value="@TipoCamara.Lpr">LPR (Lector de Patentes)</option>
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="ubicacion">Ubicación (opcional, se puede completar después)</label>
+            <InputText id="ubicacion" class="form-control" @bind-Value="_input.Ubicacion" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Cámara</button>
+            <a class="btn-secondary" href="camaras">Cancelar</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly InputModel _input = new();
+    private string? _errorMessage;
+    private bool _guardando;
+
+    private async Task RegistrarAsync()
+    {
+        _errorMessage = null;
+        _guardando = true;
+
+        try
+        {
+            var camaraId = await Sender.Send(new RegistrarCamaraCommand(
+                _input.Codigo,
+                _input.Tipo,
+                string.IsNullOrWhiteSpace(_input.Ubicacion) ? null : _input.Ubicacion));
+
+            NavigationManager.NavigateTo($"camaras/{camaraId}");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo registrar la cámara. Verificá que el código no esté repetido.";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "El código es obligatorio.")]
+        public string Codigo { get; set; } = string.Empty;
+
+        public TipoCamara Tipo { get; set; } = TipoCamara.Domo;
+
+        public string? Ubicacion { get; set; }
+    }
+}

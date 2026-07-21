@@ -1,0 +1,98 @@
+@page "/personas/nueva"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using FluentValidation
+@using IGE.Informes.Application.Personas.Commands.RegistrarPersona
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nueva Persona · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Nueva Persona</h1>
+
+<div class="card" style="max-width: 640px;">
+    <EditForm Model="_input" OnValidSubmit="RegistrarAsync" FormName="nueva-persona">
+        <DataAnnotationsValidator />
+
+        @if (_errorMessage is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="rol">Rol</label>
+            <InputSelect id="rol" class="form-control" @bind-Value="_input.Rol">
+                <option value="@RolPersona.Denunciante">Denunciante</option>
+                <option value="@RolPersona.Damnificado">Damnificado</option>
+                <option value="@RolPersona.Sospechoso">Sospechoso</option>
+                <option value="@RolPersona.ConductorIdentificado">Conductor identificado</option>
+                <option value="@RolPersona.Testigo">Testigo</option>
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="nombre">Nombre (dejar vacío si no está identificada)</label>
+            <InputText id="nombre" class="form-control" @bind-Value="_input.Nombre" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="dni">DNI (opcional)</label>
+            <InputText id="dni" class="form-control mono-data" @bind-Value="_input.Dni" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="caracteristicas">Características (obligatorio si no está identificada)</label>
+            <InputTextArea id="caracteristicas" class="form-control" rows="3" @bind-Value="_input.Caracteristicas" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Persona</button>
+            <a class="btn-secondary" href="personas">Cancelar</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly InputModel _input = new();
+    private string? _errorMessage;
+    private bool _guardando;
+
+    private async Task RegistrarAsync()
+    {
+        _errorMessage = null;
+        _guardando = true;
+
+        try
+        {
+            var personaId = await Sender.Send(new RegistrarPersonaCommand(
+                _input.Rol,
+                string.IsNullOrWhiteSpace(_input.Nombre) ? null : _input.Nombre,
+                string.IsNullOrWhiteSpace(_input.Dni) ? null : _input.Dni,
+                string.IsNullOrWhiteSpace(_input.Caracteristicas) ? null : _input.Caracteristicas));
+
+            NavigationManager.NavigateTo($"personas/{personaId}");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo registrar la persona. Verificá los datos e intentá de nuevo.";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        public RolPersona Rol { get; set; } = RolPersona.Testigo;
+        public string? Nombre { get; set; }
+        public string? Dni { get; set; }
+        public string? Caracteristicas { get; set; }
+    }
+}
