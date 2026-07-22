@@ -42,13 +42,22 @@ else
                 <button type="button" class="btn-primary" @onclick="PublicarAsync" disabled="@_publicando">Publicar</button>
                 <a class="btn-secondary" href="@($"informes/{_informe.Id}/editar")">Editar</a>
             }
-            <a class="btn-secondary" href="@($"casos/{_informe.CasoAnalisisId}")">Ver Caso de origen</a>
+            @if (_informe.CasoAnalisisId is not null)
+            {
+                <a class="btn-secondary" href="@($"casos/{_informe.CasoAnalisisId}")">Ver Caso de origen</a>
+            }
         </div>
     </div>
 
     <div class="card">
         <h2 class="headline-sm mb-2">Datos generales</h2>
         <dl class="row mb-0">
+            @if (_informe.Origen == OrigenInforme.Migrado)
+            {
+                <dt class="col-sm-3 label-md">Origen</dt>
+                <dd class="col-sm-9 body-md">Migrado desde histórico (sin Caso de Análisis asociado)</dd>
+            }
+
             <dt class="col-sm-3 label-md">Fecha de análisis</dt>
             <dd class="col-sm-9 body-md">@_informe.FechaAnalisis.ToString("dd/MM/yyyy")</dd>
 

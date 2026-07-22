@@ -6,6 +6,19 @@ public enum EstadoInforme
     Publicado,
 }
 
+/// <summary>
+/// De dónde nace el Informe. Los migrados (HU-04) no tienen un CasoAnalisis
+/// real de origen porque el histórico de Casos no se migra (ver
+/// docs/03-modelo-dominio.md, "Alcance de migración de datos") — la
+/// invariante 1 del modelo ("Informe.caso_analisis_id NOT NULL") solo rige
+/// para Informes con Origen=CargaIndividual.
+/// </summary>
+public enum OrigenInforme
+{
+    CargaIndividual,
+    Migrado,
+}
+
 public sealed class Informe : IAuditable
 {
     private readonly List<InformeAnalista> _analistas = [];
@@ -14,11 +27,12 @@ public sealed class Informe : IAuditable
     public string IdRegistro { get; private set; } = string.Empty;
     public DateOnly FechaAnalisis { get; private set; }
     public string? Relato { get; private set; }
-    public Guid CasoAnalisisId { get; private set; }
+    public Guid? CasoAnalisisId { get; private set; }
     public Guid? CausaId { get; private set; }
     public Guid DependenciaDestinoId { get; private set; }
     public string? PdfPath { get; private set; }
     public EstadoInforme Estado { get; private set; }
+    public OrigenInforme Origen { get; private set; }
 
     public IReadOnlyCollection<InformeAnalista> Analistas => _analistas;
 
@@ -34,14 +48,44 @@ public sealed class Informe : IAuditable
         Guid analistaSolicitanteId,
         Guid? causaId = null)
     {
-        if (string.IsNullOrWhiteSpace(idRegistro))
-        {
-            throw new ArgumentException("El ID Registro es obligatorio.", nameof(idRegistro));
-        }
-
         if (casoAnalisisId == Guid.Empty)
         {
             throw new ArgumentException("El Caso de Análisis de origen es obligatorio.", nameof(casoAnalisisId));
+        }
+
+        Inicializar(idRegistro, fechaAnalisis, casoAnalisisId, dependenciaDestinoId, analistaSolicitanteId, causaId, OrigenInforme.CargaIndividual);
+    }
+
+    /// <summary>
+    /// Alta de un Informe migrado en lote desde PDFs históricos (HU-04) —
+    /// sin CasoAnalisis de origen, porque el histórico de Casos no se migra.
+    /// El usuario que ejecuta la migración queda como Analista Interviniente,
+    /// igual que el solicitante en el alta individual.
+    /// </summary>
+    public static Informe CrearMigrado(
+        string idRegistro,
+        DateOnly fechaAnalisis,
+        Guid dependenciaDestinoId,
+        Guid usuarioMigradorId,
+        Guid? causaId = null)
+    {
+        var informe = new Informe();
+        informe.Inicializar(idRegistro, fechaAnalisis, null, dependenciaDestinoId, usuarioMigradorId, causaId, OrigenInforme.Migrado);
+        return informe;
+    }
+
+    private void Inicializar(
+        string idRegistro,
+        DateOnly fechaAnalisis,
+        Guid? casoAnalisisId,
+        Guid dependenciaDestinoId,
+        Guid analistaSolicitanteId,
+        Guid? causaId,
+        OrigenInforme origen)
+    {
+        if (string.IsNullOrWhiteSpace(idRegistro))
+        {
+            throw new ArgumentException("El ID Registro es obligatorio.", nameof(idRegistro));
         }
 
         if (dependenciaDestinoId == Guid.Empty)
@@ -61,6 +105,7 @@ public sealed class Informe : IAuditable
         DependenciaDestinoId = dependenciaDestinoId;
         CausaId = causaId;
         Estado = EstadoInforme.Borrador;
+        Origen = origen;
 
         _analistas.Add(new InformeAnalista(Id, analistaSolicitanteId, RolInformeAnalista.Interviniente));
     }

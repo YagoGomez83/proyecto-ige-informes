@@ -29,6 +29,11 @@ public sealed class InformeConfiguration : IEntityTypeConfiguration<Informe>
             .HasMaxLength(20)
             .IsRequired();
 
+        builder.Property(i => i.Origen)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
         builder.HasIndex(i => i.CasoAnalisisId);
         builder.HasIndex(i => i.CausaId);
         builder.HasIndex(i => i.DependenciaDestinoId);

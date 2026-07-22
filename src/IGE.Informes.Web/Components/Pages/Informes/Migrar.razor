@@ -1,0 +1,176 @@
+@page "/informes/migrar"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using IGE.Informes.Application.Common.Security
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.Informes.Commands.MigrarInformes
+@using Microsoft.AspNetCore.Components.Forms
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Migración masiva de Informes · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Migración masiva de Informes desde PDF</h1>
+
+@if (_errorMessage is not null)
+{
+    <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+}
+
+@if (_reporte is null)
+{
+    <div class="card" style="max-width: 640px;">
+        <p class="body-sm mb-3">
+            Subí los PDFs históricos exportados de Drive. El sistema los procesa con el mismo
+            extractor que la carga individual y genera un reporte al finalizar. Los Informes
+            migrados quedan en estado Borrador, sin Caso de Análisis de origen.
+        </p>
+
+        <div class="mb-3">
+            <label class="label-md" for="dependenciaDestino">Dependencia destino (se aplica a todo el lote)</label>
+            <select id="dependenciaDestino" class="form-control" @bind="_dependenciaDestinoId">
+                <option value="">Seleccionar...</option>
+                @if (_dependencias is not null)
+                {
+                    @foreach (var dependencia in _dependencias)
+                    {
+                        <option value="@dependencia.Id">@dependencia.Nombre</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="pdfs">Archivos PDF</label>
+            <InputFile id="pdfs" OnChange="ProcesarArchivosSeleccionadosAsync" multiple accept="application/pdf" />
+            @if (_pdfs is not null)
+            {
+                <p class="body-sm mt-2">@_pdfs.Count archivo(s) seleccionado(s).</p>
+            }
+        </div>
+
+        <button type="button" class="btn-primary" @onclick="MigrarAsync" disabled="@(_migrando || _pdfs is null || _pdfs.Count == 0)">
+            @(_migrando ? "Migrando..." : "Ejecutar migración")
+        </button>
+    </div>
+}
+else
+{
+    <div class="card mb-3" style="max-width: 720px;">
+        <h2 class="headline-sm mb-2">Reporte de migración</h2>
+        <dl class="row mb-3">
+            <dt class="col-sm-4 label-md">Total procesados</dt>
+            <dd class="col-sm-8 body-md mono-data">@_reporte.TotalProcesados</dd>
+
+            <dt class="col-sm-4 label-md">Exitosos</dt>
+            <dd class="col-sm-8 body-md mono-data">@_reporte.Exitosos</dd>
+
+            <dt class="col-sm-4 label-md">Con advertencia</dt>
+            <dd class="col-sm-8 body-md mono-data">@_reporte.ConAdvertencia</dd>
+
+            <dt class="col-sm-4 label-md">Fallidos</dt>
+            <dd class="col-sm-8 body-md mono-data">@_reporte.Fallidos</dd>
+        </dl>
+
+        <h3 class="headline-sm mb-2">Detalle por archivo</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="label-md">Archivo</th>
+                    <th class="label-md">Resultado</th>
+                    <th class="label-md">Motivo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _reporte.Detalle)
+                {
+                    <tr>
+                        <td class="body-sm mono-data">@item.NombreArchivo</td>
+                        <td class="body-sm">
+                            @switch (item.Resultado)
+                            {
+                                case ResultadoMigracionArchivo.Exitoso:
+                                    <StatusChip Texto="Exitoso" Semantica="ChipSemantica.Safe" />
+                                    break;
+                                case ResultadoMigracionArchivo.ConAdvertencia:
+                                    <StatusChip Texto="Advertencia" Semantica="ChipSemantica.Warning" />
+                                    break;
+                                case ResultadoMigracionArchivo.Fallido:
+                                    <StatusChip Texto="Fallido" Semantica="ChipSemantica.Alert" />
+                                    break;
+                            }
+                        </td>
+                        <td class="body-sm">@(item.Motivo ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <button type="button" class="btn-secondary" @onclick="ReiniciarAsync">Migrar otro lote</button>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<DependenciaDto>? _dependencias;
+    private string _dependenciaDestinoId = string.Empty;
+    private List<PdfMigrarDto>? _pdfs;
+    private MigracionLoteResultDto? _reporte;
+
+    private bool _migrando;
+    private string? _errorMessage;
+
+    private const long TamanioMaximoBytesPorArchivo = MigrarInformesCommandValidator.TamanioMaximoBytesPorArchivo;
+    private const int CantidadMaximaArchivos = MigrarInformesCommandValidator.CantidadMaximaArchivos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+    }
+
+    private async Task ProcesarArchivosSeleccionadosAsync(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _pdfs = [];
+
+        foreach (var archivo in e.GetMultipleFiles(CantidadMaximaArchivos))
+        {
+            using var stream = archivo.OpenReadStream(TamanioMaximoBytesPorArchivo);
+            using var memoria = new MemoryStream();
+            await stream.CopyToAsync(memoria);
+
+            _pdfs.Add(new PdfMigrarDto(memoria.ToArray(), archivo.Name));
+        }
+    }
+
+    private async Task MigrarAsync()
+    {
+        if (_pdfs is null || _pdfs.Count == 0 || string.IsNullOrWhiteSpace(_dependenciaDestinoId))
+        {
+            _errorMessage = "Completá la Dependencia destino y seleccioná al menos un PDF.";
+            return;
+        }
+
+        _errorMessage = null;
+        _migrando = true;
+
+        try
+        {
+            _reporte = await Sender.Send(new MigrarInformesCommand(Guid.Parse(_dependenciaDestinoId), _pdfs));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo ejecutar la migración. Verificá los datos e intentá de nuevo.";
+        }
+        finally
+        {
+            _migrando = false;
+        }
+    }
+
+    private Task ReiniciarAsync()
+    {
+        _reporte = null;
+        _pdfs = null;
+        _dependenciaDestinoId = string.Empty;
+        return Task.CompletedTask;
+    }
+}

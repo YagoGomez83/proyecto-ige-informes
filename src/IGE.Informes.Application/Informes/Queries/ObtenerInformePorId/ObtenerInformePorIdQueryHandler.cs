@@ -36,6 +36,7 @@ public sealed class ObtenerInformePorIdQueryHandler(IAppDbContext dbContext, IAu
             causa?.CircunscripcionJudicial,
             informe.DependenciaDestinoId,
             informe.PdfPath,
-            informe.Estado);
+            informe.Estado,
+            informe.Origen);
     }
 }

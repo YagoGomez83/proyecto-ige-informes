@@ -7,11 +7,12 @@ public sealed record InformeDto(
     string IdRegistro,
     DateOnly FechaAnalisis,
     string? Relato,
-    Guid CasoAnalisisId,
+    Guid? CasoAnalisisId,
     Guid? CausaId,
     string? CausaCaratula,
     string? CausaNroPiezaSumarial,
     string? CausaCircunscripcionJudicial,
     Guid DependenciaDestinoId,
     string? PdfPath,
-    EstadoInforme Estado);
+    EstadoInforme Estado,
+    OrigenInforme Origen);

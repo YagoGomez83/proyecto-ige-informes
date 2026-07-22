@@ -158,7 +158,9 @@ erDiagram
 
 1. Todo pedido de análisis se registra primero como `CasoAnalisis` — es la
    entidad obligatoria. `Informe` es siempre opcional y depende de un Caso
-   (`Informe.caso_analisis_id` es NOT NULL).
+   (`Informe.caso_analisis_id` es NOT NULL) **salvo para Informes
+   migrados** (`Informe.origen = Migrado`, ver HU-04 épica 01 y sección
+   "Decisiones ya resueltas" más abajo), donde es nullable por diseño.
 2. `Informe.id_registro` es único en todo el sistema.
 3. `Informe.causa_id` es nullable pero típicamente se completa: es el
    expediente propio de la `Dependencia` que solicitó el informe.
@@ -184,12 +186,15 @@ erDiagram
 | `Relevamiento_Dominios_cargados_Hik_Central.xlsx` | **Sí** | Deduplicar entre hojas repetidas (`VEHICULOS SL` ≈ `Hoja 7`); descartar hojas vacías |
 | PDFs de Informes en Drive | **Sí** | Ver ADR-004 — parser por plantilla, sin OCR |
 
-## Preguntas abiertas
+## Decisiones ya resueltas
 
-- Si el sistema nuevo no migra los Casos históricos pero sí migra los PDFs
-  de Informes históricos: esos Informes migrados van a quedar **sin**
-  `CasoAnalisis` de origen (porque ese caso vive solo en el Excel viejo).
-  ¿Corresponde entonces que `Informe.caso_analisis_id` sea nullable
-  *solo para los registros migrados*, o preferís crear un "Caso placeholder"
-  automático por cada Informe migrado para mantener la regla de negocio
-  simple? (Recomendación: nullable + flag `origen = Migrado`, más simple).
+- **`Informe.caso_analisis_id` es nullable** (confirmado, HU-04 de la
+  épica 01): los Informes migrados desde PDFs históricos quedan sin
+  `CasoAnalisis` de origen, porque el histórico de Casos no se migra (ver
+  tabla de arriba). Se agregó `Informe.origen` (`CargaIndividual` |
+  `Migrado`) para distinguirlos — la invariante 1 ("`Informe` depende de
+  un `Caso`") rige solo para `origen = CargaIndividual`; para
+  `origen = Migrado`, `caso_analisis_id` es null por diseño, no un dato
+  faltante. En el dominio, `Informe.CrearMigrado(...)` es el único punto
+  de alta que permite esto — el constructor normal sigue exigiendo un
+  `CasoAnalisis` real.

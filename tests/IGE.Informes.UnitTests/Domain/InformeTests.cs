@@ -46,6 +46,54 @@ public class InformeTests
     }
 
     [Fact]
+    public void Alta_normal_tiene_Origen_CargaIndividual_y_CasoAnalisisId()
+    {
+        var informe = CrearInforme();
+
+        Assert.Equal(OrigenInforme.CargaIndividual, informe.Origen);
+        Assert.Equal(CasoAnalisisId, informe.CasoAnalisisId);
+    }
+
+    [Fact]
+    public void CrearMigrado_nace_sin_CasoAnalisisId_con_Origen_Migrado()
+    {
+        var usuarioMigradorId = Guid.NewGuid();
+
+        var informe = Informe.CrearMigrado("500/2018", new DateOnly(2018, 3, 10), DependenciaDestinoId, usuarioMigradorId);
+
+        Assert.Null(informe.CasoAnalisisId);
+        Assert.Equal(OrigenInforme.Migrado, informe.Origen);
+        Assert.Equal(EstadoInforme.Borrador, informe.Estado);
+        Assert.Single(informe.Analistas);
+        Assert.Equal(usuarioMigradorId, informe.Analistas.Single().UsuarioId);
+        Assert.Equal(RolInformeAnalista.Interviniente, informe.Analistas.Single().Rol);
+    }
+
+    [Fact]
+    public void CrearMigrado_acepta_Causa_opcional()
+    {
+        var causaId = Guid.NewGuid();
+
+        var informe = Informe.CrearMigrado("500/2018", new DateOnly(2018, 3, 10), DependenciaDestinoId, Guid.NewGuid(), causaId);
+
+        Assert.Equal(causaId, informe.CausaId);
+    }
+
+    [Fact]
+    public void CrearMigrado_rechaza_dependencia_destino_vacia()
+    {
+        Assert.Throws<ArgumentException>(() => Informe.CrearMigrado(
+            "500/2018", new DateOnly(2018, 3, 10), Guid.Empty, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void CrearMigrado_rechaza_usuario_migrador_vacio()
+    {
+        Assert.Throws<ArgumentException>(() => Informe.CrearMigrado(
+            "500/2018", new DateOnly(2018, 3, 10), DependenciaDestinoId, Guid.Empty));
+    }
+
+    [Fact]
     public void Alta_rechaza_id_registro_vacio()
     {
         Assert.Throws<ArgumentException>(() => new Informe(
