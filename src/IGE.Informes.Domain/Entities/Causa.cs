@@ -4,7 +4,7 @@ namespace IGE.Informes.Domain.Entities;
 /// Expediente judicial/policial de la Dependencia solicitante de un
 /// Informe — no del IGE 4.0. Pertenece al Informe, no al CasoAnalisis.
 /// </summary>
-public sealed class Causa
+public sealed class Causa : IAuditable
 {
     public Guid Id { get; private set; }
     public string Caratula { get; private set; } = string.Empty;

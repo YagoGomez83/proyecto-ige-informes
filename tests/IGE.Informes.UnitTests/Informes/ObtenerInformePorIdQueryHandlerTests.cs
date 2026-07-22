@@ -38,4 +38,26 @@ public class ObtenerInformePorIdQueryHandlerTests
         Assert.Null(dto);
         Assert.Single(auditLogger.Registros);
     }
+
+    [Fact]
+    public async Task Devuelve_los_datos_de_la_Causa_cuando_el_informe_tiene_una_asignada()
+    {
+        var dbContext = new TestAppDbContext();
+        var causa = new Causa("AV. INFRACCION LEY 23.737", "7070029/26", "Primera Circunscripción");
+        dbContext.Causas.Add(causa);
+        await dbContext.SaveChangesAsync();
+
+        var informe = new Informe("290/2026", new DateOnly(2026, 7, 21), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), causa.Id);
+        dbContext.Informes.Add(informe);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ObtenerInformePorIdQueryHandler(dbContext, new FakeAuditLogger());
+
+        var dto = await handler.Handle(new ObtenerInformePorIdQuery(informe.Id), CancellationToken.None);
+
+        Assert.NotNull(dto);
+        Assert.Equal("AV. INFRACCION LEY 23.737", dto.CausaCaratula);
+        Assert.Equal("7070029/26", dto.CausaNroPiezaSumarial);
+        Assert.Equal("Primera Circunscripción", dto.CausaCircunscripcionJudicial);
+    }
 }

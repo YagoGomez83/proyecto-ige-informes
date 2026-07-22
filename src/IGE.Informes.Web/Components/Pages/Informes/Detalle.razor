@@ -29,7 +29,13 @@ else
                 <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
             }
         </div>
-        <a class="btn-secondary" href="@($"casos/{_informe.CasoAnalisisId}")">Ver Caso de origen</a>
+        <div class="d-flex gap-2">
+            @if (_informe.Estado == EstadoInforme.Borrador)
+            {
+                <a class="btn-secondary" href="@($"informes/{_informe.Id}/editar")">Editar</a>
+            }
+            <a class="btn-secondary" href="@($"casos/{_informe.CasoAnalisisId}")">Ver Caso de origen</a>
+        </div>
     </div>
 
     <div class="card">
@@ -40,6 +46,9 @@ else
 
             <dt class="col-sm-3 label-md">Relato</dt>
             <dd class="col-sm-9 body-md">@(_informe.Relato ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">Carátula de la Causa</dt>
+            <dd class="col-sm-9 body-md">@(_informe.CausaCaratula ?? "—")</dd>
 
             <dt class="col-sm-3 label-md">PDF</dt>
             <dd class="col-sm-9 body-md">@(_informe.PdfPath ?? "Pendiente de carga")</dd>

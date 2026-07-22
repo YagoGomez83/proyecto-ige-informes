@@ -20,6 +20,10 @@ public sealed class ObtenerInformePorIdQueryHandler(IAppDbContext dbContext, IAu
             return null;
         }
 
+        var causa = informe.CausaId is null
+            ? null
+            : await dbContext.Causas.AsNoTracking().FirstOrDefaultAsync(c => c.Id == informe.CausaId, cancellationToken);
+
         return new InformeDto(
             informe.Id,
             informe.IdRegistro,
@@ -27,6 +31,9 @@ public sealed class ObtenerInformePorIdQueryHandler(IAppDbContext dbContext, IAu
             informe.Relato,
             informe.CasoAnalisisId,
             informe.CausaId,
+            causa?.Caratula,
+            causa?.NroPiezaSumarial,
+            causa?.CircunscripcionJudicial,
             informe.DependenciaDestinoId,
             informe.PdfPath,
             informe.Estado);

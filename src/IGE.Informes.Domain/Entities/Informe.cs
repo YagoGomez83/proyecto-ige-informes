@@ -100,6 +100,21 @@ public sealed class Informe : IAuditable
         CausaId = causaId;
     }
 
+    public void AsignarDependenciaDestino(Guid dependenciaDestinoId)
+    {
+        if (dependenciaDestinoId == Guid.Empty)
+        {
+            throw new ArgumentException("La Dependencia destino es obligatoria.", nameof(dependenciaDestinoId));
+        }
+
+        if (Estado == EstadoInforme.Publicado)
+        {
+            throw new InvalidOperationException("Un Informe Publicado es inmutable — no se puede modificar la Dependencia destino.");
+        }
+
+        DependenciaDestinoId = dependenciaDestinoId;
+    }
+
     public void AgregarFirmante(Guid usuarioId)
     {
         if (usuarioId == Guid.Empty)
