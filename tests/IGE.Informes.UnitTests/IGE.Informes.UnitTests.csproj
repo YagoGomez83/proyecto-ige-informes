@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\IGE.Informes.Domain\IGE.Informes.Domain.csproj" />
     <ProjectReference Include="..\..\src\IGE.Informes.Application\IGE.Informes.Application.csproj" />
+    <ProjectReference Include="..\..\src\IGE.Informes.Infrastructure\IGE.Informes.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

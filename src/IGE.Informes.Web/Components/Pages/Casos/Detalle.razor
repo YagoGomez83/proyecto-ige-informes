@@ -84,7 +84,10 @@ else
     </div>
 
     <div class="card mb-3">
-        <h2 class="headline-sm mb-2">Informes generados</h2>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="headline-sm mb-0">Informes generados</h2>
+            <a class="btn-secondary" href="informes/cargar">Cargar PDF de Informe</a>
+        </div>
 
         @if (_informes is null)
         {

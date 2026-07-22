@@ -27,5 +27,7 @@ public interface IAppDbContext
 
     DbSet<Camara> Camaras { get; }
 
+    DbSet<Evidencia> Evidencias { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -21,10 +21,17 @@ services:
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=${POSTGRES_DB:-ige_informes};Username=${POSTGRES_USER:-ige_informes};Password=${POSTGRES_PASSWORD}
       - IGE_ADMIN_EMAIL=${IGE_ADMIN_EMAIL:-}
       - IGE_ADMIN_PASSWORD=${IGE_ADMIN_PASSWORD:-}
+      - Minio__Endpoint=minio:9000
+      - Minio__AccessKey=${MINIO_ROOT_USER}
+      - Minio__SecretKey=${MINIO_ROOT_PASSWORD}
+      - Minio__BucketName=ige-informes
+      - Minio__UseSsl=false
     volumes:
       - dataprotection_keys:/keys
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]

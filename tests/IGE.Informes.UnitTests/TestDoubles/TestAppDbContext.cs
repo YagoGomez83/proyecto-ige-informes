@@ -37,6 +37,8 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
 
     public DbSet<Camara> Camaras => Set<Camara>();
 
+    public DbSet<Evidencia> Evidencias => Set<Evidencia>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -68,6 +70,15 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
         builder.Entity<Vehiculo>(vehiculo =>
         {
             vehiculo.PrimitiveCollection(v => v.CategoriasAlertaIds)
+                .Metadata.SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<Evidencia>(evidencia =>
+        {
+            evidencia.PrimitiveCollection(e => e.VehiculoIds)
+                .Metadata.SetPropertyAccessMode(PropertyAccessMode.Field);
+
+            evidencia.PrimitiveCollection(e => e.PersonaIds)
                 .Metadata.SetPropertyAccessMode(PropertyAccessMode.Field);
         });
     }

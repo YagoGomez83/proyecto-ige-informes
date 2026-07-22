@@ -1,0 +1,299 @@
+@page "/informes/cargar"
+@attribute [Authorize]
+@using IGE.Informes.Application.CasosAnalisis.Queries.ListarCasos
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.Informes.Commands.ConfirmarCargaInforme
+@using IGE.Informes.Application.Informes.Queries.ParsearPdfInforme
+@using Microsoft.AspNetCore.Components.Forms
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Cargar Informe desde PDF · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Cargar Informe desde PDF</h1>
+
+@if (_errorMessage is not null)
+{
+    <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+}
+
+@if (_resultado is null)
+{
+    <div class="card" style="max-width: 640px;">
+        <h2 class="headline-sm mb-2">1. Seleccionar archivo</h2>
+        <p class="body-sm mb-3">
+            El sistema extrae automáticamente ID Registro, fecha, causa, destino y evidencias.
+            Vas a poder revisar y corregir los datos antes de guardar.
+        </p>
+        <InputFile OnChange="ProcesarArchivoSeleccionadoAsync" accept="application/pdf" />
+        @if (_procesando)
+        {
+            <p class="body-sm mt-2">Procesando...</p>
+        }
+    </div>
+}
+else
+{
+    <div class="card mb-3" style="max-width: 720px;">
+        <h2 class="headline-sm mb-2">2. Revisar datos extraídos</h2>
+
+        @if (_resultado.RequiereRevisionManual)
+        {
+            <div class="status-chip status-chip--warning mb-3">
+                No se reconoció el ID Registro — completalo manualmente antes de guardar.
+            </div>
+        }
+
+        @if (_resultado.YaExisteInformeConEseIdRegistro)
+        {
+            <div class="status-chip status-chip--alert mb-3">
+                Ya existe un Informe con este ID Registro. Podés reemplazarlo o cancelar.
+            </div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="idRegistro">ID Registro</label>
+            <input id="idRegistro" class="form-control mono-data" @bind="_idRegistro" placeholder="Ej: 290/2026" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="fechaAnalisis">Fecha de análisis</label>
+            <input id="fechaAnalisis" type="date" class="form-control" @bind="_fechaAnalisis" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="caso">Caso de Análisis de origen</label>
+            <select id="caso" class="form-control" @bind="_casoAnalisisId">
+                <option value="">Seleccionar...</option>
+                @if (_casos is not null)
+                {
+                    @foreach (var caso in _casos)
+                    {
+                        <option value="@caso.Id">@caso.Fecha.ToString("dd/MM/yyyy") — @caso.Id</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="dependenciaDestino">Dependencia destino</label>
+            <select id="dependenciaDestino" class="form-control" @bind="_dependenciaDestinoId">
+                <option value="">Seleccionar...</option>
+                @if (_dependencias is not null)
+                {
+                    @foreach (var dependencia in _dependencias)
+                    {
+                        <option value="@dependencia.Id">@dependencia.Nombre</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="causaCaratula">Carátula de la Causa</label>
+            <input id="causaCaratula" class="form-control" @bind="_causaCaratula" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="piezaSumarial">N° de pieza sumarial</label>
+            <input id="piezaSumarial" class="form-control mono-data" @bind="_piezaSumarial" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="circunscripcion">Circunscripción judicial</label>
+            <input id="circunscripcion" class="form-control" @bind="_circunscripcion" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="relato">Relato</label>
+            <textarea id="relato" class="form-control" rows="6" @bind="_relato"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <span class="label-md">Vehículos reconocidos</span>
+            @if (_resultado.Vehiculos.Count == 0)
+            {
+                <p class="body-sm mb-0">Ninguno.</p>
+            }
+            else
+            {
+                <ul class="mb-0">
+                    @foreach (var vehiculo in _resultado.Vehiculos)
+                    {
+                        <li class="body-sm">@vehiculo.Marca @vehiculo.Modelo — dominio: @(vehiculo.Dominio ?? "no visible")</li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="mb-3">
+            <span class="label-md">Personas reconocidas (DNI)</span>
+            @if (_resultado.Personas.Count == 0)
+            {
+                <p class="body-sm mb-0">Ninguna.</p>
+            }
+            else
+            {
+                <ul class="mb-0">
+                    @foreach (var persona in _resultado.Personas)
+                    {
+                        <li class="body-sm mono-data">@persona.Dni @(persona.RolSugerido is not null ? $"({persona.RolSugerido})" : "")</li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="mb-3">
+            <span class="label-md">Evidencias reconocidas</span>
+            @if (_resultado.Evidencias.Count == 0)
+            {
+                <p class="body-sm mb-0">Ninguna.</p>
+            }
+            else
+            {
+                <ul class="mb-0">
+                    @foreach (var evidencia in _resultado.Evidencias)
+                    {
+                        <li class="body-sm">
+                            IMAGEN N° @evidencia.NumeroImagen
+                            @(evidencia.CodigoCamara is not null ? $"— cámara {evidencia.CodigoCamara}" : "— cámara no reconocida")
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        @if (_resultado.YaExisteInformeConEseIdRegistro)
+        {
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="confirmarReemplazo" @bind="_confirmarReemplazo" />
+                <label class="form-check-label body-sm" for="confirmarReemplazo">Confirmo que quiero reemplazar el Informe existente</label>
+            </div>
+        }
+
+        <div class="d-flex gap-2">
+            <button type="button" class="btn-primary" @onclick="ConfirmarCargaAsync" disabled="@_procesando">Guardar Informe</button>
+            <button type="button" class="btn-secondary" @onclick="Cancelar" disabled="@_procesando">Cancelar</button>
+        </div>
+    </div>
+}
+
+@code {
+    private const long TamanioMaximoBytes = 20 * 1024 * 1024;
+
+    private byte[]? _contenidoPdf;
+    private string? _nombreArchivo;
+    private ParsearPdfInformeResultDto? _resultado;
+    private IReadOnlyCollection<CasoAnalisisResumenDto>? _casos;
+    private IReadOnlyCollection<DependenciaDto>? _dependencias;
+
+    private string _idRegistro = string.Empty;
+    private DateTime _fechaAnalisis = DateTime.Today;
+    private string _casoAnalisisId = string.Empty;
+    private string _dependenciaDestinoId = string.Empty;
+    private string? _causaCaratula;
+    private string? _piezaSumarial;
+    private string? _circunscripcion;
+    private string? _relato;
+    private bool _confirmarReemplazo;
+
+    private bool _procesando;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _casos = await Sender.Send(new ListarCasosQuery());
+        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+    }
+
+    private async Task ProcesarArchivoSeleccionadoAsync(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            var archivo = e.File;
+            using var stream = archivo.OpenReadStream(TamanioMaximoBytes);
+            using var memoria = new MemoryStream();
+            await stream.CopyToAsync(memoria);
+
+            _contenidoPdf = memoria.ToArray();
+            _nombreArchivo = archivo.Name;
+
+            _resultado = await Sender.Send(new ParsearPdfInformeQuery(_contenidoPdf));
+
+            _idRegistro = _resultado.IdRegistro ?? string.Empty;
+            _fechaAnalisis = _resultado.FechaAnalisis?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today;
+            _causaCaratula = _resultado.CausaCaratula;
+            _piezaSumarial = _resultado.PiezaSumarial;
+            _relato = _resultado.Relato;
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo procesar el archivo. Verificá que sea un PDF válido.";
+            _resultado = null;
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task ConfirmarCargaAsync()
+    {
+        if (_contenidoPdf is null || _nombreArchivo is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_idRegistro) || string.IsNullOrWhiteSpace(_casoAnalisisId) || string.IsNullOrWhiteSpace(_dependenciaDestinoId))
+        {
+            _errorMessage = "Completá el ID Registro, el Caso de origen y la Dependencia destino.";
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            var evidencias = _resultado!.Evidencias
+                .Select(e => new EvidenciaConfirmadaDto(e.NumeroImagen, e.CamaraId, e.FechaHoraCaptura, e.Descripcion))
+                .ToList();
+
+            var informeId = await Sender.Send(new ConfirmarCargaInformeCommand(
+                _contenidoPdf,
+                _nombreArchivo,
+                _idRegistro,
+                DateOnly.FromDateTime(_fechaAnalisis),
+                Guid.Parse(_casoAnalisisId),
+                Guid.Parse(_dependenciaDestinoId),
+                _causaCaratula,
+                _piezaSumarial,
+                _circunscripcion,
+                _relato,
+                _confirmarReemplazo,
+                evidencias));
+
+            NavigationManager.NavigateTo($"informes/{informeId}");
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo guardar el Informe. Verificá los datos e intentá de nuevo.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private void Cancelar()
+    {
+        _contenidoPdf = null;
+        _nombreArchivo = null;
+        _resultado = null;
+        _errorMessage = null;
+    }
+}

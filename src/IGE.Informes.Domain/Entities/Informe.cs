@@ -64,4 +64,80 @@ public sealed class Informe : IAuditable
 
         _analistas.Add(new InformeAnalista(Id, analistaSolicitanteId, RolInformeAnalista.Interviniente));
     }
+
+    public void CompletarRelato(string relato)
+    {
+        if (Estado == EstadoInforme.Publicado)
+        {
+            throw new InvalidOperationException("Un Informe Publicado es inmutable — no se puede editar el relato.");
+        }
+
+        Relato = relato;
+    }
+
+    public void AsignarPdf(string pdfPath)
+    {
+        if (string.IsNullOrWhiteSpace(pdfPath))
+        {
+            throw new ArgumentException("La ruta del PDF no puede estar vacía.", nameof(pdfPath));
+        }
+
+        if (Estado == EstadoInforme.Publicado)
+        {
+            throw new InvalidOperationException("Un Informe Publicado es inmutable — no se puede reemplazar el PDF.");
+        }
+
+        PdfPath = pdfPath;
+    }
+
+    public void AsignarCausa(Guid causaId)
+    {
+        if (Estado == EstadoInforme.Publicado)
+        {
+            throw new InvalidOperationException("Un Informe Publicado es inmutable — no se puede modificar la Causa.");
+        }
+
+        CausaId = causaId;
+    }
+
+    public void AgregarFirmante(Guid usuarioId)
+    {
+        if (usuarioId == Guid.Empty)
+        {
+            throw new ArgumentException("El usuario firmante es obligatorio.", nameof(usuarioId));
+        }
+
+        var existente = _analistas.FirstOrDefault(a => a.UsuarioId == usuarioId);
+        if (existente is not null)
+        {
+            _analistas.Remove(existente);
+        }
+
+        _analistas.Add(new InformeAnalista(Id, usuarioId, RolInformeAnalista.Firmante));
+    }
+
+    public void Publicar()
+    {
+        if (Estado == EstadoInforme.Publicado)
+        {
+            return;
+        }
+
+        if (CausaId is null)
+        {
+            throw new InvalidOperationException("No se puede publicar el Informe: falta la Causa.");
+        }
+
+        if (DependenciaDestinoId == Guid.Empty)
+        {
+            throw new InvalidOperationException("No se puede publicar el Informe: falta la Dependencia destino.");
+        }
+
+        if (!_analistas.Any(a => a.Rol == RolInformeAnalista.Firmante))
+        {
+            throw new InvalidOperationException("No se puede publicar el Informe: falta un Analista Firmante.");
+        }
+
+        Estado = EstadoInforme.Publicado;
+    }
 }

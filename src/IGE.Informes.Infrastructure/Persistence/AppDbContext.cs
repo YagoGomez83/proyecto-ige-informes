@@ -29,6 +29,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Camara> Camaras => Set<Camara>();
 
+    public DbSet<Evidencia> Evidencias => Set<Evidencia>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

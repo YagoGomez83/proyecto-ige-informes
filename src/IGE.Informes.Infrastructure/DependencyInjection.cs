@@ -1,6 +1,8 @@
 using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Infrastructure.Auditing;
+using IGE.Informes.Infrastructure.FileStorage;
 using IGE.Informes.Infrastructure.Identity;
+using IGE.Informes.Infrastructure.PdfParsing;
 using IGE.Informes.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +44,11 @@ public static class DependencyInjection
 
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuditLogger, AuditLogger>();
+
+        services.Configure<MinioOptions>(configuration.GetSection(MinioOptions.SectionName));
+        services.AddSingleton<IFileStorage, MinioFileStorage>();
+
+        services.AddSingleton<IInformePdfParser, InformePdfParserAdapter>();
 
         return services;
     }

@@ -8,6 +8,7 @@ obj/
 appsettings.Development.json
 appsettings.*.local.json
 docker/.env
+docker/docker-compose.override.local.yml
 
 *.log
 
