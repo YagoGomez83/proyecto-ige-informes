@@ -1,9 +1,11 @@
 @page "/informes/{InformeId:guid}"
 @attribute [Authorize]
+@using IGE.Informes.Application.Informes.Commands.PublicarInforme
 @using IGE.Informes.Application.Informes.Queries.ObtenerInformePorId
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
+@inject NavigationManager NavigationManager
 
 <PageTitle>Detalle de Informe · IGE 4.0</PageTitle>
 
@@ -17,6 +19,11 @@ else if (_informe is null)
 }
 else
 {
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+    }
+
     <div class="d-flex justify-content-between align-items-start mb-3">
         <div>
             <h1 class="headline-md mb-1 mono-data">@_informe.IdRegistro</h1>
@@ -32,6 +39,7 @@ else
         <div class="d-flex gap-2">
             @if (_informe.Estado == EstadoInforme.Borrador)
             {
+                <button type="button" class="btn-primary" @onclick="PublicarAsync" disabled="@_publicando">Publicar</button>
                 <a class="btn-secondary" href="@($"informes/{_informe.Id}/editar")">Editar</a>
             }
             <a class="btn-secondary" href="@($"casos/{_informe.CasoAnalisisId}")">Ver Caso de origen</a>
@@ -62,10 +70,36 @@ else
 
     private InformeDto? _informe;
     private bool _cargado;
+    private bool _publicando;
+    private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
         _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
         _cargado = true;
+    }
+
+    private async Task PublicarAsync()
+    {
+        _errorMessage = null;
+        _publicando = true;
+
+        try
+        {
+            await Sender.Send(new PublicarInformeCommand(InformeId));
+            NavigationManager.NavigateTo($"informes/{InformeId}", forceLoad: true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo publicar el Informe. Verificá que tenga Causa y Dependencia completas.";
+        }
+        finally
+        {
+            _publicando = false;
+        }
     }
 }

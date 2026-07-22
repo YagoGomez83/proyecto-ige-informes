@@ -30,4 +30,17 @@ public interface IAppDbContext
     DbSet<Evidencia> Evidencias { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fuerza el estado "Agregado" para un InformeAnalista recién añadido a
+    /// Informe.Analistas (owned collection) de un Informe ya persistido.
+    /// Necesario por un bug conocido de EF Core (10.x) con OwnsMany: al
+    /// agregar un elemento nuevo a una owned collection de una entidad ya
+    /// trackeada/persistida, el change tracker a veces lo clasifica como
+    /// "Modified" en vez de "Added", generando un UPDATE sobre una fila
+    /// inexistente (DbUpdateConcurrencyException). Acotado a InformeAnalista
+    /// a propósito — no es un bypass genérico del ChangeTracker para
+    /// cualquier entidad, solo el workaround puntual de este bug.
+    /// </summary>
+    void MarcarInformeAnalistaComoAgregado(InformeAnalista informeAnalista);
 }

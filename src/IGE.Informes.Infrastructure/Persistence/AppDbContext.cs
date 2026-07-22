@@ -37,4 +37,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
+
+    public void MarcarInformeAnalistaComoAgregado(InformeAnalista informeAnalista)
+    {
+        Entry(informeAnalista).State = EntityState.Added;
+    }
 }

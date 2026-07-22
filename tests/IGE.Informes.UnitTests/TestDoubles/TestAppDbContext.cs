@@ -39,6 +39,11 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
 
     public DbSet<Evidencia> Evidencias => Set<Evidencia>();
 
+    public void MarcarInformeAnalistaComoAgregado(InformeAnalista informeAnalista)
+    {
+        Entry(informeAnalista).State = EntityState.Added;
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
