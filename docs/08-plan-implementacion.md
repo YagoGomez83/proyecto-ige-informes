@@ -93,27 +93,38 @@ Vehiculos visibles y editables en `/vehiculos`).
 
 ---
 
-## Fase 3 · Informes y extracción de PDF (Épica 01)
+## Fase 3 · Informes y extracción de PDF (Épica 01) — ✅ CERRADA
 
-Referencia: `docs/02-historias-usuario/epic-01-gestion-informes.md`
+Referencia: `docs/epic-01-gestion-informes.md`
 
-- [~] Entidades `Informe`, `Causa`, `InformeAnalista` — creadas en Fase 1
-      (adelantadas junto con HU-03). Falta `Evidencia`.
-- [ ] Parser de PDF por plantilla (PdfPig + patrones) — ver ADR-004.
-      Probar contra los 3 PDFs de muestra ya analizados antes de dar por
-      terminado el parser.
+- [x] Entidades `Informe`, `Causa`, `InformeAnalista`, `Evidencia`.
+- [x] Parser de PDF por plantilla (PdfPig + patrones) — ver ADR-004.
+      **Deuda pendiente, no bloqueante**: nunca se consiguieron los 3 PDFs
+      de muestra reales — el parser solo está validado contra PDFs
+      sintéticos generados en los tests con la misma estructura.
 - [x] HU-03 (épica 00): generar Informe desde un Caso existente, a pedido
       de una Dependencia. **Adelantada y cerrada en Fase 1** (Command
       `GenerarInformeDesdeCasoCommand`, `IdRegistro` autogenerado
       correlativo por año).
-- [ ] HU-01/02/03 (épica 01): edición, publicación/firma de Informe.
-- [ ] HU-04 (épica 01): migración masiva de PDFs históricos desde Drive
-      (exportados a una carpeta local primero).
+- [x] HU-01 (épica 01): carga de Informe desde PDF con extracción y
+      revisión manual antes de guardar, subida real a MinIO (commit
+      `fe7203b`).
+- [x] HU-02 (épica 01): editar/corregir metadatos de un Informe en
+      Borrador — Relato, Dependencia destino, Causa (commit `f836ae3`).
+- [x] HU-03 (épica 01): publicar/firmar un Informe — un click agrega al
+      usuario actual como Firmante y publica (commit `ad1ca3d`).
+- [x] HU-04 (épica 01): migración masiva de PDFs históricos desde una
+      carpeta local (subida múltiple vía Web, no integración directa con
+      Drive) — requirió relajar `Informe.CasoAnalisisId` a nullable con
+      un campo `Origen` nuevo, ver `03-modelo-dominio.md` (commit
+      `a0ced17`).
 
-**Criterio de cierre**: subir uno de los 3 PDFs de muestra genera
-automáticamente un Informe con Causa, Evidencias y vehículos/personas
-correctamente extraídos, vinculado al Caso correspondiente (creado a mano
-si no existía, ya que no se migra el histórico de Casos).
+**Criterio de cierre**: cumplido con PDFs sintéticos (misma estructura que
+los reales, ver skill `pdf-informe-parser`) — genera automáticamente un
+Informe con Causa, Evidencias y vehículos/personas extraídos. **No
+verificado contra los 3 PDFs reales de muestra** (nunca se consiguieron
+en el repo) — si aparecen, correr el parser contra ellos antes de dar la
+deuda por saldada.
 
 ---
 

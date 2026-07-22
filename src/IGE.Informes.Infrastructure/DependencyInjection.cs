@@ -1,9 +1,12 @@
 using IGE.Informes.Application.Common.Interfaces;
+using IGE.Informes.Application.Informes.Queries.BuscarInformes;
 using IGE.Informes.Infrastructure.Auditing;
+using IGE.Informes.Infrastructure.Busqueda;
 using IGE.Informes.Infrastructure.FileStorage;
 using IGE.Informes.Infrastructure.Identity;
 using IGE.Informes.Infrastructure.PdfParsing;
 using IGE.Informes.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -49,6 +52,14 @@ public static class DependencyInjection
         services.AddSingleton<IFileStorage, MinioFileStorage>();
 
         services.AddSingleton<IInformePdfParser, InformePdfParserAdapter>();
+
+        // Único Handler que vive en Infrastructure en vez de Application:
+        // depende de EF.Functions.ToTsVector/PlainToTsQuery (Npgsql), que
+        // Application no puede referenciar — ver el comentario en
+        // BuscarInformesQueryHandler. MediatR no lo descubre por escaneo de
+        // ensamblado (solo escanea Application), así que se registra
+        // explícitamente acá.
+        services.AddScoped<IRequestHandler<BuscarInformesQuery, IReadOnlyCollection<InformeBusquedaResultDto>>, BuscarInformesQueryHandler>();
 
         return services;
     }

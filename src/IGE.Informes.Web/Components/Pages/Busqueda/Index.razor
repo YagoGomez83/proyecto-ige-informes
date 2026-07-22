@@ -1,0 +1,192 @@
+@page "/busqueda"
+@attribute [Authorize]
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.Informes.Queries.BuscarInformes
+@using IGE.Informes.Application.TiposIncidente.Queries.ListarTiposIncidente
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Búsqueda de Informes · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Búsqueda de Informes</h1>
+
+<div class="card mb-3">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="label-md" for="dependencia">Dependencia</label>
+            <select id="dependencia" class="form-control" @bind="_dependenciaId">
+                <option value="">Todas</option>
+                @if (_dependencias is not null)
+                {
+                    @foreach (var dependencia in _dependencias)
+                    {
+                        <option value="@dependencia.Id">@dependencia.Nombre</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="label-md" for="tipoIncidente">Código de incidente</label>
+            <select id="tipoIncidente" class="form-control" @bind="_tipoIncidenteId">
+                <option value="">Todos</option>
+                @if (_tiposIncidente is not null)
+                {
+                    @foreach (var tipo in _tiposIncidente)
+                    {
+                        <option value="@tipo.Id">@tipo.Codigo - @tipo.Descripcion</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="label-md" for="dominio">Dominio de vehículo</label>
+            <input id="dominio" class="form-control mono-data" @bind="_dominioVehiculo" placeholder="Ej: IAK796" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="label-md" for="dniPersona">DNI o nombre de persona</label>
+            <input id="dniPersona" class="form-control" @bind="_dniOPersona" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="label-md" for="fechaDesde">Fecha desde</label>
+            <input id="fechaDesde" type="date" class="form-control" @bind="_fechaDesde" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="label-md" for="fechaHasta">Fecha hasta</label>
+            <input id="fechaHasta" type="date" class="form-control" @bind="_fechaHasta" />
+        </div>
+
+        <div class="col-12">
+            <label class="label-md" for="textoLibre">Texto libre en el relato</label>
+            <input id="textoLibre" class="form-control" @bind="_textoLibre" placeholder="Ej: narcotráfico" />
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+        <button type="button" class="btn-primary" @onclick="BuscarAsync" disabled="@_buscando">Buscar</button>
+        <button type="button" class="btn-secondary" @onclick="LimpiarAsync" disabled="@_buscando">Limpiar filtros</button>
+    </div>
+</div>
+
+@if (_errorMessage is not null)
+{
+    <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+}
+
+@if (_resultados is not null)
+{
+    <p class="body-sm mb-2">@_resultados.Count resultado(s).</p>
+
+    @if (_resultados.Count == 0)
+    {
+        <p class="body-md">No se encontraron Informes con esos criterios.</p>
+    }
+    else
+    {
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th class="label-md">ID Registro</th>
+                        <th class="label-md">Fecha de análisis</th>
+                        <th class="label-md">Estado</th>
+                        <th class="label-md">Relato</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var informe in _resultados)
+                    {
+                        <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(informe.Id))">
+                            <td class="body-sm mono-data">@informe.IdRegistro</td>
+                            <td class="body-sm">@informe.FechaAnalisis.ToString("dd/MM/yyyy")</td>
+                            <td class="body-sm">
+                                @if (informe.Estado == EstadoInforme.Publicado)
+                                {
+                                    <StatusChip Texto="Publicado" Semantica="ChipSemantica.Safe" />
+                                }
+                                else
+                                {
+                                    <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
+                                }
+                            </td>
+                            <td class="body-sm">@(informe.Relato ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private IReadOnlyCollection<DependenciaDto>? _dependencias;
+    private IReadOnlyCollection<TipoIncidenteDto>? _tiposIncidente;
+    private IReadOnlyCollection<InformeBusquedaResultDto>? _resultados;
+
+    private string _dependenciaId = string.Empty;
+    private string _tipoIncidenteId = string.Empty;
+    private string? _dominioVehiculo;
+    private string? _dniOPersona;
+    private string? _textoLibre;
+    private DateTime? _fechaDesde;
+    private DateTime? _fechaHasta;
+
+    private bool _buscando;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+        _tiposIncidente = await Sender.Send(new ListarTiposIncidenteQuery());
+    }
+
+    private async Task BuscarAsync()
+    {
+        _errorMessage = null;
+        _buscando = true;
+
+        try
+        {
+            var query = new BuscarInformesQuery(
+                DependenciaId: string.IsNullOrWhiteSpace(_dependenciaId) ? null : Guid.Parse(_dependenciaId),
+                TipoIncidenteId: string.IsNullOrWhiteSpace(_tipoIncidenteId) ? null : Guid.Parse(_tipoIncidenteId),
+                DominioVehiculo: string.IsNullOrWhiteSpace(_dominioVehiculo) ? null : _dominioVehiculo,
+                DniOPersona: string.IsNullOrWhiteSpace(_dniOPersona) ? null : _dniOPersona,
+                TextoLibre: string.IsNullOrWhiteSpace(_textoLibre) ? null : _textoLibre,
+                FechaDesde: _fechaDesde is null ? null : DateOnly.FromDateTime(_fechaDesde.Value),
+                FechaHasta: _fechaHasta is null ? null : DateOnly.FromDateTime(_fechaHasta.Value));
+
+            _resultados = await Sender.Send(query);
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo completar la búsqueda. Verificá los filtros e intentá de nuevo.";
+        }
+        finally
+        {
+            _buscando = false;
+        }
+    }
+
+    private void IrAlInforme(Guid informeId) => NavigationManager.NavigateTo($"informes/{informeId}");
+
+    private Task LimpiarAsync()
+    {
+        _dependenciaId = string.Empty;
+        _tipoIncidenteId = string.Empty;
+        _dominioVehiculo = null;
+        _dniOPersona = null;
+        _textoLibre = null;
+        _fechaDesde = null;
+        _fechaHasta = null;
+        _resultados = null;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+}
