@@ -1,13 +1,16 @@
 @page "/vehiculos/{VehiculoId:guid}"
 @attribute [Authorize]
 @using IGE.Informes.Application.CategoriasAlerta.Queries.ListarCategoriasAlerta
+@using IGE.Informes.Application.Common.Dtos
 @using IGE.Informes.Application.Vehiculos.Commands.AsignarCategoriaAlerta
 @using IGE.Informes.Application.Vehiculos.Commands.CambiarEstadoVehiculo
 @using IGE.Informes.Application.Vehiculos.Commands.DarDeBajaVehiculo
+@using IGE.Informes.Application.Vehiculos.Queries.ObtenerHistorialInformesVehiculo
 @using IGE.Informes.Application.Vehiculos.Queries.ObtenerVehiculoPorId
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
+@inject NavigationManager NavigationManager
 
 <PageTitle>Detalle de Vehículo · IGE 4.0</PageTitle>
 
@@ -111,6 +114,51 @@ else
         </div>
     </div>
 
+    <div class="card mt-3">
+        <h2 class="headline-sm mb-2">Historial de Informes</h2>
+        @if (_historial is null)
+        {
+            <p class="body-md">Cargando historial...</p>
+        }
+        else if (_historial.Count == 0)
+        {
+            <p class="body-md">Este vehículo no aparece en ningún Informe todavía.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th class="label-md">ID Registro</th>
+                        <th class="label-md">Fecha de análisis</th>
+                        <th class="label-md">Estado</th>
+                        <th class="label-md">Evidencias</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _historial)
+                    {
+                        <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(item.InformeId))">
+                            <td class="body-sm mono-data">@item.IdRegistro</td>
+                            <td class="body-sm">@item.FechaAnalisis.ToString("dd/MM/yyyy")</td>
+                            <td class="body-sm">
+                                @if (item.Estado == EstadoInforme.Publicado)
+                                {
+                                    <StatusChip Texto="Publicado" Semantica="ChipSemantica.Safe" />
+                                }
+                                else
+                                {
+                                    <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
+                                }
+                            </td>
+                            <td class="body-sm">@item.CantidadEvidencias</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
     @if (_errorMessage is not null)
     {
         <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
@@ -124,6 +172,7 @@ else
     private VehiculoDto? _vehiculo;
     private bool _cargado;
     private IReadOnlyCollection<CategoriaAlertaDto>? _categoriasAlerta;
+    private IReadOnlyCollection<InformeHistorialDto>? _historial;
     private string? _categoriaSeleccionadaId;
     private DateTime _fechaBaja = DateTime.Today;
     private string? _errorMessage;
@@ -133,6 +182,7 @@ else
     {
         _categoriasAlerta = await Sender.Send(new ListarCategoriasAlertaQuery());
         await CargarAsync();
+        _historial = await Sender.Send(new ObtenerHistorialInformesVehiculoQuery(VehiculoId));
     }
 
     private async Task CargarAsync()
@@ -140,6 +190,8 @@ else
         _vehiculo = await Sender.Send(new ObtenerVehiculoPorIdQuery(VehiculoId));
         _cargado = true;
     }
+
+    private void IrAlInforme(Guid informeId) => NavigationManager.NavigateTo($"informes/{informeId}");
 
     private async Task MarcarIdentificadoAsync() => await CambiarEstadoAsync(EstadoVehiculo.Identificado);
 

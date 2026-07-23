@@ -1,11 +1,14 @@
 @page "/personas/{PersonaId:guid}"
 @attribute [Authorize]
+@using IGE.Informes.Application.Common.Dtos
 @using IGE.Informes.Application.Personas.Commands.CambiarRolPersona
 @using IGE.Informes.Application.Personas.Commands.IdentificarPersona
+@using IGE.Informes.Application.Personas.Queries.ObtenerHistorialInformesPersona
 @using IGE.Informes.Application.Personas.Queries.ObtenerPersonaPorId
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
+@inject NavigationManager NavigationManager
 
 <PageTitle>Detalle de Persona · IGE 4.0</PageTitle>
 
@@ -78,6 +81,51 @@ else
         </div>
     </div>
 
+    <div class="card mt-3">
+        <h2 class="headline-sm mb-2">Historial de Informes</h2>
+        @if (_historial is null)
+        {
+            <p class="body-md">Cargando historial...</p>
+        }
+        else if (_historial.Count == 0)
+        {
+            <p class="body-md">Esta persona no aparece en ningún Informe todavía.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th class="label-md">ID Registro</th>
+                        <th class="label-md">Fecha de análisis</th>
+                        <th class="label-md">Estado</th>
+                        <th class="label-md">Evidencias</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _historial)
+                    {
+                        <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(item.InformeId))">
+                            <td class="body-sm mono-data">@item.IdRegistro</td>
+                            <td class="body-sm">@item.FechaAnalisis.ToString("dd/MM/yyyy")</td>
+                            <td class="body-sm">
+                                @if (item.Estado == EstadoInforme.Publicado)
+                                {
+                                    <StatusChip Texto="Publicado" Semantica="ChipSemantica.Safe" />
+                                }
+                                else
+                                {
+                                    <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
+                                }
+                            </td>
+                            <td class="body-sm">@item.CantidadEvidencias</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
     @if (_errorMessage is not null)
     {
         <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
@@ -90,13 +138,18 @@ else
 
     private PersonaDto? _persona;
     private bool _cargado;
+    private IReadOnlyCollection<InformeHistorialDto>? _historial;
     private string _nombreIdentificar = string.Empty;
     private string _dniIdentificar = string.Empty;
     private RolPersona _rolSeleccionado;
     private string? _errorMessage;
     private bool _procesando;
 
-    protected override async Task OnInitializedAsync() => await CargarAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+        _historial = await Sender.Send(new ObtenerHistorialInformesPersonaQuery(PersonaId));
+    }
 
     private async Task CargarAsync()
     {
@@ -108,6 +161,8 @@ else
             _rolSeleccionado = _persona.Rol;
         }
     }
+
+    private void IrAlInforme(Guid informeId) => NavigationManager.NavigateTo($"informes/{informeId}");
 
     private async Task IdentificarAsync()
     {
