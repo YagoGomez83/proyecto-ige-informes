@@ -1,0 +1,278 @@
+@page "/analitica"
+@attribute [Authorize(Roles = "Supervisor,Admin")]
+@using IGE.Informes.Application.CasosAnalisis.Queries.ObtenerTableroAnalitica
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.TiposIncidente.Queries.ListarTiposIncidente
+@using MediatR
+@implements IAsyncDisposable
+@inject ISender Sender
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Analítica de Gestión · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Tablero de Analítica de Gestión</h1>
+
+<div class="card mb-3">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="label-md" for="fechaDesde">Fecha desde</label>
+            <input id="fechaDesde" type="date" class="form-control" @bind="_fechaDesde" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="label-md" for="fechaHasta">Fecha hasta</label>
+            <input id="fechaHasta" type="date" class="form-control" @bind="_fechaHasta" />
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+        <button type="button" class="btn-primary" @onclick="ActualizarAsync" disabled="@_cargando">Actualizar</button>
+    </div>
+</div>
+
+@if (_errorMessage is not null)
+{
+    <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+}
+
+@if (_tablero is not null)
+{
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="headline-sm">Casos por Dependencia</h2>
+                    <button type="button" class="btn-secondary" @onclick="@(() => ExportarAsync("dependencia"))">Exportar</button>
+                </div>
+                <canvas id="chart-dependencia"></canvas>
+                <table class="table mt-2">
+                    <thead><tr><th class="label-md">Dependencia</th><th class="label-md">Cantidad</th></tr></thead>
+                    <tbody>
+                        @foreach (var item in _tablero.PorDependencia)
+                        {
+                            <tr>
+                                <td class="body-sm">@NombreDependencia(item.DependenciaId)</td>
+                                <td class="body-sm">@item.Cantidad</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="headline-sm">Casos por Tipo de Incidente</h2>
+                    <button type="button" class="btn-secondary" @onclick="@(() => ExportarAsync("tipoIncidente"))">Exportar</button>
+                </div>
+                <canvas id="chart-tipoIncidente"></canvas>
+                <table class="table mt-2">
+                    <thead><tr><th class="label-md">Tipo de Incidente</th><th class="label-md">Cantidad</th></tr></thead>
+                    <tbody>
+                        @foreach (var item in _tablero.PorTipoIncidente)
+                        {
+                            <tr>
+                                <td class="body-sm">@NombreTipoIncidente(item.TipoIncidenteId)</td>
+                                <td class="body-sm">@item.Cantidad</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="headline-sm">Casos por Analista</h2>
+                    <button type="button" class="btn-secondary" @onclick="@(() => ExportarAsync("analista"))">Exportar</button>
+                </div>
+                <canvas id="chart-analista"></canvas>
+                <table class="table mt-2">
+                    <thead><tr><th class="label-md">Analista</th><th class="label-md">Cantidad</th></tr></thead>
+                    <tbody>
+                        @foreach (var item in _tablero.PorAnalista)
+                        {
+                            <tr>
+                                <td class="body-sm mono-data">@item.AnalistaUsuarioId</td>
+                                <td class="body-sm">@item.Cantidad</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="headline-sm">Casos por Resultado</h2>
+                    <button type="button" class="btn-secondary" @onclick="@(() => ExportarAsync("resultado"))">Exportar</button>
+                </div>
+                <canvas id="chart-resultado"></canvas>
+                <table class="table mt-2">
+                    <thead><tr><th class="label-md">Resultado</th><th class="label-md">Cantidad</th></tr></thead>
+                    <tbody>
+                        @foreach (var item in _tablero.PorResultado)
+                        {
+                            <tr>
+                                <td class="body-sm">@item.Resultado</td>
+                                <td class="body-sm">@item.Cantidad</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private IJSObjectReference? _module;
+    private IReadOnlyCollection<DependenciaDto>? _dependencias;
+    private IReadOnlyCollection<TipoIncidenteDto>? _tiposIncidente;
+    private TableroAnaliticaDto? _tablero;
+
+    private DateTime? _fechaDesde;
+    private DateTime? _fechaHasta;
+
+    private bool _cargando;
+    private string? _errorMessage;
+
+    private bool _circuitoListo;
+    private bool _graficosPendientes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+        _tiposIncidente = await Sender.Send(new ListarTiposIncidenteQuery());
+        await ActualizarAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _circuitoListo = true;
+        }
+
+        if (_circuitoListo && _graficosPendientes)
+        {
+            _graficosPendientes = false;
+            await RenderizarGraficosAsync();
+        }
+    }
+
+    private async Task ActualizarAsync()
+    {
+        _errorMessage = null;
+        _cargando = true;
+
+        try
+        {
+            var query = new ObtenerTableroAnaliticaQuery(
+                FechaDesde: _fechaDesde is null ? null : DateOnly.FromDateTime(_fechaDesde.Value),
+                FechaHasta: _fechaHasta is null ? null : DateOnly.FromDateTime(_fechaHasta.Value));
+
+            _tablero = await Sender.Send(query);
+
+            if (_circuitoListo)
+            {
+                await RenderizarGraficosAsync();
+            }
+            else
+            {
+                _graficosPendientes = true;
+            }
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo cargar el tablero de analítica. Intentá de nuevo.";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task RenderizarGraficosAsync()
+    {
+        if (_tablero is null)
+        {
+            return;
+        }
+
+        _module ??= await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/js/tablero-analitica.js");
+
+        await _module.InvokeVoidAsync(
+            "renderBarChart",
+            "chart-dependencia",
+            _tablero.PorDependencia.Select(c => NombreDependencia(c.DependenciaId)).ToArray(),
+            _tablero.PorDependencia.Select(c => c.Cantidad).ToArray(),
+            "#213a88");
+
+        await _module.InvokeVoidAsync(
+            "renderBarChart",
+            "chart-tipoIncidente",
+            _tablero.PorTipoIncidente.Select(c => NombreTipoIncidente(c.TipoIncidenteId)).ToArray(),
+            _tablero.PorTipoIncidente.Select(c => c.Cantidad).ToArray(),
+            "#006781");
+
+        await _module.InvokeVoidAsync(
+            "renderBarChart",
+            "chart-analista",
+            _tablero.PorAnalista.Select(c => c.AnalistaUsuarioId.ToString()).ToArray(),
+            _tablero.PorAnalista.Select(c => c.Cantidad).ToArray(),
+            "#213a88");
+
+        await _module.InvokeVoidAsync(
+            "renderBarChart",
+            "chart-resultado",
+            _tablero.PorResultado.Select(c => c.Resultado.ToString()).ToArray(),
+            _tablero.PorResultado.Select(c => c.Cantidad).ToArray(),
+            "#006781");
+    }
+
+    private async Task ExportarAsync(string dimension)
+    {
+        if (_tablero is null || _module is null)
+        {
+            return;
+        }
+
+        var (fileName, csv) = dimension switch
+        {
+            "dependencia" => ("casos-por-dependencia.csv", TableroAnaliticaCsvExporter.ExportarPorDependencia(_tablero.PorDependencia)),
+            "tipoIncidente" => ("casos-por-tipo-incidente.csv", TableroAnaliticaCsvExporter.ExportarPorTipoIncidente(_tablero.PorTipoIncidente)),
+            "analista" => ("casos-por-analista.csv", TableroAnaliticaCsvExporter.ExportarPorAnalista(_tablero.PorAnalista)),
+            "resultado" => ("casos-por-resultado.csv", TableroAnaliticaCsvExporter.ExportarPorResultado(_tablero.PorResultado)),
+            _ => throw new ArgumentOutOfRangeException(nameof(dimension)),
+        };
+
+        await _module.InvokeVoidAsync("downloadCsv", fileName, csv);
+    }
+
+    private string NombreDependencia(Guid id) => _dependencias?.FirstOrDefault(d => d.Id == id)?.Nombre ?? id.ToString();
+
+    private string NombreTipoIncidente(Guid id)
+    {
+        var tipo = _tiposIncidente?.FirstOrDefault(t => t.Id == id);
+        return tipo is null ? id.ToString() : $"{tipo.Codigo} - {tipo.Descripcion}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync("destroyAllCharts");
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

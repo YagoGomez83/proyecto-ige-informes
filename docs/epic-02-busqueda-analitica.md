@@ -32,18 +32,43 @@ Característica: Búsqueda de informes
 ## HU-06 · Tablero de analítica de gestión
 
 **Como** Supervisor de Equipo Analítica
-**Quiero** ver cantidad de informes por dependencia, por causa/tipo de causa
-y por analista, en un rango de fechas
+**Quiero** ver cantidad de Casos de Análisis por Dependencia (jurisdicción
+del llamado), por Tipo de Incidente, por Analista y por Resultado, en un
+rango de fechas
 **Para** reportar la carga de trabajo del equipo sin armar planillas a mano
+
+> Nota (decidido al retomar Fase 4): el tablero cuenta `CasoAnalisis`, no
+> `Informe` — es la unidad de trabajo que siempre existe (`Informe` es
+> opcional y no tiene `Resultado`), y coincide con el criterio de cierre
+> de la Fase 4 en `08-plan-implementacion.md` ("casos por dependencia y
+> resultado").
 
 ```gherkin
 Característica: Tablero de analítica
 
   Escenario: Reporte por dependencia
     Dado que selecciono un rango de fechas
-    Cuando abro el tablero de "Informes por Dependencia"
-    Entonces veo un gráfico y tabla con el conteo de informes por cada
-      dependencia solicitante en ese período
+    Cuando abro el tablero de "Casos por Dependencia"
+    Entonces veo un gráfico y tabla con el conteo de Casos de Análisis por
+      cada Dependencia (jurisdicción del llamado) en ese período
+
+  Escenario: Reporte por tipo de incidente
+    Dado que selecciono un rango de fechas
+    Cuando abro el tablero de "Casos por Tipo de Incidente"
+    Entonces veo un gráfico y tabla con el conteo de Casos de Análisis por
+      cada Tipo de Incidente en ese período
+
+  Escenario: Reporte por analista
+    Dado que selecciono un rango de fechas
+    Cuando abro el tablero de "Casos por Analista"
+    Entonces veo un gráfico y tabla con el conteo de Casos de Análisis por
+      cada Analista asignado en ese período
+
+  Escenario: Reporte por resultado
+    Dado que selecciono un rango de fechas
+    Cuando abro el tablero de "Casos por Resultado"
+    Entonces veo un gráfico y tabla con el conteo de Casos de Análisis por
+      Resultado (Positivo, Negativo, Revisión) en ese período
 
   Escenario: Exportar reporte
     Dado que estoy viendo cualquier tablero de analítica
