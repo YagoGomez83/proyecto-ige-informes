@@ -51,13 +51,13 @@
                 </div>
             </Authorized>
         </AuthorizeView>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="configuracion">
-                <span class="bi bi-gear-nav-menu" aria-hidden="true"></span> Configuración
-            </NavLink>
-        </div>
         <AuthorizeView Roles="Admin">
             <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="configuracion">
+                        <span class="bi bi-gear-nav-menu" aria-hidden="true"></span> Configuración
+                    </NavLink>
+                </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="informes/migrar">
                         <span class="bi bi-upload-nav-menu" aria-hidden="true"></span> Migrar Informes

@@ -11,7 +11,7 @@ public sealed class ObtenerCamaraPorIdQueryHandler(IAppDbContext dbContext)
     {
         return await dbContext.Camaras.AsNoTracking()
             .Where(c => c.Id == request.CamaraId)
-            .Select(c => new CamaraDto(c.Id, c.Codigo, c.Tipo, c.Ubicacion))
+            .Select(c => new CamaraDto(c.Id, c.Codigo, c.Tipo, c.Ubicacion, c.DependenciaId))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

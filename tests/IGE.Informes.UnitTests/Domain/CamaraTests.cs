@@ -58,4 +58,51 @@ public class CamaraTests
 
         Assert.Equal(TipoCamara.Lpr, camara.Tipo);
     }
+
+    [Fact]
+    public void Alta_con_dependencia_la_asigna()
+    {
+        var dependenciaId = Guid.NewGuid();
+
+        var camara = new Camara("SL 18", TipoCamara.Domo, dependenciaId: dependenciaId);
+
+        Assert.Equal(dependenciaId, camara.DependenciaId);
+    }
+
+    [Fact]
+    public void Alta_sin_dependencia_queda_sin_jurisdiccion()
+    {
+        var camara = new Camara("LP 217", TipoCamara.Lpr);
+
+        Assert.Null(camara.DependenciaId);
+    }
+
+    [Fact]
+    public void AsignarDependencia_vincula_la_camara_a_una_dependencia()
+    {
+        var camara = new Camara("LP 217", TipoCamara.Lpr);
+        var dependenciaId = Guid.NewGuid();
+
+        camara.AsignarDependencia(dependenciaId);
+
+        Assert.Equal(dependenciaId, camara.DependenciaId);
+    }
+
+    [Fact]
+    public void AsignarDependencia_rechaza_id_vacio()
+    {
+        var camara = new Camara("LP 217", TipoCamara.Lpr);
+
+        Assert.Throws<ArgumentException>(() => camara.AsignarDependencia(Guid.Empty));
+    }
+
+    [Fact]
+    public void QuitarDependencia_deja_la_camara_sin_jurisdiccion()
+    {
+        var camara = new Camara("SL 18", TipoCamara.Domo, dependenciaId: Guid.NewGuid());
+
+        camara.QuitarDependencia();
+
+        Assert.Null(camara.DependenciaId);
+    }
 }

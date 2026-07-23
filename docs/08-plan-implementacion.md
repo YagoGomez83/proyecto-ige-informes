@@ -169,6 +169,46 @@ el sistema para todos los usuarios.
 
 ---
 
+## Fase 6 · Gestión de Catálogos (Épica 04)
+
+Referencia: `docs/epic-04-gestion-catalogos.md`
+
+Agregada después del cierre de la Fase 4 — hasta ahora `Dependencia` y
+`Camara` existían en `Domain` sin ningún alta manual desde la UI (los
+datos se cargaban por fuera del código). Esta fase agrega el CRUD que
+faltaba, más el modelo de jurisdicción geográfica (`Barrio`) pedido para
+poder asociar Cámaras y Casos a una zona real.
+
+- [x] Entidad `Barrio` en `Domain`, con catálogo administrable.
+- [x] `Dependencia` extendida: colección de `Barrio` (jurisdicción
+      geográfica opcional, sin restricción por `Tipo`), `Nombre` único.
+- [x] `Camara` extendida: `DependenciaId` opcional (nullable).
+- [x] HU-11: alta de Dependencias + asignación de Barrios de jurisdicción.
+- [x] HU-12: alta manual de Cámaras con Dependencia opcional.
+- [x] HU-13: catálogo de Barrios.
+- [x] Rutas nuevas bajo `/configuracion` (liberado el placeholder de
+      `Proximamente.razor`), restringidas a rol Admin (páginas de alta y
+      acciones de edición de Cámara envueltas en `AuthorizeView
+      Roles="Admin"`, hallazgo del `security-reviewer` sobre
+      `Camaras/Detalle.razor` corregido antes de cerrar).
+
+**Criterio de cierre**: el Administrador da de alta una Dependencia nueva,
+le asigna Barrios de jurisdicción, y da de alta una Cámara vinculada a esa
+Dependencia, todo desde la UI sin tocar la base de datos directamente.
+**Cumplido y verificado en navegador** (flujo completo: Barrio → Dependencia
+→ asignación → Cámara con y sin Dependencia, confirmado en base real con
+`AuditLog` correcto).
+
+**Deuda registrada (no bloqueante)**: la migración `AddBarrioYJurisdiccion`
+crea el índice único `IX_Dependencias_Nombre` sin un paso previo de
+detección/consolidación de duplicados — señalado por el `security-reviewer`.
+No aplica en el entorno actual (sin duplicados verificado), pero si se
+despliega contra un entorno con datos cargados manualmente antes de esta
+fase, la migración podría fallar a mitad de camino. Revisar antes de un
+despliegue a un entorno con datos preexistentes de `Dependencia`.
+
+---
+
 ## Cómo trabajar cada fase con Claude Code
 
 1. Abrir una sesión nueva por fase (o por HU si la fase es grande).

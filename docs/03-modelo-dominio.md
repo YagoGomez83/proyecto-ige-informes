@@ -6,6 +6,8 @@
 erDiagram
     DEPENDENCIA ||--o{ CASO_ANALISIS : "jurisdiccion del llamado"
     DEPENDENCIA ||--o{ INFORME : "solicita"
+    DEPENDENCIA }o--o{ BARRIO : "jurisdiccion geografica (opcional)"
+    DEPENDENCIA ||--o{ CAMARA : "jurisdiccion (opcional)"
     CAUSA ||--o{ INFORME : "motiva"
     TIPO_INCIDENTE ||--o{ CASO_ANALISIS : "clasifica"
     CASO_ANALISIS ||--o{ INFORME : "puede originar 0..N"
@@ -24,7 +26,7 @@ erDiagram
 
     DEPENDENCIA {
         guid id
-        string nombre
+        string nombre "unico"
         string tipo "Comisaria|Fiscalia|Juzgado|Division|UR"
     }
 
@@ -88,6 +90,12 @@ erDiagram
         string codigo "ej SL-18, JK-51, VM-86"
         string ubicacion
         string tipo "Domo|LPR"
+        guid dependencia_id "nullable, jurisdiccion opcional"
+    }
+
+    BARRIO {
+        guid id
+        string nombre "unico"
     }
 
     VEHICULO {
@@ -177,6 +185,15 @@ erDiagram
    Firmante` antes de que `Informe.estado` pueda pasar a `Publicado`.
 9. Toda lectura de un `CasoAnalisis`, `Informe`, `Vehiculo` o `Persona` por
    parte de un `Usuario` queda registrada en `AuditLog`.
+10. `Dependencia.nombre` es único en todo el sistema.
+11. Un `Dependencia` puede tener 0 o más `Barrio` asignados (jurisdicción
+    geográfica), sin importar su `Tipo` — no hay restricción en el dominio
+    por tipo de Dependencia; la UI simplemente no lo exige para Fiscalía o
+    Juzgado.
+12. `Camara.dependencia_id` es nullable — una Cámara LPR en ruta o en un
+    paso limítrofe puede no pertenecer a ninguna Dependencia.
+13. `Barrio.nombre` es único — se reutiliza el mismo `Barrio` entre
+    distintas Dependencias en vez de duplicar el nombre por cada una.
 
 ## Alcance de migración de datos (confirmado)
 

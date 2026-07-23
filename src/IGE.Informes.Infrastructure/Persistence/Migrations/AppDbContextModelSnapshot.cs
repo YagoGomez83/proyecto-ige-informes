@@ -56,6 +56,25 @@ namespace IGE.Informes.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditLogs", (string)null);
                 });
 
+            modelBuilder.Entity("IGE.Informes.Domain.Entities.Barrio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Barrios", (string)null);
+                });
+
             modelBuilder.Entity("IGE.Informes.Domain.Entities.Camara", b =>
                 {
                     b.Property<Guid>("Id")
@@ -66,6 +85,9 @@ namespace IGE.Informes.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("DependenciaId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
@@ -80,6 +102,8 @@ namespace IGE.Informes.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Codigo")
                         .IsUnique();
+
+                    b.HasIndex("DependenciaId");
 
                     b.ToTable("Camaras", (string)null);
                 });
@@ -188,6 +212,11 @@ namespace IGE.Informes.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.PrimitiveCollection<Guid[]>("BarrioIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("BarrioIds");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -199,6 +228,9 @@ namespace IGE.Informes.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
 
                     b.ToTable("Dependencias", (string)null);
                 });
@@ -623,6 +655,13 @@ namespace IGE.Informes.Infrastructure.Persistence.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("IGE.Informes.Domain.Entities.Camara", b =>
+                {
+                    b.HasOne("IGE.Informes.Domain.Entities.Dependencia", null)
+                        .WithMany()
+                        .HasForeignKey("DependenciaId");
                 });
 
             modelBuilder.Entity("IGE.Informes.Domain.Entities.CasoAnalisis", b =>

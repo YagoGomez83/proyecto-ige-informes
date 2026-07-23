@@ -1,0 +1,84 @@
+@page "/dependencias/nueva"
+@attribute [Authorize(Roles = "Admin")]
+@using System.ComponentModel.DataAnnotations
+@using FluentValidation
+@using IGE.Informes.Application.Dependencias.Commands.CrearDependencia
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nueva Dependencia · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Nueva Dependencia</h1>
+
+<div class="card" style="max-width: 480px;">
+    <EditForm Model="_input" OnValidSubmit="RegistrarAsync" FormName="nueva-dependencia">
+        <DataAnnotationsValidator />
+
+        @if (_errorMessage is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="nombre">Nombre</label>
+            <InputText id="nombre" class="form-control" @bind-Value="_input.Nombre" placeholder="Ej: Comisaría Seccional Primera" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="tipo">Tipo</label>
+            <InputSelect id="tipo" class="form-control" @bind-Value="_input.Tipo">
+                <option value="@TipoDependencia.Comisaria">Comisaría</option>
+                <option value="@TipoDependencia.Fiscalia">Fiscalía</option>
+                <option value="@TipoDependencia.Juzgado">Juzgado</option>
+                <option value="@TipoDependencia.Division">División</option>
+                <option value="@TipoDependencia.UnidadRegional">Unidad Regional</option>
+            </InputSelect>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Dependencia</button>
+            <a class="btn-secondary" href="dependencias">Cancelar</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly InputModel _input = new();
+    private string? _errorMessage;
+    private bool _guardando;
+
+    private async Task RegistrarAsync()
+    {
+        _errorMessage = null;
+        _guardando = true;
+
+        try
+        {
+            var dependenciaId = await Sender.Send(new CrearDependenciaCommand(_input.Nombre, _input.Tipo));
+
+            NavigationManager.NavigateTo($"dependencias/{dependenciaId}");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo registrar la Dependencia. Verificá que el nombre no esté repetido.";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        public string Nombre { get; set; } = string.Empty;
+
+        public TipoDependencia Tipo { get; set; } = TipoDependencia.Comisaria;
+    }
+}

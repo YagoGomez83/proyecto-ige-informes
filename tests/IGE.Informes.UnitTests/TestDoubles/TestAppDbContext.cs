@@ -21,6 +21,8 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
 
     public DbSet<Dependencia> Dependencias => Set<Dependencia>();
 
+    public DbSet<Barrio> Barrios => Set<Barrio>();
+
     public DbSet<TipoIncidente> TiposIncidente => Set<TipoIncidente>();
 
     public DbSet<CasoAnalisis> CasosAnalisis => Set<CasoAnalisis>();
@@ -75,6 +77,12 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
         builder.Entity<Vehiculo>(vehiculo =>
         {
             vehiculo.PrimitiveCollection(v => v.CategoriasAlertaIds)
+                .Metadata.SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<Dependencia>(dependencia =>
+        {
+            dependencia.PrimitiveCollection(d => d.BarrioIds)
                 .Metadata.SetPropertyAccessMode(PropertyAccessMode.Field);
         });
 

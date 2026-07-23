@@ -16,7 +16,16 @@ public sealed class RegistrarCamaraCommandHandler(IAppDbContext dbContext) : IRe
             throw new EntidadDuplicadaException(nameof(Camara), nameof(Camara.Codigo), request.Codigo);
         }
 
-        var camara = new Camara(request.Codigo, request.Tipo, request.Ubicacion);
+        if (request.DependenciaId is { } dependenciaId)
+        {
+            var dependenciaExiste = await dbContext.Dependencias.AnyAsync(d => d.Id == dependenciaId, cancellationToken);
+            if (!dependenciaExiste)
+            {
+                throw new EntidadNoEncontradaException(nameof(Dependencia), dependenciaId);
+            }
+        }
+
+        var camara = new Camara(request.Codigo, request.Tipo, request.Ubicacion, request.DependenciaId);
 
         dbContext.Camaras.Add(camara);
 

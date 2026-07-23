@@ -11,6 +11,8 @@ public interface IAppDbContext
 {
     DbSet<Dependencia> Dependencias { get; }
 
+    DbSet<Barrio> Barrios { get; }
+
     DbSet<TipoIncidente> TiposIncidente { get; }
 
     DbSet<CasoAnalisis> CasosAnalisis { get; }

@@ -1,0 +1,131 @@
+@page "/dependencias/{DependenciaId:guid}"
+@attribute [Authorize]
+@using IGE.Informes.Application.Barrios.Queries.ListarBarrios
+@using IGE.Informes.Application.Dependencias.Commands.AsignarBarrioADependencia
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.Dependencias.Queries.ObtenerDependenciaPorId
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Detalle de Dependencia · IGE 4.0</PageTitle>
+
+@if (!_cargado)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_dependencia is null)
+{
+    <p class="body-md">No se encontró la Dependencia solicitada.</p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <h1 class="headline-md mb-1">@_dependencia.Nombre</h1>
+        <a class="btn-secondary" href="dependencias">Volver al listado</a>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Datos generales</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3 label-md">Tipo</dt>
+            <dd class="col-sm-9 body-md">@_dependencia.Tipo</dd>
+        </dl>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Jurisdicción geográfica</h2>
+        @if (_dependencia.BarrioIds.Count == 0)
+        {
+            <p class="body-md">Esta Dependencia no tiene Barrios asignados.</p>
+        }
+        else
+        {
+            <ul class="mb-0">
+                @foreach (var barrioId in _dependencia.BarrioIds)
+                {
+                    <li class="body-md">@NombreBarrio(barrioId)</li>
+                }
+            </ul>
+        }
+    </div>
+
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <div class="card">
+                <h2 class="headline-sm mb-2">Asignar Barrio</h2>
+                <div class="d-flex align-items-end gap-2">
+                    <div class="flex-grow-1">
+                        <select class="form-control" @bind="_barrioSeleccionadoId">
+                            <option value="">Seleccionar...</option>
+                            @if (_barrios is not null)
+                            {
+                                @foreach (var barrio in _barrios)
+                                {
+                                    <option value="@barrio.Id">@barrio.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <button type="button" class="btn-secondary" @onclick="AsignarBarrioAsync" disabled="@_procesando">Asignar</button>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid DependenciaId { get; set; }
+
+    private DependenciaDto? _dependencia;
+    private IReadOnlyCollection<BarrioDto>? _barrios;
+    private bool _cargado;
+    private string? _barrioSeleccionadoId;
+    private string? _errorMessage;
+    private bool _procesando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _barrios = await Sender.Send(new ListarBarriosQuery());
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _dependencia = await Sender.Send(new ObtenerDependenciaPorIdQuery(DependenciaId));
+        _cargado = true;
+    }
+
+    private string NombreBarrio(Guid barrioId) => _barrios?.FirstOrDefault(b => b.Id == barrioId)?.Nombre ?? barrioId.ToString();
+
+    private async Task AsignarBarrioAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_barrioSeleccionadoId))
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new AsignarBarrioADependenciaCommand(DependenciaId, Guid.Parse(_barrioSeleccionadoId)));
+            _barrioSeleccionadoId = null;
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo asignar el Barrio.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+}

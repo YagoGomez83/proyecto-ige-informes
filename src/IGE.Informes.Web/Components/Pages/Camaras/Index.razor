@@ -8,7 +8,11 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="headline-md">Cámaras</h1>
-    <a class="btn-primary" href="camaras/nueva">Nueva Cámara</a>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <a class="btn-primary" href="camaras/nueva">Nueva Cámara</a>
+        </Authorized>
+    </AuthorizeView>
 </div>
 
 @if (_camaras is null)

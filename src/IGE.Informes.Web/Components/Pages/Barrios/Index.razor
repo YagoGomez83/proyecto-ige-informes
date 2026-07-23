@@ -1,0 +1,56 @@
+@page "/barrios"
+@attribute [Authorize]
+@using IGE.Informes.Application.Barrios.Queries.ListarBarrios
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Barrios · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Barrios</h1>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <a class="btn-primary" href="barrios/nuevo">Nuevo Barrio</a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@if (_barrios is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_barrios.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay barrios cargados.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Nombre</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var barrio in _barrios)
+                {
+                    <tr>
+                        <td class="body-md">@barrio.Nombre</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<BarrioDto>? _barrios;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _barrios = await Sender.Send(new ListarBarriosQuery());
+    }
+}

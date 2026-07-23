@@ -1,8 +1,10 @@
 @page "/camaras/{CamaraId:guid}"
 @attribute [Authorize]
+@using IGE.Informes.Application.Camaras.Commands.AsignarDependenciaACamara
 @using IGE.Informes.Application.Camaras.Commands.CambiarTipoCamara
 @using IGE.Informes.Application.Camaras.Commands.CompletarUbicacionCamara
 @using IGE.Informes.Application.Camaras.Queries.ObtenerCamaraPorId
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
@@ -42,32 +44,58 @@ else
 
             <dt class="col-sm-3 label-md">Ubicación</dt>
             <dd class="col-sm-9 body-md">@(_camara.Ubicacion ?? "—")</dd>
+
+            <dt class="col-sm-3 label-md">Dependencia</dt>
+            <dd class="col-sm-9 body-md">@NombreDependencia(_camara.DependenciaId)</dd>
         </dl>
     </div>
 
-    @if (_camara.Ubicacion is null)
-    {
-        <div class="card mb-3">
-            <h2 class="headline-sm mb-2">Completar ubicación</h2>
-            <div class="d-flex align-items-end gap-2">
-                <div class="flex-grow-1">
-                    <input class="form-control" @bind="_ubicacion" placeholder="Ej: Av. Illia y San Martín" />
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <div class="card mb-3">
+                <h2 class="headline-sm mb-2">Asignar Dependencia</h2>
+                <div class="d-flex align-items-end gap-2">
+                    <div class="flex-grow-1">
+                        <select class="form-control" @bind="_dependenciaSeleccionadaId">
+                            <option value="">Seleccionar...</option>
+                            @if (_dependencias is not null)
+                            {
+                                @foreach (var dependencia in _dependencias)
+                                {
+                                    <option value="@dependencia.Id">@dependencia.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <button type="button" class="btn-secondary" @onclick="AsignarDependenciaAsync" disabled="@_procesando">Asignar</button>
                 </div>
-                <button type="button" class="btn-primary" @onclick="CompletarUbicacionAsync" disabled="@_procesando">Guardar</button>
             </div>
-        </div>
-    }
 
-    <div class="card">
-        <h2 class="headline-sm mb-2">Cambiar tipo</h2>
-        <div class="d-flex align-items-end gap-2">
-            <select class="form-control" @bind="_tipoSeleccionado">
-                <option value="@TipoCamara.Domo">Domo</option>
-                <option value="@TipoCamara.Lpr">LPR (Lector de Patentes)</option>
-            </select>
-            <button type="button" class="btn-secondary" @onclick="CambiarTipoAsync" disabled="@_procesando">Confirmar</button>
-        </div>
-    </div>
+            @if (_camara.Ubicacion is null)
+            {
+                <div class="card mb-3">
+                    <h2 class="headline-sm mb-2">Completar ubicación</h2>
+                    <div class="d-flex align-items-end gap-2">
+                        <div class="flex-grow-1">
+                            <input class="form-control" @bind="_ubicacion" placeholder="Ej: Av. Illia y San Martín" />
+                        </div>
+                        <button type="button" class="btn-primary" @onclick="CompletarUbicacionAsync" disabled="@_procesando">Guardar</button>
+                    </div>
+                </div>
+            }
+
+            <div class="card">
+                <h2 class="headline-sm mb-2">Cambiar tipo</h2>
+                <div class="d-flex align-items-end gap-2">
+                    <select class="form-control" @bind="_tipoSeleccionado">
+                        <option value="@TipoCamara.Domo">Domo</option>
+                        <option value="@TipoCamara.Lpr">LPR (Lector de Patentes)</option>
+                    </select>
+                    <button type="button" class="btn-secondary" @onclick="CambiarTipoAsync" disabled="@_procesando">Confirmar</button>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
 
     @if (_errorMessage is not null)
     {
@@ -80,13 +108,19 @@ else
     public Guid CamaraId { get; set; }
 
     private CamaraDto? _camara;
+    private IReadOnlyCollection<DependenciaDto>? _dependencias;
     private bool _cargado;
     private string _ubicacion = string.Empty;
     private TipoCamara _tipoSeleccionado;
+    private string? _dependenciaSeleccionadaId;
     private string? _errorMessage;
     private bool _procesando;
 
-    protected override async Task OnInitializedAsync() => await CargarAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+        await CargarAsync();
+    }
 
     private async Task CargarAsync()
     {
@@ -96,6 +130,42 @@ else
         if (_camara is not null)
         {
             _tipoSeleccionado = _camara.Tipo;
+        }
+    }
+
+    private string NombreDependencia(Guid? dependenciaId)
+    {
+        if (dependenciaId is null)
+        {
+            return "—";
+        }
+
+        return _dependencias?.FirstOrDefault(d => d.Id == dependenciaId)?.Nombre ?? "—";
+    }
+
+    private async Task AsignarDependenciaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_dependenciaSeleccionadaId))
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new AsignarDependenciaACamaraCommand(CamaraId, Guid.Parse(_dependenciaSeleccionadaId)));
+            _dependenciaSeleccionadaId = null;
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo asignar la Dependencia.";
+        }
+        finally
+        {
+            _procesando = false;
         }
     }
 

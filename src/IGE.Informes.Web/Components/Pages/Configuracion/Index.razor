@@ -1,0 +1,27 @@
+@page "/configuracion"
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Configuración · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Configuración</h1>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <a class="card d-block" href="dependencias" style="text-decoration: none;">
+            <h2 class="headline-sm mb-1">Dependencias</h2>
+            <p class="body-sm mb-0">Alta y jurisdicción geográfica de Comisarías, Fiscalías y demás organismos.</p>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a class="card d-block" href="camaras" style="text-decoration: none;">
+            <h2 class="headline-sm mb-1">Cámaras</h2>
+            <p class="body-sm mb-0">Catálogo de cámaras Domo y LPR, con Dependencia opcional.</p>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a class="card d-block" href="barrios" style="text-decoration: none;">
+            <h2 class="headline-sm mb-1">Barrios</h2>
+            <p class="body-sm mb-0">Catálogo de zonas geográficas reutilizable como jurisdicción.</p>
+        </a>
+    </div>
+</div>

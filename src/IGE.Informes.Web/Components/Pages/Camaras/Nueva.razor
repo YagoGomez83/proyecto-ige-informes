@@ -1,8 +1,9 @@
 @page "/camaras/nueva"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Admin")]
 @using System.ComponentModel.DataAnnotations
 @using FluentValidation
 @using IGE.Informes.Application.Camaras.Commands.RegistrarCamara
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
@@ -39,6 +40,20 @@
             <InputText id="ubicacion" class="form-control" @bind-Value="_input.Ubicacion" />
         </div>
 
+        <div class="mb-3">
+            <label class="label-md" for="dependencia">Dependencia (opcional — dejar sin seleccionar para LPR en ruta o paso limítrofe)</label>
+            <select id="dependencia" class="form-control" @bind="_input.DependenciaId">
+                <option value="">Sin Dependencia</option>
+                @if (_dependencias is not null)
+                {
+                    @foreach (var dependencia in _dependencias)
+                    {
+                        <option value="@dependencia.Id">@dependencia.Nombre</option>
+                    }
+                }
+            </select>
+        </div>
+
         <div class="d-flex gap-2">
             <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Cámara</button>
             <a class="btn-secondary" href="camaras">Cancelar</a>
@@ -48,8 +63,14 @@
 
 @code {
     private readonly InputModel _input = new();
+    private IReadOnlyCollection<DependenciaDto>? _dependencias;
     private string? _errorMessage;
     private bool _guardando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+    }
 
     private async Task RegistrarAsync()
     {
@@ -61,7 +82,8 @@
             var camaraId = await Sender.Send(new RegistrarCamaraCommand(
                 _input.Codigo,
                 _input.Tipo,
-                string.IsNullOrWhiteSpace(_input.Ubicacion) ? null : _input.Ubicacion));
+                string.IsNullOrWhiteSpace(_input.Ubicacion) ? null : _input.Ubicacion,
+                string.IsNullOrWhiteSpace(_input.DependenciaId) ? null : Guid.Parse(_input.DependenciaId)));
 
             NavigationManager.NavigateTo($"camaras/{camaraId}");
         }
@@ -87,5 +109,7 @@
         public TipoCamara Tipo { get; set; } = TipoCamara.Domo;
 
         public string? Ubicacion { get; set; }
+
+        public string DependenciaId { get; set; } = string.Empty;
     }
 }

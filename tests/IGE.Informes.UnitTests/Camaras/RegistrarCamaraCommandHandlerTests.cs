@@ -33,4 +33,46 @@ public class RegistrarCamaraCommandHandlerTests
         await Assert.ThrowsAsync<EntidadDuplicadaException>(() => handler.Handle(
             new RegistrarCamaraCommand("SL 18", TipoCamara.Lpr, null), CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Registra_una_camara_con_dependencia()
+    {
+        var dbContext = new TestAppDbContext();
+        var dependencia = new Dependencia("Comisaría 2°", TipoDependencia.Comisaria);
+        dbContext.Dependencias.Add(dependencia);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new RegistrarCamaraCommandHandler(dbContext);
+
+        var camaraId = await handler.Handle(
+            new RegistrarCamaraCommand("SL 18", TipoCamara.Domo, null, dependencia.Id),
+            CancellationToken.None);
+
+        var camara = await dbContext.Camaras.FindAsync(camaraId);
+        Assert.Equal(dependencia.Id, camara!.DependenciaId);
+    }
+
+    [Fact]
+    public async Task Registra_una_camara_sin_dependencia_para_lpr_en_ruta()
+    {
+        var dbContext = new TestAppDbContext();
+        var handler = new RegistrarCamaraCommandHandler(dbContext);
+
+        var camaraId = await handler.Handle(
+            new RegistrarCamaraCommand("LP 217", TipoCamara.Lpr, "Ruta 20 km 5"),
+            CancellationToken.None);
+
+        var camara = await dbContext.Camaras.FindAsync(camaraId);
+        Assert.Null(camara!.DependenciaId);
+    }
+
+    [Fact]
+    public async Task Rechaza_una_dependencia_inexistente()
+    {
+        var dbContext = new TestAppDbContext();
+        var handler = new RegistrarCamaraCommandHandler(dbContext);
+
+        await Assert.ThrowsAsync<EntidadNoEncontradaException>(() => handler.Handle(
+            new RegistrarCamaraCommand("SL 18", TipoCamara.Domo, null, Guid.NewGuid()), CancellationToken.None));
+    }
 }

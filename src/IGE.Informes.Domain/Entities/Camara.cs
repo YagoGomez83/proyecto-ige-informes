@@ -12,12 +12,13 @@ public sealed class Camara : IAuditable
     public string Codigo { get; private set; } = string.Empty;
     public string? Ubicacion { get; private set; }
     public TipoCamara Tipo { get; private set; }
+    public Guid? DependenciaId { get; private set; }
 
     private Camara()
     {
     }
 
-    public Camara(string codigo, TipoCamara tipo, string? ubicacion = null)
+    public Camara(string codigo, TipoCamara tipo, string? ubicacion = null, Guid? dependenciaId = null)
     {
         if (string.IsNullOrWhiteSpace(codigo))
         {
@@ -28,6 +29,7 @@ public sealed class Camara : IAuditable
         Codigo = codigo;
         Tipo = tipo;
         Ubicacion = ubicacion;
+        DependenciaId = dependenciaId;
     }
 
     public void CompletarUbicacion(string ubicacion)
@@ -43,5 +45,25 @@ public sealed class Camara : IAuditable
     public void CambiarTipo(TipoCamara tipo)
     {
         Tipo = tipo;
+    }
+
+    /// <summary>
+    /// Vincula la Cámara a la Dependencia en cuya jurisdicción se
+    /// encuentra (ej. una Domo dentro de una Comisaría). Opcional — una
+    /// LPR en ruta o en un paso limítrofe puede no tener Dependencia.
+    /// </summary>
+    public void AsignarDependencia(Guid dependenciaId)
+    {
+        if (dependenciaId == Guid.Empty)
+        {
+            throw new ArgumentException("La Dependencia es obligatoria.", nameof(dependenciaId));
+        }
+
+        DependenciaId = dependenciaId;
+    }
+
+    public void QuitarDependencia()
+    {
+        DependenciaId = null;
     }
 }

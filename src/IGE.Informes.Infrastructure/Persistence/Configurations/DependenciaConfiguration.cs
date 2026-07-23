@@ -20,5 +20,11 @@ public sealed class DependenciaConfiguration : IEntityTypeConfiguration<Dependen
             .HasConversion<string>()
             .HasMaxLength(50)
             .IsRequired();
+
+        builder.HasIndex(d => d.Nombre).IsUnique();
+
+        builder.PrimitiveCollection(d => d.BarrioIds)
+            .HasColumnName("BarrioIds")
+            .Metadata.SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

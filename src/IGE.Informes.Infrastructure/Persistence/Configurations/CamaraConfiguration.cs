@@ -21,5 +21,10 @@ public sealed class CamaraConfiguration : IEntityTypeConfiguration<Camara>
             .IsRequired();
 
         builder.HasIndex(c => c.Codigo).IsUnique();
+
+        builder.HasOne<Dependencia>()
+            .WithMany()
+            .HasForeignKey(c => c.DependenciaId)
+            .IsRequired(false);
     }
 }

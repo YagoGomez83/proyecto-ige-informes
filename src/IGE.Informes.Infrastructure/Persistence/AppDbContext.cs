@@ -13,6 +13,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Dependencia> Dependencias => Set<Dependencia>();
 
+    public DbSet<Barrio> Barrios => Set<Barrio>();
+
     public DbSet<TipoIncidente> TiposIncidente => Set<TipoIncidente>();
 
     public DbSet<CasoAnalisis> CasosAnalisis => Set<CasoAnalisis>();

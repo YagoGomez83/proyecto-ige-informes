@@ -14,9 +14,10 @@
 | **Código de Incidente** | Catálogo de tipificación policial usado para clasificar el Caso de Análisis (ej. `164 - ROBO`, `162 - HURTO`, `02 - ASALTO A MANO ARMADA`, `25 - PERSONA SOSPECHOSA`). Es independiente de si el caso termina generando un Informe: ese es un evento posterior, disparado por el pedido de una Dependencia. |
 | **Estado del Caso** | Pendiente, Cerrado o En Revisión — refleja si el trabajo de análisis del caso está terminado. |
 | **Resultado del Caso** | Positivo, Negativo o Revisión — indica si el análisis de cámaras arrojó un hallazgo útil para la investigación. Dimensión clave de analítica de gestión. |
-| **Dependencia** | Organismo externo que solicita el análisis o el Informe: Comisaría, Fiscalía, Juzgado, División de investigación, o Unidad Regional (UR). |
+| **Dependencia** | Organismo externo que solicita el análisis o el Informe: Comisaría, Fiscalía, Juzgado, División de investigación, o Unidad Regional (UR). Algunas Dependencias (típicamente Comisarías) tienen **jurisdicción geográfica**: una colección de **Barrio** bajo su cobertura. Otras (Fiscalía, Juzgado) no la tienen — el campo queda vacío. |
+| **Barrio** | Zona geográfica catalogada (barrio, zona rural, tramo de ruta) que puede estar bajo la jurisdicción de una o más Dependencias. Catálogo simple administrado por el Administrador — sin geometría/mapa, solo nombre. |
 | **Evidencia** | Cada captura individual documentada dentro de un Informe (una "Imagen N°X"): cámara/dispositivo de origen, fecha y hora exacta, descripción y archivo de imagen. |
-| **Cámara / Dispositivo** | Fuente de una Evidencia o mencionada en un Caso. Código identificador (`SL 18`, `JK 51`, `VM 86`, `LP 217`) más ubicación. Dos tipos: Domo de monitoreo o LPR (Lector de Patentes). |
+| **Cámara / Dispositivo** | Fuente de una Evidencia o mencionada en un Caso. Código identificador (`SL 18`, `JK 51`, `VM 86`, `LP 217`) más ubicación. Dos tipos: Domo de monitoreo o LPR (Lector de Patentes). Puede pertenecer opcionalmente a una **Dependencia** (una Domo dentro de la jurisdicción de una Comisaría) — una LPR en ruta o en un paso limítrofe puede no tener Dependencia asociada. |
 | **Vehículo** | Rodado en catálogo de vigilancia. Atributos: marca/modelo, color, dominio (puede ser parcial/incierto), **categoría de alerta** (Robado, Narcotráfico, Inhibidores, Robo de Cubiertas, Pedido Especial — puede tener más de una), **estado** (Vigente | Identificado), **acción a realizar** al detectarlo (Detener | Identificar), **avisar a** (dependencia/persona de contacto), **fecha de baja** (cuándo dejó de estar en vigilancia activa). |
 | **Persona** | Individuo mencionado o identificado en un Caso/Informe, con un **rol** (Denunciante, Damnificado, Sospechoso, Conductor identificado, Testigo). Puede tener DNI si está identificada, o solo características físicas si no. |
 | **Analista / Operador** | Usuario del Equipo de Analítica. Un Caso puede tener varios analistas asignados (columna "Operadores" / "Creador ID" en la planilla histórica — se modela como relación N:M con rol). |
@@ -45,3 +46,11 @@
   cambiados entre fuentes del mismo caso).
 - **Características libres**: no modelar como columnas fijas — usar un
   campo de observaciones/tags flexible.
+- **Jurisdicción geográfica no es universal**: no todo `Tipo` de
+  `Dependencia` tiene Barrios asociados (una Comisaría sí, una Fiscalía o
+  Juzgado normalmente no) — no forzar la relación como obligatoria ni
+  restringirla por `Tipo` en el dominio; el campo simplemente queda vacío
+  cuando no aplica.
+- **`Camara.DependenciaId` es opcional**: una Domo dentro de la
+  jurisdicción de una Comisaría se vincula a esa Dependencia; una LPR en
+  ruta o en un paso limítrofe puede no pertenecer a ninguna.

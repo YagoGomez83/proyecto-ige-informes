@@ -1,0 +1,70 @@
+@page "/barrios/nuevo"
+@attribute [Authorize(Roles = "Admin")]
+@using System.ComponentModel.DataAnnotations
+@using FluentValidation
+@using IGE.Informes.Application.Barrios.Commands.CrearBarrio
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nuevo Barrio · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Nuevo Barrio</h1>
+
+<div class="card" style="max-width: 480px;">
+    <EditForm Model="_input" OnValidSubmit="RegistrarAsync" FormName="nuevo-barrio">
+        <DataAnnotationsValidator />
+
+        @if (_errorMessage is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="nombre">Nombre</label>
+            <InputText id="nombre" class="form-control" @bind-Value="_input.Nombre" placeholder="Ej: Barrio Norte" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Barrio</button>
+            <a class="btn-secondary" href="barrios">Cancelar</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly InputModel _input = new();
+    private string? _errorMessage;
+    private bool _guardando;
+
+    private async Task RegistrarAsync()
+    {
+        _errorMessage = null;
+        _guardando = true;
+
+        try
+        {
+            await Sender.Send(new CrearBarrioCommand(_input.Nombre));
+
+            NavigationManager.NavigateTo("barrios");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo registrar el Barrio. Verificá que el nombre no esté repetido.";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        public string Nombre { get; set; } = string.Empty;
+    }
+}
