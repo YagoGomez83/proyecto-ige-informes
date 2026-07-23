@@ -132,13 +132,19 @@ deuda por saldada.
 
 Referencia: `docs/02-historias-usuario/epic-02-busqueda-analitica.md`
 
-- [ ] Full-text search sobre `CasoAnalisis.observaciones` e
-      `Informe.relato` (PostgreSQL `tsvector` + índice GIN).
-- [ ] HU-05: búsqueda combinada (dependencia, código de incidente, dominio,
-      DNI/nombre, texto libre, rango de fechas).
-- [ ] HU-06: tableros de analítica (casos por dependencia, por código de
-      incidente, por resultado, por analista) + exportación a Excel/CSV.
-- [ ] HU-07: ficha 360° de Vehículo/Persona.
+- [x] Full-text search sobre `Informe.relato` (PostgreSQL `tsvector`,
+      ADR-002) — usado por HU-05. `CasoAnalisis.observaciones` no tiene
+      full-text propio: HU-06 no lo necesitó (solo agrupa/cuenta, no busca
+      texto libre) y HU-05 ya cubre búsqueda de Informes; queda como deuda
+      si en el futuro se pide buscar texto libre sobre Casos.
+- [x] HU-05: búsqueda combinada (dependencia, código de incidente, dominio,
+      DNI/nombre, texto libre, rango de fechas). Commit af090d8.
+- [x] HU-06: tablero de analítica (casos por dependencia, tipo de
+      incidente, resultado, analista — ver nota de alcance en
+      `docs/epic-02-busqueda-analitica.md`, cuenta CasoAnalisis no
+      Informe) + exportación a CSV. Commit e35a592.
+- [x] HU-07: ficha 360° de Vehículo/Persona (historial de Informes en las
+      páginas de detalle existentes). Commit 1deb312.
 
 **Criterio de cierre**: el Supervisor genera el reporte trimestral de
 "casos por dependencia y resultado" sin abrir Excel.
