@@ -23,8 +23,8 @@ naturaleza del dato.
 
 | Amenaza | Riesgo | Control |
 |---|---|---|
-| **S**poofing — suplantación de identidad | Alto (sin AD/LDAP, credenciales propias) | Hash de contraseñas con **Argon2id**; política de contraseña mínima (12+ caracteres); **2FA (TOTP)** obligatorio para roles Supervisor/Admin, recomendado para Analista |
-| **S**poofing — fuerza bruta / credential stuffing | Alto | Bloqueo de cuenta tras 5 intentos fallidos (lockout progresivo); rate limiting en el endpoint de login |
+| **S**poofing — suplantación de identidad | Alto (sin AD/LDAP, credenciales propias) | Hash de contraseñas con **Argon2id**; política de contraseña mínima (12+ caracteres); **2FA (TOTP)** disponible como autoservicio (`Manage/EnableAuthenticator`) para cualquier rol. **Deuda pendiente** (verificado en Fase 5): no hay enforcement que bloquee el login de Supervisor/Admin sin 2FA activado — a decidir si se vuelve obligatorio antes de producción |
+| **S**poofing — fuerza bruta / credential stuffing | Alto | Bloqueo de cuenta tras 5 intentos fallidos (lockout progresivo, `Identity.Lockout`); rate limiting por IP en las rutas `/Account` (10 req/min, `Microsoft.AspNetCore.RateLimiting`, ver `src/IGE.Informes.Web/Program.cs`) — requiere `ForwardedHeaders` configurado para que la IP particionada sea la del cliente real y no la del reverse proxy, ver Fase 5 |
 | **E**levation of Privilege | Medio | RBAC estricto por policy (`Analista` / `Supervisor` / `Admin`) validado en el backend en cada Command/Query — nunca confiar en el rol mostrado en el cliente |
 | **R**epudiation | Medio | Toda acción de login/logout queda en `AuditLog` con IP y user-agent |
 
@@ -34,6 +34,7 @@ naturaleza del dato.
 |---|---|---|
 | **I**nformation Disclosure — acceso no autorizado a un Informe/Persona | Alto | Autorización a nivel de Application layer (no solo UI); todo acceso de lectura a `Informe`, `CasoAnalisis`, `Vehiculo`, `Persona` se registra en `AuditLog` (usuario, entidad, timestamp) — es requisito, no opcional |
 | **T**ampering — modificación no autorizada de un Informe publicado | Alto | Un `Informe` en estado `Publicado` es inmutable salvo por un flujo explícito de "corrección" que genera nueva versión y conserva el historial (nunca sobreescribe) |
+| **T**ampering — código de identificación repetido entre entidades (`Camara.Codigo`) | Bajo | Decisión de diseño explícita (Fase 7): a diferencia del resto de los identificadores de negocio del proyecto, `Camara.Codigo` **no** es único — el relevamiento real trae códigos repetidos entre cámaras de una misma instalación agrupada (ver `docs/01-glosario-dominio.md`). No representa una amenaza de seguridad (no es un identificador de acceso ni de autorización), solo una particularidad de modelado a tener presente si se agrega lógica nueva que asuma unicidad |
 | **R**epudiation — negar haber modificado/consultado algo | Medio | `AuditLog` append-only, sin permisos de borrado ni para Admin desde la aplicación |
 | **I**nformation Disclosure — archivos (PDFs/imágenes) accesibles por URL directa | Alto | MinIO con **URLs prefirmadas de corta expiración** (nunca URLs públicas permanentes); bucket privado por defecto |
 
@@ -64,7 +65,7 @@ naturaleza del dato.
 | A04 Insecure Design | Sí | Threat model documentado (este archivo), revisado en cada nueva feature sensible |
 | A05 Security Misconfiguration | Sí | Contenedores con usuario no-root, imágenes base mínimas, headers de seguridad (CSP, HSTS) en el reverse proxy |
 | A07 Identification and Authentication Failures | Sí | Ver sección 1 |
-| A08 Software and Data Integrity Failures | Sí | Dependencias con `dotnet list package --vulnerable` en CI; imágenes Docker escaneadas (Trivy) antes de desplegar |
+| A08 Software and Data Integrity Failures | Sí | **Deuda pendiente** (verificado en Fase 5): `.github/workflows/ci.yml` corre build+tests pero todavía no `dotnet list package --vulnerable` ni escaneo de imagen Docker (Trivy) — agregar antes de un despliegue a producción |
 | A09 Security Logging and Monitoring Failures | Sí | `AuditLog` + logs estructurados (Serilog) centralizados; alertas ante múltiples intentos de login fallidos |
 
 ## Gestión de secretos y CI/CD

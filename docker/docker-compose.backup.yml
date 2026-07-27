@@ -1,0 +1,37 @@
+# Override opcional que agrega el sidecar de backup diario (Postgres +
+# MinIO). Se activa explícitamente con:
+#   docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
+# No se incluye en el compose principal para que levantar el stack base
+# (dev local) no dependa de este volumen extra ni de compilar esta imagen.
+services:
+  backup:
+    build:
+      context: ./backup
+    restart: unless-stopped
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=${POSTGRES_DB:-ige_informes}
+      - PGUSER=${POSTGRES_USER:-ige_informes}
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_BUCKET=ige-informes
+      - BACKUP_RETENTION_DIAS=30
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+volumes:
+  backups:
+    # 🔶 En producción, este volumen debe estar montado sobre un disco/NAS
+    # externo al servidor (ver docs/07-plan-despliegue.md: "un backup que
+    # vive en el mismo disco que falla no sirve"). En un volumen Docker
+    # nombrado local (como acá) solo sirve para el simulacro de
+    # restauración y para desarrollo — no reemplaza copiar el contenido
+    # fuera del servidor.

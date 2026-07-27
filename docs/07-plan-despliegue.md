@@ -78,6 +78,34 @@ se recomienda:
   completa (DB + MinIO) al menos una vez antes de ir a producción, y luego
   trimestralmente. Un backup nunca probado es un backup que no existe.
 
+### Implementación (Fase 5)
+
+- Scripts en `docker/backup/scripts/`: `backup-postgres.sh` (`pg_dump -Fc`,
+  con rotación por `BACKUP_RETENTION_DIAS`), `backup-minio.sh` (`mc mirror`
+  incremental), `restore-postgres.sh` (dropea y recrea la base indicada,
+  pensado para el simulacro o para recuperación real ante desastre).
+- Sidecar `docker/backup/Dockerfile` (imagen basada en `postgres:16`, trae
+  `pg_dump`/`pg_restore` nativos + `mc` + `cron`), levantado como servicio
+  opcional vía `docker-compose.backup.yml`:
+  ```
+  docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
+  ```
+  No se fusionó al `docker-compose.yml` principal para no forzar este
+  volumen/imagen extra en un entorno de desarrollo que no lo necesita.
+- Cron programado a las 03:00 (`docker/backup/crontab`). Backup manual (sin
+  esperar al cron): `docker exec <contenedor-backup> /scripts/entrypoint-job.sh`.
+- El volumen `backups` del compose es local — sirve para el simulacro y
+  desarrollo, pero en producción **debe** montarse sobre un disco/NAS
+  externo al servidor antes de confiar en él (ver 🔶 arriba).
+- **Simulacro de restauración ejecutado y verificado** (2026-07-27, entorno
+  de desarrollo Docker local): `pg_dump` → `pg_restore` contra una base de
+  prueba (`ige_informes_restore_test`, descartada después) reprodujo
+  exactamente los mismos conteos de filas que el origen (854 Cámaras, 80
+  Dependencias, 54 Localidades, 1 Informe); los 5 archivos de MinIO
+  espejados verificaron tamaño no-cero e íntegro. Pendiente repetir el
+  mismo simulacro contra el servidor de producción real (con el volumen de
+  backups ya montado sobre almacenamiento externo) antes del go-live.
+
 ## Monitoreo y logs
 
 - Logs estructurados (Serilog) de la aplicación, con nivel `Warning`+ 

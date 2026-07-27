@@ -1,0 +1,2 @@
+# Backup diario a las 03:00 (fuera de horario de uso, ver docs/07-plan-despliegue.md)
+0 3 * * * root /scripts/entrypoint-job.sh >> /var/log/ige-backup.log 2>&1

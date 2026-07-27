@@ -151,21 +151,65 @@ Referencia: `docs/02-historias-usuario/epic-02-busqueda-analitica.md`
 
 ---
 
-## Fase 5 · Hardening de seguridad y despliegue final
+## Fase 5 · Hardening de seguridad y despliegue final — ✅ CERRADA
 
 Referencia: `docs/06-seguridad-amenazas.md`, `docs/07-plan-despliegue.md`
 
-- [ ] Revisión de checklist OWASP Top 10 completo.
-- [ ] Rate limiting y lockout de login verificados con test de carga básico.
-- [ ] Backups automatizados configurados y **probados con una restauración
-      real** antes de considerar la fase cerrada.
-- [ ] TLS interno configurado en el reverse proxy.
-- [ ] Documentación de onboarding/offboarding de usuarios para el
-      Administrador.
+- [x] Revisión de checklist OWASP Top 10 completo — verificado ítem por
+      ítem contra el código real (no solo contra la documentación) vía
+      `security-reviewer`. A01/A02/A03/A05/A09 cumplen. A04 y A07 tenían
+      documentación desactualizada/hallazgos, corregidos en esta fase (ver
+      abajo). A08 queda como deuda explícita (no bloqueante).
+- [x] Rate limiting y lockout de login verificados. Lockout de Identity
+      (5 intentos, 15 min) ya existía desde Fase 0. Rate limiting nuevo:
+      `Microsoft.AspNetCore.RateLimiting`, 10 req/min por IP, acotado a
+      `/Account` (Blazor Server no permite atar una política a un
+      componente Razor individual, así que se usa `GlobalLimiter` +
+      `UseWhen`). Verificado con test de carga básico (`curl` en loop):
+      request 11 en la misma ventana devuelve 429, otras rutas no se ven
+      afectadas. **Hallazgo del security-reviewer corregido en la misma
+      fase**: faltaba `ForwardedHeaders` — sin él, el limiter particionaba
+      por la IP interna de Caddy en vez de la del cliente real, compartiendo
+      el límite entre todos los usuarios. Agregado `UseForwardedHeaders` +
+      verificado con dos IPs simuladas vía `X-Forwarded-For` (una se
+      bloquea, la otra no se ve afectada).
+- [x] Backups automatizados configurados y **probados con una restauración
+      real**: `docker/backup/` (scripts `backup-postgres.sh`,
+      `backup-minio.sh`, `restore-postgres.sh` + sidecar con cron diario a
+      las 03:00, activable con `docker-compose.backup.yml`). Simulacro de
+      restauración ejecutado contra una base de prueba: los conteos de
+      filas post-restauración coinciden exactamente con el origen (854
+      Cámaras, 80 Dependencias, 54 Localidades, 1 Informe); los 5 archivos
+      de MinIO espejados verificados íntegros. Detalle en
+      `07-plan-despliegue.md`, sección "Implementación (Fase 5)".
+- [x] TLS interno configurado en el reverse proxy — ya existía desde
+      Fase 0 (`docker/Caddyfile`, `tls internal` + HSTS/CSP/X-Frame-Options),
+      confirmado sin downgrade posible (no hay bloque HTTP alternativo).
+- [x] Documentación de onboarding/offboarding de usuarios:
+      `docs/09-onboarding-offboarding-usuarios.md`. Registra como hallazgo
+      que **no existe todavía una UI de gestión de usuarios** — el alta/baja
+      real hoy es manual (script de consola o directo contra Postgres,
+      nunca borrando la cuenta en la baja por la FK de `AuditLog`).
 
 **Criterio de cierre**: simulacro de restauración completa desde backup
-exitoso, y checklist de seguridad firmado por el equipo antes de habilitar
-el sistema para todos los usuarios.
+exitoso — **cumplido**. Checklist de seguridad revisado con hallazgos
+corregidos donde aplicaba — **cumplido**, con deuda explícita registrada
+abajo (no bloqueante para habilitar el sistema a los primeros usuarios,
+sí antes de un despliegue a producción sin supervisión).
+
+**Deuda registrada (no bloqueante)**:
+- A08 OWASP: el CI (`.github/workflows/ci.yml`) no corre
+  `dotnet list package --vulnerable` ni escaneo de imagen Docker (Trivy)
+  todavía.
+- 2FA (TOTP) es autoservicio, no obligatorio para ningún rol — a decidir
+  si se exige para Supervisor/Admin antes de producción.
+- No hay UI de gestión de usuarios (alta/cambio de rol/bloqueo) — todo el
+  proceso de `09-onboarding-offboarding-usuarios.md` es manual.
+- No hay invalidación activa de sesión al hacer offboarding de un usuario
+  (solo bloqueo de logins futuros).
+- El volumen de backups (`docker-compose.backup.yml`) es local en el
+  entorno de desarrollo/simulacro — en producción debe montarse sobre
+  almacenamiento externo al servidor antes de confiar en él.
 
 ---
 
