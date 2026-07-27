@@ -23,7 +23,7 @@ naturaleza del dato.
 
 | Amenaza | Riesgo | Control |
 |---|---|---|
-| **S**poofing — suplantación de identidad | Alto (sin AD/LDAP, credenciales propias) | Hash de contraseñas con **Argon2id**; política de contraseña mínima (12+ caracteres); **2FA (TOTP)** disponible como autoservicio (`Manage/EnableAuthenticator`) para cualquier rol. **Deuda pendiente** (verificado en Fase 5): no hay enforcement que bloquee el login de Supervisor/Admin sin 2FA activado — a decidir si se vuelve obligatorio antes de producción |
+| **S**poofing — suplantación de identidad | Alto (sin AD/LDAP, credenciales propias) | Hash de contraseñas con **Argon2id**; política de contraseña mínima (12+ caracteres); **2FA (TOTP) obligatorio para Supervisor y Admin** — tras un login con contraseña correcta, si el rol es Supervisor/Admin y `TwoFactorEnabled = false`, se lo redirige a configurarlo (`Account/ConfigurarDosFactoresObligatorio`) antes de poder acceder a cualquier otra página; no hay forma de posponerlo ni saltearlo. Para Analista sigue siendo autoservicio opcional (`Manage/EnableAuthenticator`) |
 | **S**poofing — fuerza bruta / credential stuffing | Alto | Bloqueo de cuenta tras 5 intentos fallidos (lockout progresivo, `Identity.Lockout`); rate limiting por IP en las rutas `/Account` (10 req/min, `Microsoft.AspNetCore.RateLimiting`, ver `src/IGE.Informes.Web/Program.cs`) — requiere `ForwardedHeaders` configurado para que la IP particionada sea la del cliente real y no la del reverse proxy, ver Fase 5 |
 | **E**levation of Privilege | Medio | RBAC estricto por policy (`Analista` / `Supervisor` / `Admin`) validado en el backend en cada Command/Query — nunca confiar en el rol mostrado en el cliente |
 | **R**epudiation | Medio | Toda acción de login/logout queda en `AuditLog` con IP y user-agent |
@@ -54,6 +54,61 @@ naturaleza del dato.
 | **I**nformation Disclosure — tráfico en claro dentro de la LAN | Medio | TLS interno (certificado propio o de la institución) incluso dentro de la LAN — no asumir que "es red interna, no hace falta" |
 | Secrets en texto plano (connection strings, claves) | Alto | Variables de entorno vía Docker secrets o `.env` **fuera del control de versiones**; nunca secretos hardcodeados en `appsettings.json` commiteado |
 | Falta de backups / pérdida de datos | Alto | Ver `07-plan-despliegue.md` — backups automatizados de PostgreSQL y del bucket MinIO |
+
+## 2FA obligatorio para Supervisor y Admin
+
+```gherkin
+Característica: 2FA obligatorio para roles Supervisor y Admin
+
+  Escenario: Admin sin 2FA activado intenta loguearse
+    Dado que soy un usuario con rol "Admin" y no tengo 2FA activado
+    Cuando ingreso mi email y contraseña correctos
+    Entonces se me redirige a configurar 2FA antes de poder acceder a
+    cualquier otra página del sistema
+
+  Escenario: Supervisor sin 2FA activado intenta loguearse
+    Dado que soy un usuario con rol "Supervisor" y no tengo 2FA activado
+    Cuando ingreso mi email y contraseña correctos
+    Entonces se me redirige a configurar 2FA antes de poder acceder a
+    cualquier otra página del sistema
+
+  Escenario: Analista sin 2FA activado intenta loguearse
+    Dado que soy un usuario con rol "Analista" y no tengo 2FA activado
+    Cuando ingreso mi email y contraseña correctos
+    Entonces accedo normalmente al sistema, sin que se me exija 2FA
+
+  Escenario: Admin completa la configuración obligatoria de 2FA
+    Dado que fui redirigido a configurar 2FA de forma obligatoria
+    Cuando escaneo el código QR e ingreso el código de verificación válido
+    Entonces mi 2FA queda activado y accedo a la página que quería
+    visitar originalmente
+
+  Escenario: Admin con 2FA ya activado hace login normal
+    Dado que soy Admin y ya tengo 2FA activado
+    Cuando ingreso mi email y contraseña correctos
+    Entonces se me pide el código de mi aplicación de autenticación
+    (flujo actual, sin cambios)
+
+  Escenario: Usuario promovido a Supervisor debe configurar 2FA en su
+  próximo login
+    Dado que un Administrador me cambia el rol de "Analista" a "Supervisor"
+    Y yo no tengo 2FA activado
+    Cuando hago login la próxima vez
+    Entonces se me exige configurar 2FA antes de continuar
+```
+
+### Notas de implementación
+
+- El enforcement corre en `Login.razor` después de `PasswordSignInAsync`
+  exitoso, consultando el rol actual del usuario vía `UserManager` — no
+  hace falta ningún cambio en `CambiarRolUsuarioCommandHandler`, el
+  siguiente login ya lo cubre.
+- La página de configuración obligatoria reutiliza el mismo mecanismo de
+  `Manage/EnableAuthenticator` (QR + código TOTP), pero en una ruta propia
+  sin acceso al resto del sistema hasta completarla.
+- No hay período de gracia: la cuenta queda autenticada (cookie creada)
+  pero **no puede navegar a ninguna otra página** hasta terminar el setup
+  — decisión explícita, más simple que trackear una fecha límite.
 
 ## Checklist OWASP Top 10 (mapeo rápido)
 

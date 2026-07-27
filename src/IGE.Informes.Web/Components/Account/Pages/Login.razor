@@ -2,6 +2,7 @@
 
 @using System.ComponentModel.DataAnnotations
 @using IGE.Informes.Application.Common.Interfaces
+@using IGE.Informes.Application.Common.Security
 @using IGE.Informes.Infrastructure.Identity
 @using Microsoft.AspNetCore.Identity
 
@@ -97,6 +98,19 @@
         {
             var user = await UserManager.FindByEmailAsync(Input.Email);
             await AuditLogger.RegistrarAccesoAsync("Login", nameof(ApplicationUser), user?.Id);
+
+            if (user is not null && !user.TwoFactorEnabled)
+            {
+                var roles = await UserManager.GetRolesAsync(user);
+                if (roles.Contains(Roles.Admin) || roles.Contains(Roles.Supervisor))
+                {
+                    RedirectManager.RedirectTo(
+                        "Account/ConfigurarDosFactoresObligatorio",
+                        new() { ["ReturnUrl"] = ReturnUrl });
+                    return;
+                }
+            }
+
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else

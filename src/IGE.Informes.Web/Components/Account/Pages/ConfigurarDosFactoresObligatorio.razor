@@ -1,0 +1,138 @@
+@page "/Account/ConfigurarDosFactoresObligatorio"
+@attribute [Authorize]
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using IGE.Informes.Application.Common.Security
+@using IGE.Informes.Infrastructure.Identity
+@using Microsoft.AspNetCore.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+@inject UrlEncoder UrlEncoder
+
+<PageTitle>Configuración obligatoria de 2FA · IGE 4.0</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card">
+            <h1 class="headline-md mb-2">Configuración obligatoria de seguridad</h1>
+            <p class="body-sm mb-3">
+                Tu rol (@rol) requiere verificación en dos pasos. Configurala
+                ahora para poder continuar — no vas a poder acceder al resto
+                del sistema hasta completar este paso.
+            </p>
+
+            @if (message is not null)
+            {
+                <div class="status-chip status-chip--alert mb-3">@message</div>
+            }
+
+            @if (sharedKey is not null)
+            {
+                <div class="mb-3">
+                    <p class="body-sm">Escaneá el código QR o ingresá esta clave manualmente en tu app de autenticación (Google Authenticator, Authy, etc.):</p>
+                    <code class="mono-data">@sharedKey</code>
+                </div>
+
+                <EditForm Model="Input" method="post" OnValidSubmit="OnValidSubmitAsync" FormName="setup-2fa-obligatorio">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+                    <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+                    <div class="form-floating mb-3">
+                        <InputText @bind-Value="Input.Code" class="form-control mono-data" autocomplete="off" placeholder="Código de 6 dígitos" />
+                        <label>Código de verificación</label>
+                        <ValidationMessage For="() => Input.Code" class="text-danger" />
+                    </div>
+                    <button type="submit" class="btn-primary">Verificar y continuar</button>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+    private string? sharedKey;
+    private string rol = string.Empty;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
+        if (user.TwoFactorEnabled)
+        {
+            RedirectManager.RedirectTo(ReturnUrl ?? "/");
+        }
+
+        var roles = await UserManager.GetRolesAsync(user);
+        rol = roles.FirstOrDefault(r => r is Roles.Admin or Roles.Supervisor) ?? string.Empty;
+
+        await LoadSharedKeyAsync();
+    }
+
+    private async Task LoadSharedKeyAsync()
+    {
+        var unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
+        if (string.IsNullOrEmpty(unformattedKey))
+        {
+            await UserManager.ResetAuthenticatorKeyAsync(user);
+            unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
+        }
+
+        sharedKey = FormatKey(unformattedKey!);
+    }
+
+    private string FormatKey(string unformattedKey)
+    {
+        var result = new StringBuilder();
+        var currentPosition = 0;
+        while (currentPosition + 4 < unformattedKey.Length)
+        {
+            result.Append(unformattedKey.AsSpan(currentPosition, 4)).Append(' ');
+            currentPosition += 4;
+        }
+        if (currentPosition < unformattedKey.Length)
+        {
+            result.Append(unformattedKey.AsSpan(currentPosition));
+        }
+
+        return result.ToString().ToLowerInvariant();
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var verificationCode = Input.Code.Replace(" ", string.Empty).Replace("-", string.Empty);
+
+        var is2faTokenValid = await UserManager.VerifyTwoFactorTokenAsync(
+            user, UserManager.Options.Tokens.AuthenticatorTokenProvider, verificationCode);
+
+        if (!is2faTokenValid)
+        {
+            message = "Código de verificación inválido.";
+            return;
+        }
+
+        await UserManager.SetTwoFactorEnabledAsync(user, true);
+        RedirectManager.RedirectTo(ReturnUrl ?? "/");
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "El código es obligatorio.")]
+        [StringLength(7, ErrorMessage = "El {0} debe tener al menos {2} caracteres.", MinimumLength = 6)]
+        public string Code { get; set; } = "";
+    }
+}

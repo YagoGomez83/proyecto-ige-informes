@@ -1,5 +1,14 @@
 @inherits LayoutComponentBase
 
+@using IGE.Informes.Application.Common.Security
+@using IGE.Informes.Infrastructure.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -27,3 +36,39 @@
     <a href="." class="reload">Recargar</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private const string RutaSetup2faObligatorio = "Account/ConfigurarDosFactoresObligatorio";
+
+    // Defensa en profundidad: Login.razor ya redirige acá tras un login
+    // exitoso sin 2FA para Admin/Supervisor, pero este chequeo evita que
+    // el usuario navegue a mano a cualquier otra URL del sistema mientras
+    // el setup obligatorio siga pendiente (ver docs/06-seguridad-
+    // amenazas.md, sección "2FA obligatorio para Supervisor y Admin").
+    protected override async Task OnInitializedAsync()
+    {
+        var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).Split('?')[0];
+        if (currentPath.StartsWith(RutaSetup2faObligatorio, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity?.IsAuthenticated ?? true)
+        {
+            return;
+        }
+
+        var user = await UserManager.GetUserAsync(authState.User);
+        if (user is null || user.TwoFactorEnabled)
+        {
+            return;
+        }
+
+        var roles = await UserManager.GetRolesAsync(user);
+        if (roles.Contains(Roles.Admin) || roles.Contains(Roles.Supervisor))
+        {
+            NavigationManager.NavigateTo($"{RutaSetup2faObligatorio}?ReturnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad: false);
+        }
+    }
+}
