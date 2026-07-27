@@ -47,6 +47,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuditLogger, AuditLogger>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
 
         services.Configure<MinioOptions>(configuration.GetSection(MinioOptions.SectionName));
         services.AddSingleton<IFileStorage, MinioFileStorage>();

@@ -1,0 +1,87 @@
+@page "/usuarios"
+@attribute [Authorize(Roles = "Admin")]
+@using System.Security.Claims
+@using IGE.Informes.Application.Common.Interfaces
+@using IGE.Informes.Application.Usuarios.Queries.ListarUsuarios
+@using Microsoft.AspNetCore.Components.Authorization
+@using MediatR
+@inject ISender Sender
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Usuarios · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Usuarios</h1>
+    <a class="btn-primary" href="usuarios/nuevo">Nuevo Usuario</a>
+</div>
+
+@if (_usuarios is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_usuarios.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay usuarios cargados.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Nombre</th>
+                    <th class="label-md">Email</th>
+                    <th class="label-md">Rol</th>
+                    <th class="label-md">Estado</th>
+                    <th class="label-md"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var usuario in _usuarios)
+                {
+                    <tr>
+                        <td class="body-md">@usuario.NombreCompleto</td>
+                        <td class="body-md">@usuario.Email</td>
+                        <td class="body-md">@usuario.Rol</td>
+                        <td>
+                            @if (usuario.Bloqueado)
+                            {
+                                <span class="status-chip status-chip--alert">Bloqueado</span>
+                            }
+                            else
+                            {
+                                <span class="status-chip status-chip--safe">Activo</span>
+                            }
+                        </td>
+                        <td>
+                            @if (usuario.Id != _usuarioActualId)
+                            {
+                                <a class="btn-secondary" href="usuarios/@usuario.Id">Ver</a>
+                            }
+                            else
+                            {
+                                <span class="body-sm">(vos)</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<UsuarioDto>? _usuarios;
+    private Guid? _usuarioActualId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var idClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        _usuarioActualId = Guid.TryParse(idClaim, out var id) ? id : null;
+
+        _usuarios = await Sender.Send(new ListarUsuariosQuery());
+    }
+}

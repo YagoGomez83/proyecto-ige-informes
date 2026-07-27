@@ -179,3 +179,89 @@ Característica: Jerarquía de Unidad Regional
     Cuando consulto la ficha de esa Unidad Regional
     Entonces veo listadas todas las Comisarías que dependen de ella
 ```
+
+---
+
+## HU-17 · Gestión de Usuarios
+
+**Como** Administrador
+**Quiero** dar de alta usuarios nuevos, cambiarles el rol y bloquear/
+desbloquear su acceso
+**Para** administrar quién puede usar el sistema sin depender de AD/LDAP
+(ver `00-vision-alcance.md`) ni de tocar la base de datos a mano
+
+> Contexto: hasta esta HU, el único mecanismo de alta era `IdentitySeeder`
+> (un único Admin creado por variable de entorno al primer arranque, ver
+> `docs/09-onboarding-offboarding-usuarios.md`). Esta HU reemplaza el
+> proceso manual documentado ahí por una UI real — actualizar ese documento
+> una vez implementada.
+
+```gherkin
+Característica: Gestión de Usuarios
+
+  Escenario: Alta de un usuario nuevo
+    Dado que completo nombre completo, email, una contraseña de 12 o más
+    caracteres, y selecciono el rol "Analista"
+    Cuando confirmo el alta
+    Entonces el usuario queda creado con ese rol y puede iniciar sesión
+    con esa contraseña
+
+  Escenario: Email duplicado
+    Dado que ya existe un usuario con el email "ana.gomez@institucion.gob"
+    Cuando intento dar de alta otro usuario con el mismo email
+    Entonces el sistema rechaza el alta y me indica que el email ya existe
+
+  Escenario: Contraseña que no cumple la política mínima
+    Dado que completo una contraseña de menos de 12 caracteres
+    Cuando confirmo el alta
+    Entonces el sistema rechaza el alta e indica el motivo
+
+  Escenario: Cambiar el rol de un usuario existente
+    Dado que un usuario tiene el rol "Analista"
+    Cuando le asigno el rol "Supervisor"
+    Entonces el usuario pasa a tener el rol "Supervisor" y deja de tener "Analista"
+
+  Escenario: Bloquear el acceso de un usuario
+    Dado que un usuario activo existe en el sistema
+    Cuando lo bloqueo
+    Entonces no puede volver a iniciar sesión hasta que un Administrador lo desbloquee
+
+  Escenario: Desbloquear el acceso de un usuario
+    Dado que un usuario está bloqueado
+    Cuando lo desbloqueo
+    Entonces puede volver a iniciar sesión con su contraseña existente
+
+  Escenario: Un Administrador no puede cambiarse el rol a sí mismo
+    Dado que estoy logueado como Administrador
+    Cuando intento cambiar mi propio rol desde la ficha de mi usuario
+    Entonces el sistema rechaza la operación
+
+  Escenario: Un Administrador no puede bloquearse a sí mismo
+    Dado que estoy logueado como Administrador
+    Cuando intento bloquear mi propio usuario
+    Entonces el sistema rechaza la operación
+
+  Escenario: Ver el listado de usuarios
+    Dado que existen varios usuarios con distintos roles y estados
+    Cuando accedo al listado de usuarios
+    Entonces veo nombre, email, rol y si está bloqueado o activo, de cada uno
+```
+
+### Notas de modelado
+
+- No se agrega ninguna entidad nueva a `Domain` — esta HU opera sobre
+  `ApplicationUser`/`ApplicationRole` de ASP.NET Core Identity
+  (`Infrastructure/Identity`), fuera del modelo de dominio del negocio.
+- `Application` no puede depender de `Infrastructure` (Clean Architecture,
+  ver `CLAUDE.md`) ni de `UserManager<T>`/`RoleManager<T>` directamente —
+  se agrega el puerto `IUserManagementService` en
+  `Application/Common/Interfaces/`, implementado en `Infrastructure`
+  envolviendo Identity real. Los Handlers dependen solo del puerto.
+- Bloquear un usuario reutiliza el mecanismo de lockout ya usado contra
+  fuerza bruta (`Identity.Lockout`, ver `docs/06-seguridad-amenazas.md`):
+  `LockoutEnabled = true` + `LockoutEnd = DateTimeOffset.MaxValue`. No se
+  borra el usuario nunca — el `AuditLog` referencia `UsuarioId` como FK
+  (ver `docs/09-onboarding-offboarding-usuarios.md`).
+- Un usuario tiene un único rol a la vez en este sistema (aunque Identity
+  permite roles múltiples) — cambiar de rol remueve el anterior antes de
+  asignar el nuevo, en la misma operación.

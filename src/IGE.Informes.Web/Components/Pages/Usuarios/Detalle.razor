@@ -1,0 +1,181 @@
+@page "/usuarios/{UsuarioId:guid}"
+@attribute [Authorize(Roles = "Admin")]
+@using System.Security.Claims
+@using IGE.Informes.Application.Common.Interfaces
+@using IGE.Informes.Application.Common.Security
+@using IGE.Informes.Application.Usuarios.Commands.BloquearUsuario
+@using IGE.Informes.Application.Usuarios.Commands.CambiarRolUsuario
+@using IGE.Informes.Application.Usuarios.Commands.DesbloquearUsuario
+@using IGE.Informes.Application.Usuarios.Queries.ListarUsuarios
+@using Microsoft.AspNetCore.Components.Authorization
+@using MediatR
+@inject ISender Sender
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Detalle de Usuario · IGE 4.0</PageTitle>
+
+@if (!_cargado)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_usuario is null)
+{
+    <p class="body-md">No se encontró el usuario solicitado.</p>
+}
+else if (EsElUsuarioActual)
+{
+    <p class="body-md">No podés administrar tu propia cuenta desde acá.</p>
+    <a class="btn-secondary" href="usuarios">Volver al listado</a>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="headline-md mb-1">@_usuario.NombreCompleto</h1>
+            @if (_usuario.Bloqueado)
+            {
+                <span class="status-chip status-chip--alert">Bloqueado</span>
+            }
+            else
+            {
+                <span class="status-chip status-chip--safe">Activo</span>
+            }
+        </div>
+        <a class="btn-secondary" href="usuarios">Volver al listado</a>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Datos generales</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3 label-md">Email</dt>
+            <dd class="col-sm-9 body-md">@_usuario.Email</dd>
+
+            <dt class="col-sm-3 label-md">Rol</dt>
+            <dd class="col-sm-9 body-md">@_usuario.Rol</dd>
+        </dl>
+    </div>
+
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Cambiar rol</h2>
+        <div class="d-flex align-items-end gap-2">
+            <select class="form-control" @bind="_rolSeleccionado">
+                <option value="@Roles.Analista">Analista</option>
+                <option value="@Roles.Supervisor">Supervisor</option>
+                <option value="@Roles.Admin">Admin</option>
+            </select>
+            <button type="button" class="btn-secondary" @onclick="CambiarRolAsync" disabled="@_procesando">Confirmar</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="headline-sm mb-2">@(_usuario.Bloqueado ? "Desbloquear acceso" : "Bloquear acceso")</h2>
+        @if (_usuario.Bloqueado)
+        {
+            <button type="button" class="btn-secondary" @onclick="DesbloquearAsync" disabled="@_procesando">Desbloquear</button>
+        }
+        else
+        {
+            <button type="button" class="btn-secondary" @onclick="BloquearAsync" disabled="@_procesando">Bloquear</button>
+        }
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid UsuarioId { get; set; }
+
+    private UsuarioDto? _usuario;
+    private Guid? _usuarioActualId;
+    private bool _cargado;
+    private string _rolSeleccionado = Roles.Analista;
+    private string? _errorMessage;
+    private bool _procesando;
+
+    private bool EsElUsuarioActual => _usuarioActualId is not null && _usuarioActualId == UsuarioId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var idClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        _usuarioActualId = Guid.TryParse(idClaim, out var id) ? id : null;
+
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        var usuarios = await Sender.Send(new ListarUsuariosQuery());
+        _usuario = usuarios.FirstOrDefault(u => u.Id == UsuarioId);
+        _cargado = true;
+
+        if (_usuario is not null)
+        {
+            _rolSeleccionado = _usuario.Rol;
+        }
+    }
+
+    private async Task CambiarRolAsync()
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new CambiarRolUsuarioCommand(UsuarioId, _rolSeleccionado));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo cambiar el rol.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task BloquearAsync()
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new BloquearUsuarioCommand(UsuarioId));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo bloquear el usuario.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task DesbloquearAsync()
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new DesbloquearUsuarioCommand(UsuarioId));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo desbloquear el usuario.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+}

@@ -1,0 +1,100 @@
+@page "/usuarios/nuevo"
+@attribute [Authorize(Roles = "Admin")]
+@using System.ComponentModel.DataAnnotations
+@using FluentValidation
+@using IGE.Informes.Application.Common.Security
+@using IGE.Informes.Application.Usuarios.Commands.CrearUsuario
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nuevo Usuario · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Nuevo Usuario</h1>
+
+<div class="card" style="max-width: 480px;">
+    <EditForm Model="_input" OnValidSubmit="RegistrarAsync" FormName="nuevo-usuario">
+        <DataAnnotationsValidator />
+
+        @if (_errorMessage is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="nombreCompleto">Nombre completo</label>
+            <InputText id="nombreCompleto" class="form-control" @bind-Value="_input.NombreCompleto" placeholder="Ej: Ana Gómez" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="email">Email</label>
+            <InputText id="email" class="form-control" @bind-Value="_input.Email" placeholder="ana.gomez@institucion.gob" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="password">Contraseña temporal (12+ caracteres)</label>
+            <InputText id="password" type="password" class="form-control" @bind-Value="_input.Password" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="rol">Rol</label>
+            <InputSelect id="rol" class="form-control" @bind-Value="_input.Rol">
+                <option value="@Roles.Analista">Analista</option>
+                <option value="@Roles.Supervisor">Supervisor</option>
+                <option value="@Roles.Admin">Admin</option>
+            </InputSelect>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Usuario</button>
+            <a class="btn-secondary" href="usuarios">Cancelar</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly InputModel _input = new();
+    private string? _errorMessage;
+    private bool _guardando;
+
+    private async Task RegistrarAsync()
+    {
+        _errorMessage = null;
+        _guardando = true;
+
+        try
+        {
+            await Sender.Send(new CrearUsuarioCommand(_input.NombreCompleto, _input.Email, _input.Password, _input.Rol));
+
+            NavigationManager.NavigateTo("usuarios");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo registrar el usuario. Verificá que el email no esté repetido y que la contraseña cumpla la política mínima.";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "El nombre completo es obligatorio.")]
+        public string NombreCompleto { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El email es obligatorio.")]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La contraseña es obligatoria.")]
+        [MinLength(12, ErrorMessage = "La contraseña debe tener al menos 12 caracteres.")]
+        public string Password { get; set; } = string.Empty;
+
+        public string Rol { get; set; } = Roles.Analista;
+    }
+}
