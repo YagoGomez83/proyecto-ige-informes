@@ -13,6 +13,8 @@ public sealed class Camara : IAuditable
     public string? Ubicacion { get; private set; }
     public TipoCamara Tipo { get; private set; }
     public Guid? DependenciaId { get; private set; }
+    public Guid? LocalidadId { get; private set; }
+    public Guid? CentroControlCamarasId { get; private set; }
 
     private Camara()
     {
@@ -65,5 +67,43 @@ public sealed class Camara : IAuditable
     public void QuitarDependencia()
     {
         DependenciaId = null;
+    }
+
+    /// <summary>
+    /// Localidad donde está físicamente instalada la Cámara. Opcional —
+    /// una Cámara puede darse de alta antes de completar el relevamiento.
+    /// </summary>
+    public void AsignarLocalidad(Guid localidadId)
+    {
+        if (localidadId == Guid.Empty)
+        {
+            throw new ArgumentException("La Localidad es obligatoria.", nameof(localidadId));
+        }
+
+        LocalidadId = localidadId;
+    }
+
+    public void QuitarLocalidad()
+    {
+        LocalidadId = null;
+    }
+
+    /// <summary>
+    /// Centro de Control de Cámaras que la monitorea. Opcional por el
+    /// mismo motivo que Localidad.
+    /// </summary>
+    public void AsignarCentroControlCamaras(Guid centroControlCamarasId)
+    {
+        if (centroControlCamarasId == Guid.Empty)
+        {
+            throw new ArgumentException("El Centro de Control de Cámaras es obligatorio.", nameof(centroControlCamarasId));
+        }
+
+        CentroControlCamarasId = centroControlCamarasId;
+    }
+
+    public void QuitarCentroControlCamaras()
+    {
+        CentroControlCamarasId = null;
     }
 }

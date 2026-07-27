@@ -1,0 +1,56 @@
+@page "/localidades"
+@attribute [Authorize]
+@using IGE.Informes.Application.Localidades.Queries.ListarLocalidades
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Localidades · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Localidades</h1>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <a class="btn-primary" href="localidades/nueva">Nueva Localidad</a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@if (_localidades is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_localidades.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay localidades cargadas.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Nombre</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var localidad in _localidades)
+                {
+                    <tr>
+                        <td class="body-md">@localidad.Nombre</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<LocalidadDto>? _localidades;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _localidades = await Sender.Send(new ListarLocalidadesQuery());
+    }
+}

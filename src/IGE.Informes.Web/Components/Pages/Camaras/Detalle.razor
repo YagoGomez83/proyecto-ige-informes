@@ -1,10 +1,14 @@
 @page "/camaras/{CamaraId:guid}"
 @attribute [Authorize]
+@using IGE.Informes.Application.Camaras.Commands.AsignarCentroControlCamarasACamara
 @using IGE.Informes.Application.Camaras.Commands.AsignarDependenciaACamara
+@using IGE.Informes.Application.Camaras.Commands.AsignarLocalidadACamara
 @using IGE.Informes.Application.Camaras.Commands.CambiarTipoCamara
 @using IGE.Informes.Application.Camaras.Commands.CompletarUbicacionCamara
 @using IGE.Informes.Application.Camaras.Queries.ObtenerCamaraPorId
+@using IGE.Informes.Application.CentrosControlCamaras.Queries.ListarCentrosControlCamaras
 @using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.Localidades.Queries.ListarLocalidades
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
@@ -47,6 +51,12 @@ else
 
             <dt class="col-sm-3 label-md">Dependencia</dt>
             <dd class="col-sm-9 body-md">@NombreDependencia(_camara.DependenciaId)</dd>
+
+            <dt class="col-sm-3 label-md">Localidad</dt>
+            <dd class="col-sm-9 body-md">@NombreLocalidad(_camara.LocalidadId)</dd>
+
+            <dt class="col-sm-3 label-md">Centro de Control</dt>
+            <dd class="col-sm-9 body-md">@NombreCentroControl(_camara.CentroControlCamarasId)</dd>
         </dl>
     </div>
 
@@ -68,6 +78,44 @@ else
                         </select>
                     </div>
                     <button type="button" class="btn-secondary" @onclick="AsignarDependenciaAsync" disabled="@_procesando">Asignar</button>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <h2 class="headline-sm mb-2">Asignar Localidad</h2>
+                <div class="d-flex align-items-end gap-2">
+                    <div class="flex-grow-1">
+                        <select class="form-control" @bind="_localidadSeleccionadaId">
+                            <option value="">Seleccionar...</option>
+                            @if (_localidades is not null)
+                            {
+                                @foreach (var localidad in _localidades)
+                                {
+                                    <option value="@localidad.Id">@localidad.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <button type="button" class="btn-secondary" @onclick="AsignarLocalidadAsync" disabled="@_procesando">Asignar</button>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <h2 class="headline-sm mb-2">Asignar Centro de Control</h2>
+                <div class="d-flex align-items-end gap-2">
+                    <div class="flex-grow-1">
+                        <select class="form-control" @bind="_centroControlSeleccionadoId">
+                            <option value="">Seleccionar...</option>
+                            @if (_centrosControlCamaras is not null)
+                            {
+                                @foreach (var centro in _centrosControlCamaras)
+                                {
+                                    <option value="@centro.Id">@centro.Sigla — @centro.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <button type="button" class="btn-secondary" @onclick="AsignarCentroControlAsync" disabled="@_procesando">Asignar</button>
                 </div>
             </div>
 
@@ -109,16 +157,22 @@ else
 
     private CamaraDto? _camara;
     private IReadOnlyCollection<DependenciaDto>? _dependencias;
+    private IReadOnlyCollection<LocalidadDto>? _localidades;
+    private IReadOnlyCollection<CentroControlCamarasDto>? _centrosControlCamaras;
     private bool _cargado;
     private string _ubicacion = string.Empty;
     private TipoCamara _tipoSeleccionado;
     private string? _dependenciaSeleccionadaId;
+    private string? _localidadSeleccionadaId;
+    private string? _centroControlSeleccionadoId;
     private string? _errorMessage;
     private bool _procesando;
 
     protected override async Task OnInitializedAsync()
     {
         _dependencias = await Sender.Send(new ListarDependenciasQuery());
+        _localidades = await Sender.Send(new ListarLocalidadesQuery());
+        _centrosControlCamaras = await Sender.Send(new ListarCentrosControlCamarasQuery());
         await CargarAsync();
     }
 
@@ -143,6 +197,26 @@ else
         return _dependencias?.FirstOrDefault(d => d.Id == dependenciaId)?.Nombre ?? "—";
     }
 
+    private string NombreLocalidad(Guid? localidadId)
+    {
+        if (localidadId is null)
+        {
+            return "—";
+        }
+
+        return _localidades?.FirstOrDefault(l => l.Id == localidadId)?.Nombre ?? "—";
+    }
+
+    private string NombreCentroControl(Guid? centroControlCamarasId)
+    {
+        if (centroControlCamarasId is null)
+        {
+            return "—";
+        }
+
+        return _centrosControlCamaras?.FirstOrDefault(c => c.Id == centroControlCamarasId)?.Sigla ?? "—";
+    }
+
     private async Task AsignarDependenciaAsync()
     {
         if (string.IsNullOrWhiteSpace(_dependenciaSeleccionadaId))
@@ -162,6 +236,58 @@ else
         catch (Exception)
         {
             _errorMessage = "No se pudo asignar la Dependencia.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task AsignarLocalidadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_localidadSeleccionadaId))
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new AsignarLocalidadACamaraCommand(CamaraId, Guid.Parse(_localidadSeleccionadaId)));
+            _localidadSeleccionadaId = null;
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo asignar la Localidad.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task AsignarCentroControlAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_centroControlSeleccionadoId))
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new AsignarCentroControlCamarasACamaraCommand(CamaraId, Guid.Parse(_centroControlSeleccionadoId)));
+            _centroControlSeleccionadoId = null;
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo asignar el Centro de Control.";
         }
         finally
         {

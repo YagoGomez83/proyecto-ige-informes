@@ -105,4 +105,51 @@ public class CamaraTests
 
         Assert.Null(camara.DependenciaId);
     }
+
+    [Fact]
+    public void Alta_sin_localidad_ni_centro_control_camaras_quedan_null_por_defecto()
+    {
+        var camara = new Camara("SL 18", TipoCamara.Domo);
+
+        Assert.Null(camara.LocalidadId);
+        Assert.Null(camara.CentroControlCamarasId);
+    }
+
+    [Fact]
+    public void AsignarLocalidad_vincula_la_camara_a_una_localidad()
+    {
+        var camara = new Camara("SL 18", TipoCamara.Domo);
+        var localidadId = Guid.NewGuid();
+
+        camara.AsignarLocalidad(localidadId);
+
+        Assert.Equal(localidadId, camara.LocalidadId);
+    }
+
+    [Fact]
+    public void AsignarLocalidad_rechaza_id_vacio()
+    {
+        var camara = new Camara("SL 18", TipoCamara.Domo);
+
+        Assert.Throws<ArgumentException>(() => camara.AsignarLocalidad(Guid.Empty));
+    }
+
+    [Fact]
+    public void AsignarCentroControlCamaras_vincula_la_camara_a_un_centro_de_control()
+    {
+        var camara = new Camara("SL 18", TipoCamara.Domo);
+        var centroControlCamarasId = Guid.NewGuid();
+
+        camara.AsignarCentroControlCamaras(centroControlCamarasId);
+
+        Assert.Equal(centroControlCamarasId, camara.CentroControlCamarasId);
+    }
+
+    [Fact]
+    public void AsignarCentroControlCamaras_rechaza_id_vacio()
+    {
+        var camara = new Camara("SL 18", TipoCamara.Domo);
+
+        Assert.Throws<ArgumentException>(() => camara.AsignarCentroControlCamaras(Guid.Empty));
+    }
 }

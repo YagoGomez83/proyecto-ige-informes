@@ -22,16 +22,22 @@ public class RegistrarCamaraCommandHandlerTests
     }
 
     [Fact]
-    public async Task Rechaza_un_codigo_duplicado()
+    public async Task Permite_un_codigo_repetido_entre_camaras_de_una_misma_instalacion()
     {
+        // Ver docs/01-glosario-dominio.md: Camara.Codigo no es único — el
+        // relevamiento real trae códigos repetidos entre cámaras de una
+        // misma instalación agrupada (ej. un peaje con 22 cámaras "PLI").
         var dbContext = new TestAppDbContext();
-        dbContext.Camaras.Add(new Camara("SL 18", TipoCamara.Domo));
+        dbContext.Camaras.Add(new Camara("PLI", TipoCamara.Lpr, "La Punilla - Ingreso"));
         await dbContext.SaveChangesAsync();
 
         var handler = new RegistrarCamaraCommandHandler(dbContext);
 
-        await Assert.ThrowsAsync<EntidadDuplicadaException>(() => handler.Handle(
-            new RegistrarCamaraCommand("SL 18", TipoCamara.Lpr, null), CancellationToken.None));
+        var camaraId = await handler.Handle(
+            new RegistrarCamaraCommand("PLI", TipoCamara.Lpr, "La Punilla - Egreso"), CancellationToken.None);
+
+        var camara = await dbContext.Camaras.FindAsync(camaraId);
+        Assert.Equal("PLI", camara!.Codigo);
     }
 
     [Fact]

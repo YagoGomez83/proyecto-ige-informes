@@ -23,6 +23,10 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
 
     public DbSet<Barrio> Barrios => Set<Barrio>();
 
+    public DbSet<Localidad> Localidades => Set<Localidad>();
+
+    public DbSet<CentroControlCamaras> CentrosControlCamaras => Set<CentroControlCamaras>();
+
     public DbSet<TipoIncidente> TiposIncidente => Set<TipoIncidente>();
 
     public DbSet<CasoAnalisis> CasosAnalisis => Set<CasoAnalisis>();

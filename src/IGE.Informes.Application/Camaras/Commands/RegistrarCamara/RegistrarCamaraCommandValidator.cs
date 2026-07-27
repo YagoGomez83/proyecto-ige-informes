@@ -6,7 +6,7 @@ public sealed class RegistrarCamaraCommandValidator : AbstractValidator<Registra
 {
     public RegistrarCamaraCommandValidator()
     {
-        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(50);
         RuleFor(x => x.Tipo).IsInEnum();
         RuleFor(x => x.Ubicacion).MaximumLength(300);
     }

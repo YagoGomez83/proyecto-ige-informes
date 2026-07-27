@@ -26,5 +26,11 @@ public sealed class DependenciaConfiguration : IEntityTypeConfiguration<Dependen
         builder.PrimitiveCollection(d => d.BarrioIds)
             .HasColumnName("BarrioIds")
             .Metadata.SetPropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasOne<Dependencia>()
+            .WithMany()
+            .HasForeignKey(d => d.UnidadRegionalId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

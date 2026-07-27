@@ -13,6 +13,10 @@ public interface IAppDbContext
 
     DbSet<Barrio> Barrios { get; }
 
+    DbSet<Localidad> Localidades { get; }
+
+    DbSet<CentroControlCamaras> CentrosControlCamaras { get; }
+
     DbSet<TipoIncidente> TiposIncidente { get; }
 
     DbSet<CasoAnalisis> CasosAnalisis { get; }

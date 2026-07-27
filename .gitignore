@@ -10,6 +10,11 @@ appsettings.*.local.json
 docker/.env
 docker/docker-compose.override.local.yml
 
+# Relevamientos con datos de infraestructura sensible (ubicaciones de
+# cámaras, jurisdicciones policiales) — se leen desde una ruta local, no
+# se versionan (ver docs/03-modelo-dominio.md, sección de migración).
+docs/*.xlsx
+
 *.log
 
 .claude/settings.local.json

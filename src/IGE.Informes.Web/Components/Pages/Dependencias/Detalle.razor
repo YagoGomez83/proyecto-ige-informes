@@ -2,8 +2,10 @@
 @attribute [Authorize]
 @using IGE.Informes.Application.Barrios.Queries.ListarBarrios
 @using IGE.Informes.Application.Dependencias.Commands.AsignarBarrioADependencia
+@using IGE.Informes.Application.Dependencias.Commands.AsignarUnidadRegionalADependencia
 @using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
 @using IGE.Informes.Application.Dependencias.Queries.ObtenerDependenciaPorId
+@using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
 
@@ -29,6 +31,12 @@ else
         <dl class="row mb-0">
             <dt class="col-sm-3 label-md">Tipo</dt>
             <dd class="col-sm-9 body-md">@_dependencia.Tipo</dd>
+
+            @if (_dependencia.Tipo == TipoDependencia.Comisaria)
+            {
+                <dt class="col-sm-3 label-md">Unidad Regional</dt>
+                <dd class="col-sm-9 body-md">@NombreUnidadRegional(_dependencia.UnidadRegionalId)</dd>
+            }
         </dl>
     </div>
 
@@ -51,7 +59,7 @@ else
 
     <AuthorizeView Roles="Admin">
         <Authorized>
-            <div class="card">
+            <div class="card mb-3">
                 <h2 class="headline-sm mb-2">Asignar Barrio</h2>
                 <div class="d-flex align-items-end gap-2">
                     <div class="flex-grow-1">
@@ -69,6 +77,28 @@ else
                     <button type="button" class="btn-secondary" @onclick="AsignarBarrioAsync" disabled="@_procesando">Asignar</button>
                 </div>
             </div>
+
+            @if (_dependencia.Tipo == TipoDependencia.Comisaria)
+            {
+                <div class="card">
+                    <h2 class="headline-sm mb-2">Asignar Unidad Regional</h2>
+                    <div class="d-flex align-items-end gap-2">
+                        <div class="flex-grow-1">
+                            <select class="form-control" @bind="_unidadRegionalSeleccionadaId">
+                                <option value="">Seleccionar...</option>
+                                @if (_unidadesRegionales is not null)
+                                {
+                                    @foreach (var ur in _unidadesRegionales)
+                                    {
+                                        <option value="@ur.Id">@ur.Nombre</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <button type="button" class="btn-secondary" @onclick="AsignarUnidadRegionalAsync" disabled="@_procesando">Asignar</button>
+                    </div>
+                </div>
+            }
         </Authorized>
     </AuthorizeView>
 
@@ -84,14 +114,18 @@ else
 
     private DependenciaDto? _dependencia;
     private IReadOnlyCollection<BarrioDto>? _barrios;
+    private IReadOnlyCollection<DependenciaDto>? _unidadesRegionales;
     private bool _cargado;
     private string? _barrioSeleccionadoId;
+    private string? _unidadRegionalSeleccionadaId;
     private string? _errorMessage;
     private bool _procesando;
 
     protected override async Task OnInitializedAsync()
     {
         _barrios = await Sender.Send(new ListarBarriosQuery());
+        var todasLasDependencias = await Sender.Send(new ListarDependenciasQuery());
+        _unidadesRegionales = todasLasDependencias.Where(d => d.Tipo == TipoDependencia.UnidadRegional).ToList();
         await CargarAsync();
     }
 
@@ -102,6 +136,16 @@ else
     }
 
     private string NombreBarrio(Guid barrioId) => _barrios?.FirstOrDefault(b => b.Id == barrioId)?.Nombre ?? barrioId.ToString();
+
+    private string NombreUnidadRegional(Guid? unidadRegionalId)
+    {
+        if (unidadRegionalId is null)
+        {
+            return "—";
+        }
+
+        return _unidadesRegionales?.FirstOrDefault(u => u.Id == unidadRegionalId)?.Nombre ?? "—";
+    }
 
     private async Task AsignarBarrioAsync()
     {
@@ -122,6 +166,32 @@ else
         catch (Exception)
         {
             _errorMessage = "No se pudo asignar el Barrio.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task AsignarUnidadRegionalAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_unidadRegionalSeleccionadaId))
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new AsignarUnidadRegionalADependenciaCommand(DependenciaId, Guid.Parse(_unidadRegionalSeleccionadaId)));
+            _unidadRegionalSeleccionadaId = null;
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo asignar la Unidad Regional.";
         }
         finally
         {

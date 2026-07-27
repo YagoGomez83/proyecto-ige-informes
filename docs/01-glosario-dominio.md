@@ -14,10 +14,12 @@
 | **Código de Incidente** | Catálogo de tipificación policial usado para clasificar el Caso de Análisis (ej. `164 - ROBO`, `162 - HURTO`, `02 - ASALTO A MANO ARMADA`, `25 - PERSONA SOSPECHOSA`). Es independiente de si el caso termina generando un Informe: ese es un evento posterior, disparado por el pedido de una Dependencia. |
 | **Estado del Caso** | Pendiente, Cerrado o En Revisión — refleja si el trabajo de análisis del caso está terminado. |
 | **Resultado del Caso** | Positivo, Negativo o Revisión — indica si el análisis de cámaras arrojó un hallazgo útil para la investigación. Dimensión clave de analítica de gestión. |
-| **Dependencia** | Organismo externo que solicita el análisis o el Informe: Comisaría, Fiscalía, Juzgado, División de investigación, o Unidad Regional (UR). Algunas Dependencias (típicamente Comisarías) tienen **jurisdicción geográfica**: una colección de **Barrio** bajo su cobertura. Otras (Fiscalía, Juzgado) no la tienen — el campo queda vacío. |
+| **Dependencia** | Organismo externo que solicita el análisis o el Informe: Comisaría, Fiscalía, Juzgado, División de investigación, o Unidad Regional (UR). Algunas Dependencias (típicamente Comisarías) tienen **jurisdicción geográfica**: una colección de **Barrio** bajo su cobertura. Otras (Fiscalía, Juzgado) no la tienen — el campo queda vacío. Una Dependencia de tipo Comisaría puede pertenecer a una **Unidad Regional** (otra Dependencia con `Tipo = UnidadRegional`) mediante `UnidadRegionalId` — una UR agrupa varias Comisarías/Jurisdicciones bajo su mando. |
 | **Barrio** | Zona geográfica catalogada (barrio, zona rural, tramo de ruta) que puede estar bajo la jurisdicción de una o más Dependencias. Catálogo simple administrado por el Administrador — sin geometría/mapa, solo nombre. |
+| **Localidad** | Ciudad, pueblo o paraje de la provincia donde está físicamente instalada una Cámara (ej. `Arizona`, `Cerro de Oro`, `Estancia Grande`, `Potrero de Los Funes`). Catálogo simple administrado por el Administrador — sin geometría/mapa, solo nombre. **Distinto de Barrio**: Barrio es la jurisdicción geográfica de una Dependencia (usado para Casos/Informes); Localidad es un atributo geográfico de la Cámara, viene del relevamiento físico del catálogo de cámaras y no tiene relación con Dependencia. |
+| **Centro de Control de Cámaras (CCC)** | Catálogo de los centros que monitorean cámaras, uno por ciudad cabecera: CCCSL (San Luis), CCCVM (Villa Mercedes), CCCME (Merlo), CCCJD (Justo Daract). Toda Cámara pertenece a un CCC. |
 | **Evidencia** | Cada captura individual documentada dentro de un Informe (una "Imagen N°X"): cámara/dispositivo de origen, fecha y hora exacta, descripción y archivo de imagen. |
-| **Cámara / Dispositivo** | Fuente de una Evidencia o mencionada en un Caso. Código identificador (`SL 18`, `JK 51`, `VM 86`, `LP 217`) más ubicación. Dos tipos: Domo de monitoreo o LPR (Lector de Patentes). Puede pertenecer opcionalmente a una **Dependencia** (una Domo dentro de la jurisdicción de una Comisaría) — una LPR en ruta o en un paso limítrofe puede no tener Dependencia asociada. |
+| **Cámara / Dispositivo** | Fuente de una Evidencia o mencionada en un Caso. Código identificador (`SL 18`, `JK 51`, `VM 86`, `LP 217`) más ubicación. Dos tipos: Domo de monitoreo o LPR (Lector de Patentes). Puede pertenecer opcionalmente a una **Dependencia** (una Domo dentro de la jurisdicción de una Comisaría) — una LPR en ruta o en un paso limítrofe puede no tener Dependencia asociada. Tiene una **Localidad** (dónde está instalada) y un **Centro de Control de Cámaras** que la monitorea. **`Codigo` no es único**: el relevamiento real muestra el mismo código para varias cámaras de una misma instalación agrupada (ej. un peaje o una planta verificadora con múltiples cámaras) — se diferencian por `Ubicacion`, no por `Codigo`. |
 | **Vehículo** | Rodado en catálogo de vigilancia. Atributos: marca/modelo, color, dominio (puede ser parcial/incierto), **categoría de alerta** (Robado, Narcotráfico, Inhibidores, Robo de Cubiertas, Pedido Especial — puede tener más de una), **estado** (Vigente | Identificado), **acción a realizar** al detectarlo (Detener | Identificar), **avisar a** (dependencia/persona de contacto), **fecha de baja** (cuándo dejó de estar en vigilancia activa). |
 | **Persona** | Individuo mencionado o identificado en un Caso/Informe, con un **rol** (Denunciante, Damnificado, Sospechoso, Conductor identificado, Testigo). Puede tener DNI si está identificada, o solo características físicas si no. |
 | **Analista / Operador** | Usuario del Equipo de Analítica. Un Caso puede tener varios analistas asignados (columna "Operadores" / "Creador ID" en la planilla histórica — se modela como relación N:M con rol). |
@@ -54,3 +56,18 @@
 - **`Camara.DependenciaId` es opcional**: una Domo dentro de la
   jurisdicción de una Comisaría se vincula a esa Dependencia; una LPR en
   ruta o en un paso limítrofe puede no pertenecer a ninguna.
+- **`Camara.Codigo` no es único**: a diferencia de `Dependencia.Nombre` y
+  `Barrio.Nombre`, el relevamiento real (`docs/camaras.xlsx`) trae códigos
+  repetidos entre varias cámaras de una misma instalación agrupada (ej.
+  un peaje con 22 cámaras bajo el mismo código). No forzar unicidad en el
+  dominio ni en la base — diferenciar por `Ubicacion`.
+- **`Localidad` no es `Barrio`**: no unificar ambos catálogos aunque
+  compartan la forma (solo nombre). `Barrio` cuelga de `Dependencia`
+  (jurisdicción para Casos/Informes); `Localidad` cuelga de `Camara`
+  (dónde está instalada físicamente). Son dos vocabularios geográficos
+  independientes que pueden solaparse en nombre sin ser la misma entidad.
+- **Jerarquía de Unidad Regional**: se modela como auto-referencia dentro
+  de `Dependencia` (`UnidadRegionalId`, nullable, FK a otra `Dependencia`
+  con `Tipo = UnidadRegional`) en vez de una entidad separada — reutiliza
+  el catálogo existente en lugar de duplicar el concepto de "organismo
+  externo".

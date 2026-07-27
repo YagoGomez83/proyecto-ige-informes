@@ -12,7 +12,7 @@ public sealed class CamaraConfiguration : IEntityTypeConfiguration<Camara>
 
         builder.HasKey(c => c.Id);
 
-        builder.Property(c => c.Codigo).HasMaxLength(20).IsRequired();
+        builder.Property(c => c.Codigo).HasMaxLength(50).IsRequired();
         builder.Property(c => c.Ubicacion).HasMaxLength(300);
 
         builder.Property(c => c.Tipo)
@@ -20,11 +20,21 @@ public sealed class CamaraConfiguration : IEntityTypeConfiguration<Camara>
             .HasMaxLength(20)
             .IsRequired();
 
-        builder.HasIndex(c => c.Codigo).IsUnique();
+        builder.HasIndex(c => c.Codigo);
 
         builder.HasOne<Dependencia>()
             .WithMany()
             .HasForeignKey(c => c.DependenciaId)
+            .IsRequired(false);
+
+        builder.HasOne<Localidad>()
+            .WithMany()
+            .HasForeignKey(c => c.LocalidadId)
+            .IsRequired(false);
+
+        builder.HasOne<CentroControlCamaras>()
+            .WithMany()
+            .HasForeignKey(c => c.CentroControlCamarasId)
             .IsRequired(false);
     }
 }

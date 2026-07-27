@@ -1,0 +1,58 @@
+@page "/centros-control-camaras"
+@attribute [Authorize]
+@using IGE.Informes.Application.CentrosControlCamaras.Queries.ListarCentrosControlCamaras
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Centros de Control de Cámaras · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Centros de Control de Cámaras</h1>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <a class="btn-primary" href="centros-control-camaras/nuevo">Nuevo Centro de Control</a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@if (_centros is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_centros.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay centros de control cargados.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Sigla</th>
+                    <th class="label-md">Nombre</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var centro in _centros)
+                {
+                    <tr>
+                        <td class="mono-data">@centro.Sigla</td>
+                        <td class="body-md">@centro.Nombre</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<CentroControlCamarasDto>? _centros;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _centros = await Sender.Send(new ListarCentrosControlCamarasQuery());
+    }
+}

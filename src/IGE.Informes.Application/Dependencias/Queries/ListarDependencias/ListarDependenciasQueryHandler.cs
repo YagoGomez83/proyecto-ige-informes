@@ -11,7 +11,7 @@ public sealed class ListarDependenciasQueryHandler(IAppDbContext dbContext)
     {
         return await dbContext.Dependencias.AsNoTracking()
             .OrderBy(d => d.Nombre)
-            .Select(d => new DependenciaDto(d.Id, d.Nombre, d.Tipo, d.BarrioIds))
+            .Select(d => new DependenciaDto(d.Id, d.Nombre, d.Tipo, d.BarrioIds, d.UnidadRegionalId))
             .ToListAsync(cancellationToken);
     }
 }

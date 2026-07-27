@@ -12,7 +12,7 @@ public sealed class ObtenerDependenciaPorIdQueryHandler(IAppDbContext dbContext)
     {
         return await dbContext.Dependencias.AsNoTracking()
             .Where(d => d.Id == request.DependenciaId)
-            .Select(d => new DependenciaDto(d.Id, d.Nombre, d.Tipo, d.BarrioIds))
+            .Select(d => new DependenciaDto(d.Id, d.Nombre, d.Tipo, d.BarrioIds, d.UnidadRegionalId))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

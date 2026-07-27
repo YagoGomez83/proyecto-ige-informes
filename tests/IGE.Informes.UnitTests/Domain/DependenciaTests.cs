@@ -78,4 +78,46 @@ public class DependenciaTests
 
         Assert.Contains(barrioId, fiscalia.BarrioIds);
     }
+
+    [Fact]
+    public void AsignarUnidadRegional_vincula_la_dependencia_a_la_unidad_regional()
+    {
+        // HU-16: la regla de que la Dependencia referenciada debe tener
+        // Tipo = UnidadRegional se valida en el Handler de Application
+        // (ver docs/03-modelo-dominio.md, invariante 14) — el Domain solo
+        // guarda la referencia, no valida el tipo de la Dependencia destino.
+        var comisaria = new Dependencia("Comisaría 2°", TipoDependencia.Comisaria);
+        var unidadRegionalId = Guid.NewGuid();
+
+        comisaria.AsignarUnidadRegional(unidadRegionalId);
+
+        Assert.Equal(unidadRegionalId, comisaria.UnidadRegionalId);
+    }
+
+    [Fact]
+    public void AsignarUnidadRegional_rechaza_id_vacio()
+    {
+        var comisaria = new Dependencia("Comisaría 2°", TipoDependencia.Comisaria);
+
+        Assert.Throws<ArgumentException>(() => comisaria.AsignarUnidadRegional(Guid.Empty));
+    }
+
+    [Fact]
+    public void Alta_sin_asignar_unidad_regional_queda_sin_unidad_regional_asociada()
+    {
+        var comisaria = new Dependencia("Comisaría 2°", TipoDependencia.Comisaria);
+
+        Assert.Null(comisaria.UnidadRegionalId);
+    }
+
+    [Fact]
+    public void QuitarUnidadRegional_deja_la_dependencia_sin_unidad_regional()
+    {
+        var comisaria = new Dependencia("Comisaría 2°", TipoDependencia.Comisaria);
+        comisaria.AsignarUnidadRegional(Guid.NewGuid());
+
+        comisaria.QuitarUnidadRegional();
+
+        Assert.Null(comisaria.UnidadRegionalId);
+    }
 }

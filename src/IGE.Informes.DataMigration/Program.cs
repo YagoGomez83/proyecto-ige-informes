@@ -1,4 +1,5 @@
 using IGE.Informes.Application.Common.Interfaces;
+using IGE.Informes.DataMigration;
 using IGE.Informes.DataMigration.Consolidacion;
 using IGE.Informes.DataMigration.Excel;
 using IGE.Informes.Domain.Entities;
@@ -6,9 +7,21 @@ using IGE.Informes.Infrastructure.Auditing;
 using IGE.Informes.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
+if (args.Length > 0 && string.Equals(args[0], "camaras", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length < 3 || !File.Exists(args[1]))
+    {
+        Console.WriteLine("Uso: dotnet run -- camaras <ruta-al-excel.xlsx> <connection-string> [--confirmar]");
+        return 1;
+    }
+
+    return await ProgramCamaras.Ejecutar(args[1], args[2], args.Contains("--confirmar"));
+}
+
 if (args.Length == 0 || !File.Exists(args[0]))
 {
-    Console.WriteLine("Uso: dotnet run -- <ruta-al-excel.xlsx> <connection-string> [--confirmar]");
+    Console.WriteLine("Uso: dotnet run -- <ruta-al-excel.xlsx> <connection-string> [--confirmar]   (migración de Vehículos)");
+    Console.WriteLine("     dotnet run -- camaras <ruta-al-excel.xlsx> <connection-string> [--confirmar]   (migración de Cámaras)");
     Console.WriteLine("Sin --confirmar, corre en modo dry-run: solo muestra el reporte, no persiste nada.");
     return 1;
 }
@@ -160,13 +173,3 @@ return 0;
 
 static string TruncarSiExcede(string valor, int maxLength) =>
     valor.Length > maxLength ? valor[..maxLength] : valor;
-
-sealed class UsuarioMigracionService : ICurrentUserService
-{
-    // Guid reservado y documentado como "usuario de sistema / migración
-    // histórica" — nunca corresponde a una cuenta real de Identity.
-    public static readonly Guid UsuarioMigracionId = new("00000000-0000-0000-0000-000000000001");
-
-    public Guid? UsuarioId => UsuarioMigracionId;
-    public IReadOnlyCollection<string> Roles => ["Admin"];
-}

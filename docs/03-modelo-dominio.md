@@ -8,6 +8,9 @@ erDiagram
     DEPENDENCIA ||--o{ INFORME : "solicita"
     DEPENDENCIA }o--o{ BARRIO : "jurisdiccion geografica (opcional)"
     DEPENDENCIA ||--o{ CAMARA : "jurisdiccion (opcional)"
+    DEPENDENCIA ||--o{ DEPENDENCIA : "Unidad Regional agrupa Comisarias (opcional)"
+    LOCALIDAD ||--o{ CAMARA : "ubicacion fisica (opcional)"
+    CENTRO_CONTROL_CAMARAS ||--o{ CAMARA : "monitorea"
     CAUSA ||--o{ INFORME : "motiva"
     TIPO_INCIDENTE ||--o{ CASO_ANALISIS : "clasifica"
     CASO_ANALISIS ||--o{ INFORME : "puede originar 0..N"
@@ -28,6 +31,7 @@ erDiagram
         guid id
         string nombre "unico"
         string tipo "Comisaria|Fiscalia|Juzgado|Division|UR"
+        guid unidad_regional_id "nullable, FK a Dependencia con tipo=UR"
     }
 
     CAUSA {
@@ -87,15 +91,28 @@ erDiagram
 
     CAMARA {
         guid id
-        string codigo "ej SL-18, JK-51, VM-86"
+        string codigo "ej SL-18, JK-51, VM-86; NO unico, ver notas de modelado"
         string ubicacion
         string tipo "Domo|LPR"
         guid dependencia_id "nullable, jurisdiccion opcional"
+        guid localidad_id "nullable, ubicacion fisica"
+        guid centro_control_camaras_id "nullable, quien la monitorea"
     }
 
     BARRIO {
         guid id
         string nombre "unico"
+    }
+
+    LOCALIDAD {
+        guid id
+        string nombre "unico"
+    }
+
+    CENTRO_CONTROL_CAMARAS {
+        guid id
+        string sigla "unico, ej CCCSL"
+        string nombre "ej Centro de Control de Camaras San Luis"
     }
 
     VEHICULO {
@@ -194,6 +211,20 @@ erDiagram
     paso limítrofe puede no pertenecer a ninguna Dependencia.
 13. `Barrio.nombre` es único — se reutiliza el mismo `Barrio` entre
     distintas Dependencias en vez de duplicar el nombre por cada una.
+14. `Dependencia.UnidadRegionalId` es nullable y solo tiene sentido para
+    `Tipo = Comisaria` (una Comisaría pertenece a una UR); el dominio no
+    restringe por `Tipo` — igual que con `Barrio`, la UI simplemente no lo
+    ofrece para Fiscalía/Juzgado. La Dependencia referenciada debe tener
+    `Tipo = UnidadRegional` (se valida en el Handler, no con FK check
+    constraint, para message de error claro).
+15. `Localidad.nombre` es único.
+16. `CentroControlCamaras.sigla` es único (ej. `CCCSL`).
+17. `Camara.Codigo` **no** es único — a diferencia de `Dependencia.nombre`,
+    `Barrio.nombre` y `Localidad.nombre`. El dato real trae códigos
+    repetidos entre cámaras de una misma instalación agrupada.
+18. `Camara.LocalidadId` y `Camara.CentroControlCamarasId` son nullables —
+    igual criterio que `DependenciaId`: una Cámara puede darse de alta sin
+    esos datos si todavía no se relevaron.
 
 ## Alcance de migración de datos (confirmado)
 
@@ -202,6 +233,7 @@ erDiagram
 | `ANALITICA_2026.xlsx` (Casos de Análisis históricos) | **No** — el equipo sigue llevándolo en Excel en paralelo | El sistema nuevo arranca registrando Casos desde cero a partir de su puesta en producción |
 | `Relevamiento_Dominios_cargados_Hik_Central.xlsx` | **Sí** | Deduplicar entre hojas repetidas (`VEHICULOS SL` ≈ `Hoja 7`); descartar hojas vacías |
 | PDFs de Informes en Drive | **Sí** | Ver ADR-004 — parser por plantilla, sin OCR |
+| `docs/camaras.xlsx` (relevamiento de Cámaras) | **Sí** | 851 filas con datos reales (de 1015 filas en el `UsedRange`; las 164 restantes están completamente vacías — residuo de formato de Excel, no datos perdidos): `ID` (Codigo, no único), `Ubicacion`, `Localidad`, `Monitoreo` (sigla de CentroControlCamaras), `Unidad Regional`, `Jurisdiccion` (nombre de Dependencia tipo Comisaría). Normalizar antes de importar: `UR1` → `UR 1` (inconsistencia de formato encontrada en el origen), espacios dobles en nombres de Jurisdicción. |
 
 ## Decisiones ya resueltas
 
