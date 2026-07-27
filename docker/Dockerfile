@@ -23,7 +23,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r ige && useradd -r -g ige ige
-RUN mkdir -p /keys && chown ige:ige /keys
+RUN mkdir -p /keys /app/generated && chown ige:ige /keys /app/generated
 USER ige
 
 COPY --from=build /app ./

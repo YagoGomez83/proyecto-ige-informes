@@ -9,6 +9,7 @@ appsettings.Development.json
 appsettings.*.local.json
 docker/.env
 docker/docker-compose.override.local.yml
+docker/generated/
 
 # Relevamientos con datos de infraestructura sensible (ubicaciones de
 # cámaras, jurisdicciones policiales) — se leen desde una ruta local, no
