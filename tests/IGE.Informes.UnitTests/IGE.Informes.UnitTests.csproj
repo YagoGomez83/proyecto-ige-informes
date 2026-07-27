@@ -25,4 +25,8 @@
     <ProjectReference Include="..\..\src\IGE.Informes.Infrastructure\IGE.Informes.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="PdfParsing\Resources\DejaVuSans.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
