@@ -18,8 +18,15 @@ public class RegistrarCamaraConcurrenciaTests : IAsyncLifetime
     public async Task DisposeAsync() => await _postgres.DisposeAsync();
 
     [Fact]
-    public async Task Carrera_entre_el_chequeo_y_el_insert_termina_en_EntidadDuplicadaException()
+    public async Task Codigo_repetido_bajo_concurrencia_se_acepta_contra_la_base_real()
     {
+        // Camara.Codigo dejó de ser único (ver docs/01-glosario-dominio.md):
+        // el relevamiento real trae códigos repetidos entre cámaras de una
+        // misma instalación agrupada (ej. "PLI" con 22 cámaras). Este test
+        // reemplaza al anterior (que esperaba EntidadDuplicadaException bajo
+        // condición de carrera) y confirma contra Postgres real que el
+        // índice de Codigo ya no es UNIQUE — dos altas concurrentes con el
+        // mismo Codigo deben persistir ambas sin conflicto.
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(_postgres.GetConnectionString())
             .Options;
@@ -29,21 +36,19 @@ public class RegistrarCamaraConcurrenciaTests : IAsyncLifetime
             await migrationContext.Database.MigrateAsync();
         }
 
-        await using var dbContext = new AppDbContext(options);
-        var handler = new RegistrarCamaraCommandHandler(dbContext);
-
-        // Reproduce la ventana de carrera que el AnyAsync del Handler no
-        // puede ver: otra alta con el mismo Codigo se persiste, por su
-        // cuenta, en el instante entre el chequeo del Handler y su propio
-        // SaveChangesAsync — el índice único de la base es quien atrapa
-        // el conflicto, no el AnyAsync.
         await using (var altaConcurrente = new AppDbContext(options))
         {
-            altaConcurrente.Camaras.Add(new Camara("SL 18", TipoCamara.Domo));
+            altaConcurrente.Camaras.Add(new Camara("PLI", TipoCamara.Lpr, "La Punilla - Ingreso"));
             await altaConcurrente.SaveChangesAsync();
         }
 
-        await Assert.ThrowsAsync<EntidadDuplicadaException>(() => handler.Handle(
-            new RegistrarCamaraCommand("SL 18", TipoCamara.Lpr, null), CancellationToken.None));
+        await using var dbContext = new AppDbContext(options);
+        var handler = new RegistrarCamaraCommandHandler(dbContext);
+
+        var camaraId = await handler.Handle(
+            new RegistrarCamaraCommand("PLI", TipoCamara.Lpr, "La Punilla - Egreso"), CancellationToken.None);
+
+        var camara = await dbContext.Camaras.FindAsync(camaraId);
+        Assert.Equal("PLI", camara!.Codigo);
     }
 }

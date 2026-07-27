@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "preview"
+
+      - name: Restore
+        run: dotnet restore IGE.Informes.sln
+
+      - name: Build
+        run: dotnet build IGE.Informes.sln --no-restore --configuration Release
+
+      - name: Unit tests
+        run: dotnet test tests/IGE.Informes.UnitTests/IGE.Informes.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-tests.trx"
+
+      - name: Integration tests
+        run: dotnet test tests/IGE.Informes.IntegrationTests/IGE.Informes.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-tests.trx"
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Resultados de tests
+          path: "**/*.trx"
+          reporter: dotnet-trx
