@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+.vs/
+.vscode/
+.git/
+.claude/
+docker/.env
+docker/docker-compose.override.local.yml
+docs/*.xlsx
