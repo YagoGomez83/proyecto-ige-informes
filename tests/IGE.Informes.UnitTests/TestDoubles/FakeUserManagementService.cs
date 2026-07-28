@@ -37,6 +37,9 @@ public sealed class FakeUserManagementService : IUserManagementService
     public IReadOnlyCollection<(Guid UsuarioId, string NuevoRol)> CambiarRolAsyncLlamadoCon => _cambiarRolAsyncLlamadoCon;
     private readonly List<(Guid UsuarioId, string NuevoRol)> _cambiarRolAsyncLlamadoCon = [];
 
+    public IReadOnlyCollection<(Guid UsuarioId, string NuevaPassword)> ResetearPasswordAsyncLlamadoCon => _resetearPasswordAsyncLlamadoCon;
+    private readonly List<(Guid UsuarioId, string NuevaPassword)> _resetearPasswordAsyncLlamadoCon = [];
+
     /// <summary>
     /// Helper de setup para pruebas: agrega un usuario preexistente sin pasar
     /// por <see cref="CrearUsuarioAsync"/>.
@@ -129,5 +132,17 @@ public sealed class FakeUserManagementService : IUserManagementService
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<bool> ResetearPasswordAsync(Guid usuarioId, string nuevaPassword, CancellationToken cancellationToken)
+    {
+        _resetearPasswordAsyncLlamadoCon.Add((usuarioId, nuevaPassword));
+
+        if (nuevaPassword.Length < LongitudMinimaPassword)
+        {
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(_usuarios.ContainsKey(usuarioId));
     }
 }

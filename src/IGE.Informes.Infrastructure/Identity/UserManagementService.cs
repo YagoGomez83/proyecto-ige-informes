@@ -123,6 +123,40 @@ public sealed class UserManagementService(
         await userManager.SetLockoutEndDateAsync(usuario, null);
     }
 
+    public async Task<bool> ResetearPasswordAsync(Guid usuarioId, string nuevaPassword, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(usuarioId.ToString())
+            ?? throw new InvalidOperationException($"Usuario '{usuarioId}' no encontrado.");
+
+        // Transacción explícita, mismo motivo que en CambiarRolAsync/CrearUsuarioAsync:
+        // ResetPasswordAsync/UpdateSecurityStampAsync cada uno hace su propio SaveChanges.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        // GeneratePasswordResetTokenAsync + ResetPasswordAsync es el mecanismo de Identity
+        // para fijar una contraseña nueva sin conocer la anterior (reset administrativo),
+        // a diferencia de ChangePasswordAsync que la requiere. Valida la política mínima
+        // igual que CreateAsync/AddPasswordAsync.
+        var token = await userManager.GeneratePasswordResetTokenAsync(usuario);
+        var resultado = await userManager.ResetPasswordAsync(usuario, token, nuevaPassword);
+        if (!resultado.Succeeded)
+        {
+            return false;
+        }
+
+        // Mismo motivo que en BloquearAsync/CambiarRolAsync: invalida el SecurityStamp para
+        // cortar cualquier sesión Blazor ya abierta con la contraseña vieja.
+        var resultadoStamp = await userManager.UpdateSecurityStampAsync(usuario);
+        if (!resultadoStamp.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"No se pudo invalidar el SecurityStamp del usuario '{usuarioId}'.");
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
+        return true;
+    }
+
     private async Task<UsuarioDto> MapearAsync(ApplicationUser usuario)
     {
         var roles = await userManager.GetRolesAsync(usuario);

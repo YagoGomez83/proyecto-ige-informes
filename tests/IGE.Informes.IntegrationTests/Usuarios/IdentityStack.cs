@@ -19,12 +19,16 @@ internal sealed class IdentityStack : IAsyncDisposable
     {
         DbContext = new AppDbContext(options);
 
-        _serviceProvider = new ServiceCollection()
+        var services = new ServiceCollection()
             .AddLogging()
-            .AddSingleton(DbContext)
+            .AddDataProtection().Services
+            .AddSingleton(DbContext);
+
+        _serviceProvider = services
             .AddIdentityCore<ApplicationUser>()
             .AddRoles<ApplicationRole>()
             .AddEntityFrameworkStores<AppDbContext>()
+            .AddDefaultTokenProviders()
             .Services
             .BuildServiceProvider();
 

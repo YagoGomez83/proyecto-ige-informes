@@ -245,7 +245,42 @@ Característica: Gestión de Usuarios
     Dado que existen varios usuarios con distintos roles y estados
     Cuando accedo al listado de usuarios
     Entonces veo nombre, email, rol y si está bloqueado o activo, de cada uno
+
+  Escenario: Un Administrador resetea la contraseña de otro usuario
+    Dado que un usuario existente olvidó su contraseña
+    Cuando ingreso una contraseña nueva de 12 o más caracteres desde su ficha
+    y confirmo el reseteo
+    Entonces el usuario puede iniciar sesión con la contraseña nueva y ya
+    no con la anterior
+
+  Escenario: Reseteo con contraseña que no cumple la política mínima
+    Dado que estoy en la ficha de un usuario existente
+    Cuando ingreso una contraseña nueva de menos de 12 caracteres y confirmo
+    Entonces el sistema rechaza el reseteo e indica el motivo
+
+  Escenario: Un Administrador no puede resetear su propia contraseña desde esta pantalla
+    Dado que estoy logueado como Administrador
+    Cuando intento resetear la contraseña de mi propio usuario
+    Entonces el sistema rechaza la operación (para cambiar la propia
+    contraseña ya existe "Cuenta > Administrar > Contraseña")
 ```
+
+### Reseteo de contraseña por un Admin (extensión de HU-17)
+
+- El Admin tipea la contraseña nueva (mismo patrón que el alta: 12+
+  caracteres, comunicada por un canal separado al usuario — ver
+  `docs/09-onboarding-offboarding-usuarios.md`). No hay generación
+  aleatoria ni envío de email (el sistema no tiene SMTP real, ver
+  `IdentityNoOpEmailSender`).
+- No se fuerza cambio de contraseña en el próximo login — alcance
+  acotado a la resolución del reset en sí, igual de simple que el alta.
+- Reutiliza el mismo tratamiento de auto-gestión que bloqueo/cambio de
+  rol: un Admin no puede resetearse su propia contraseña desde esta
+  pantalla (ya tiene su propio flujo en `Manage/ChangePassword`).
+- Igual que `BloquearAsync`/`CambiarRolAsync`, invalida el `SecurityStamp`
+  para cortar cualquier sesión Blazor ya abierta con la contraseña vieja
+  (mismo mecanismo que `PersistingRevalidatingAuthenticationStateProvider`,
+  ver `docs/06-seguridad-amenazas.md`).
 
 ### Notas de modelado
 

@@ -31,4 +31,14 @@ public interface IUserManagementService
     Task BloquearAsync(Guid usuarioId, CancellationToken cancellationToken);
 
     Task DesbloquearAsync(Guid usuarioId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Resetea la contraseña del usuario indicado a <paramref name="nuevaPassword"/> e
+    /// invalida su SecurityStamp (mismo mecanismo que <see cref="CambiarRolAsync"/> y
+    /// <see cref="BloquearAsync"/>, para cortar cualquier sesión Blazor ya abierta con la
+    /// contraseña vieja). Devuelve false si la contraseña no cumple la política mínima de
+    /// Identity (el Handler traduce ese caso a una excepción de negocio con el detalle,
+    /// mismo patrón que <see cref="CrearUsuarioAsync"/>), true si el reseteo tuvo éxito.
+    /// </summary>
+    Task<bool> ResetearPasswordAsync(Guid usuarioId, string nuevaPassword, CancellationToken cancellationToken);
 }

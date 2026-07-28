@@ -6,6 +6,7 @@
 @using IGE.Informes.Application.Usuarios.Commands.BloquearUsuario
 @using IGE.Informes.Application.Usuarios.Commands.CambiarRolUsuario
 @using IGE.Informes.Application.Usuarios.Commands.DesbloquearUsuario
+@using IGE.Informes.Application.Usuarios.Commands.ResetearPasswordUsuario
 @using IGE.Informes.Application.Usuarios.Queries.ListarUsuarios
 @using Microsoft.AspNetCore.Components.Authorization
 @using MediatR
@@ -67,7 +68,7 @@ else
         </div>
     </div>
 
-    <div class="card">
+    <div class="card mb-3">
         <h2 class="headline-sm mb-2">@(_usuario.Bloqueado ? "Desbloquear acceso" : "Bloquear acceso")</h2>
         @if (_usuario.Bloqueado)
         {
@@ -76,6 +77,25 @@ else
         else
         {
             <button type="button" class="btn-secondary" @onclick="BloquearAsync" disabled="@_procesando">Bloquear</button>
+        }
+    </div>
+
+    <div class="card">
+        <h2 class="headline-sm mb-2">Resetear contraseña</h2>
+        <p class="body-sm mb-2">
+            Definí una contraseña nueva y comunicásela a la persona por un canal
+            distinto al que usaste para avisarle que se reseteó.
+        </p>
+        <div class="d-flex align-items-end gap-2">
+            <div class="flex-grow-1">
+                <label class="label-md" for="nuevaPassword">Contraseña nueva (12+ caracteres)</label>
+                <input id="nuevaPassword" type="password" class="form-control" @bind="_nuevaPassword" />
+            </div>
+            <button type="button" class="btn-secondary" @onclick="ResetearPasswordAsync" disabled="@_procesando">Confirmar</button>
+        </div>
+        @if (_passwordReseteada)
+        {
+            <div class="status-chip status-chip--safe mt-2">Contraseña reseteada correctamente.</div>
         }
     </div>
 
@@ -93,6 +113,8 @@ else
     private Guid? _usuarioActualId;
     private bool _cargado;
     private string _rolSeleccionado = Roles.Analista;
+    private string _nuevaPassword = string.Empty;
+    private bool _passwordReseteada;
     private string? _errorMessage;
     private bool _procesando;
 
@@ -172,6 +194,32 @@ else
         catch (Exception)
         {
             _errorMessage = "No se pudo desbloquear el usuario.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+
+    private async Task ResetearPasswordAsync()
+    {
+        _errorMessage = null;
+        _passwordReseteada = false;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new ResetearPasswordUsuarioCommand(UsuarioId, _nuevaPassword));
+            _nuevaPassword = string.Empty;
+            _passwordReseteada = true;
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo resetear la contraseña. Verificá que cumpla la política mínima de 12 caracteres.";
         }
         finally
         {
