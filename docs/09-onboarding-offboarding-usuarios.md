@@ -67,12 +67,11 @@ desbloquee explícitamente desde la misma ficha.
       considerar si corresponde bloqueo o simplemente esperar).
 - [ ] Bloquear la cuenta desde `/usuarios/{id}` — no hay forma de borrarla,
       y no debería hacerse aunque la hubiera.
-- [ ] Si la persona tenía sesiones activas, no hay invalidación inmediata
-      de sesión en este sistema (Blazor Server + cookie de Identity) más
-      allá de esperar la expiración natural de la cookie o reiniciar el
-      contenedor `web` — **deuda pendiente**: evaluar invalidación activa
-      de sesión si se vuelve un requisito real (ej. RRHH necesita corte
-      inmediato).
+- [ ] Si la persona tenía una sesión activa, se corta sola: bloquear invalida
+      el `SecurityStamp` y `PersistingRevalidatingAuthenticationStateProvider`
+      cierra el circuito de Blazor Server en su próximo ciclo de
+      revalidación — hasta 30 minutos de latencia (no es corte instantáneo;
+      si RRHH necesita corte inmediato, ver deuda abajo).
 
 ## Cambiar el rol de un usuario existente
 
@@ -104,7 +103,9 @@ insertar filas en `AspNetUsers` a mano con un hash de contraseña inventado
 
 ## Deuda pendiente registrada
 
-- 2FA es autoservicio, no obligatorio para ningún rol — ver
-  `docs/06-seguridad-amenazas.md`, sección Autenticación.
-- No hay invalidación activa de sesión al hacer offboarding — solo bloqueo
-  de futuros logins.
+- La invalidación de sesión al bloquear (o cambiar el rol de) un usuario
+  tiene hasta 30 minutos de latencia (intervalo de
+  `PersistingRevalidatingAuthenticationStateProvider`) — no es corte
+  instantáneo. Si en el futuro se necesita corte inmediato, evaluar bajar
+  el intervalo o un mecanismo de notificación activa a los circuitos
+  abiertos (no hay infraestructura de SignalR custom hoy para eso).

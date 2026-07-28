@@ -205,8 +205,13 @@ sí antes de un despliegue a producción sin supervisión).
   si se exige para Supervisor/Admin antes de producción.
 - No hay UI de gestión de usuarios (alta/cambio de rol/bloqueo) — todo el
   proceso de `09-onboarding-offboarding-usuarios.md` es manual.
-- No hay invalidación activa de sesión al hacer offboarding de un usuario
-  (solo bloqueo de logins futuros).
+  **(Resuelto en HU-17.)**
+- ~~No hay invalidación activa de sesión al hacer offboarding de un usuario
+  (solo bloqueo de logins futuros).~~ **Resuelto**: `BloquearAsync`/
+  `CambiarRolAsync` invalidan el `SecurityStamp`, que
+  `PersistingRevalidatingAuthenticationStateProvider` detecta en su próximo
+  ciclo de revalidación (hasta 30 min de latencia, ver
+  `docs/09-onboarding-offboarding-usuarios.md`).
 - El volumen de backups (`docker-compose.backup.yml`) es local en el
   entorno de desarrollo/simulacro — en producción debe montarse sobre
   almacenamiento externo al servidor antes de confiar en él.

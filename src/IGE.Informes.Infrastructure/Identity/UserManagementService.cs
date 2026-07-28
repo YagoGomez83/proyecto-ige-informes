@@ -59,6 +59,11 @@ public sealed class UserManagementService(
         }
 
         await userManager.AddToRoleAsync(usuario, nuevoRol);
+
+        // Mismo motivo que en BloquearAsync: invalida el SecurityStamp para que
+        // PersistingRevalidatingAuthenticationStateProvider fuerce el circuito a
+        // revalidar y refleje el nuevo rol, en vez de operar con permisos viejos.
+        await userManager.UpdateSecurityStampAsync(usuario);
     }
 
     public async Task BloquearAsync(Guid usuarioId, CancellationToken cancellationToken)
@@ -68,6 +73,11 @@ public sealed class UserManagementService(
 
         await userManager.SetLockoutEnabledAsync(usuario, true);
         await userManager.SetLockoutEndDateAsync(usuario, DateTimeOffset.MaxValue);
+
+        // Invalida el SecurityStamp para que PersistingRevalidatingAuthenticationStateProvider
+        // cierre cualquier circuito de Blazor Server ya abierto en su próximo ciclo de
+        // revalidación (máx. 30 min), en vez de dejarlo activo hasta que expire la cookie.
+        await userManager.UpdateSecurityStampAsync(usuario);
     }
 
     public async Task DesbloquearAsync(Guid usuarioId, CancellationToken cancellationToken)
