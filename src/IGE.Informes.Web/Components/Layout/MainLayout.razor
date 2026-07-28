@@ -4,8 +4,9 @@
 @using IGE.Informes.Infrastructure.Identity
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.Extensions.DependencyInjection
 
-@inject UserManager<ApplicationUser> UserManager
+@inject IServiceScopeFactory ScopeFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -59,13 +60,22 @@
             return;
         }
 
-        var user = await UserManager.GetUserAsync(authState.User);
+        // Scope propio (no el UserManager/AppDbContext inyectado en el scope del
+        // circuito): páginas hijas disparan sus propias Queries/Commands contra el
+        // mismo AppDbContext scoped en su OnInitializedAsync, que corre en paralelo
+        // al de este layout — sin aislar el scope, dos operaciones concurrentes sobre
+        // la misma instancia de DbContext tiran InvalidOperationException
+        // ("A second operation was started on this context instance...").
+        await using var scope = ScopeFactory.CreateAsyncScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var user = await userManager.GetUserAsync(authState.User);
         if (user is null || user.TwoFactorEnabled)
         {
             return;
         }
 
-        var roles = await UserManager.GetRolesAsync(user);
+        var roles = await userManager.GetRolesAsync(user);
         if (roles.Contains(Roles.Admin) || roles.Contains(Roles.Supervisor))
         {
             NavigationManager.NavigateTo($"{RutaSetup2faObligatorio}?ReturnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad: false);
