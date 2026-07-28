@@ -198,9 +198,10 @@ abajo (no bloqueante para habilitar el sistema a los primeros usuarios,
 sí antes de un despliegue a producción sin supervisión).
 
 **Deuda registrada (no bloqueante)**:
-- A08 OWASP: el CI (`.github/workflows/ci.yml`) no corre
-  `dotnet list package --vulnerable` ni escaneo de imagen Docker (Trivy)
-  todavía.
+- A08 OWASP: el CI (`.github/workflows/ci.yml`) corre
+  `dotnet list package --vulnerable --include-transitive` y falla el build
+  ante cualquier paquete NuGet con vulnerabilidad conocida. **Resuelto
+  parcialmente** — sigue faltando escaneo de la imagen Docker (Trivy).
 - 2FA (TOTP) es autoservicio, no obligatorio para ningún rol — a decidir
   si se exige para Supervisor/Admin antes de producción.
 - No hay UI de gestión de usuarios (alta/cambio de rol/bloqueo) — todo el

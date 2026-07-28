@@ -35,6 +35,20 @@ jobs:
       - name: Integration tests
         run: dotnet test tests/IGE.Informes.IntegrationTests/IGE.Informes.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-tests.trx"
 
+      - name: Escanear dependencias vulnerables (OWASP A08)
+        run: |
+          dotnet list IGE.Informes.sln package --vulnerable --include-transitive --format json --output-version 1 --no-restore > vulnerable-packages.json
+          cat vulnerable-packages.json
+          if jq -e '
+            [.projects[].frameworks[]?
+              | (.topLevelPackages // [])[], (.transitivePackages // [])[]
+              | select(has("vulnerabilities"))
+            ] | length > 0
+          ' vulnerable-packages.json > /dev/null; then
+            echo "Se encontraron paquetes NuGet con vulnerabilidades conocidas (ver detalle arriba)."
+            exit 1
+          fi
+
       - name: Publish test results
         uses: dorny/test-reporter@v1
         if: always()
