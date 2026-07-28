@@ -263,6 +263,28 @@ public class MigrarInformesCommandHandlerTests
     }
 
     [Fact]
+    public async Task MigrarInformes_FechaAnalisisNoReconocida_CuentaComoAdvertenciaYNoInventaLaFechaDeHoy()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var extraidoSinFecha = CrearExtraidoExitoso("700/2022") with { FechaAnalisis = null };
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(extraidoSinFecha);
+        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "700-2022.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(1, reporte.ConAdvertencia);
+        Assert.Equal(0, reporte.Exitosos);
+        Assert.Equal(0, reporte.Fallidos);
+        Assert.Empty(dbContext.Informes.ToList());
+
+        var detalle = reporte.Detalle.Single();
+        Assert.Equal(ResultadoMigracionArchivo.ConAdvertencia, detalle.Resultado);
+        Assert.Contains("Fecha", detalle.Motivo, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task MigrarInformes_DependenciaDestinoInexistente_RechazaConEntidadNoEncontrada()
     {
         var dbContext = new TestAppDbContext();

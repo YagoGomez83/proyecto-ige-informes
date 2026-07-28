@@ -69,6 +69,16 @@ public sealed class MigrarInformesCommandHandler(
                 continue;
             }
 
+            if (extraido.FechaAnalisis is null)
+            {
+                // No inventar la fecha con DateTime.UtcNow: un fallback silencioso
+                // dejaba Informes "Exitosos" con la fecha de la migración en vez de
+                // la fecha real del análisis, sin ninguna advertencia visible en el
+                // reporte (hallazgo detectado revisando una migración real).
+                detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.ConAdvertencia, "No se reconoció la Fecha de Análisis.", extraido.Destino));
+                continue;
+            }
+
             // El parser nunca extrae Circunscripción judicial (no es un
             // patrón presente en el texto del PDF, ver skill
             // pdf-informe-parser) y Causa exige los 3 campos no vacíos —
@@ -76,9 +86,7 @@ public sealed class MigrarInformesCommandHandler(
             // Admin la completa después vía HU-02 si hace falta. Mismo
             // criterio "los 3 campos o ninguno" que ya usa
             // ConfirmarCargaInformeCommandHandler.
-            var fechaAnalisis = extraido.FechaAnalisis ?? DateOnly.FromDateTime(DateTime.UtcNow);
-
-            var informe = Informe.CrearMigrado(idRegistro, fechaAnalisis, request.DependenciaDestinoId, usuarioId);
+            var informe = Informe.CrearMigrado(idRegistro, extraido.FechaAnalisis.Value, request.DependenciaDestinoId, usuarioId);
 
             if (!string.IsNullOrWhiteSpace(extraido.Relato))
             {
