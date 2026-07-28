@@ -14,7 +14,7 @@ public sealed class MigrarInformesCommandValidator : AbstractValidator<MigrarInf
     // arbitrario a un cliente que invocara el Command directamente
     // (hallazgo del security-reviewer). Cada PDF se procesa sincrónicamente
     // en el mismo request, así que un lote sin tope es un vector de DoS.
-    public const int CantidadMaximaArchivos = 200;
+    public const int CantidadMaximaArchivos = 500;
 
     public MigrarInformesCommandValidator()
     {
