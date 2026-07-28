@@ -1,10 +1,12 @@
 using IGE.Informes.Application.Common.Interfaces;
+using IGE.Informes.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 
 namespace IGE.Informes.Infrastructure.Identity;
 
 public sealed class UserManagementService(
-    UserManager<ApplicationUser> userManager) : IUserManagementService
+    UserManager<ApplicationUser> userManager,
+    AppDbContext dbContext) : IUserManagementService
 {
     public async Task<IReadOnlyCollection<UsuarioDto>> ListarUsuariosAsync(CancellationToken cancellationToken)
     {
@@ -33,13 +35,24 @@ public sealed class UserManagementService(
             NombreCompleto = nombreCompleto,
         };
 
+        // Transacción explícita: si AddToRoleAsync falla después de que CreateAsync ya
+        // persistió, sin rollback quedaría un usuario creado sin ningún rol asignado,
+        // reportado igual como alta exitosa (mismo bug que se corrigió en CambiarRolAsync).
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
         var resultado = await userManager.CreateAsync(usuario, password);
         if (!resultado.Succeeded)
         {
             return null;
         }
 
-        await userManager.AddToRoleAsync(usuario, rol);
+        var resultadoRol = await userManager.AddToRoleAsync(usuario, rol);
+        if (!resultadoRol.Succeeded)
+        {
+            throw new InvalidOperationException($"No se pudo asignar el rol '{rol}' al usuario nuevo.");
+        }
+
+        await transaction.CommitAsync(cancellationToken);
 
         return usuario.Id;
     }
@@ -52,18 +65,40 @@ public sealed class UserManagementService(
         var usuario = await userManager.FindByIdAsync(usuarioId.ToString())
             ?? throw new InvalidOperationException($"Usuario '{usuarioId}' no encontrado.");
 
+        // Transacción explícita: RemoveFromRolesAsync/AddToRoleAsync/UpdateSecurityStampAsync
+        // cada uno hace su propio SaveChanges vía UserManager. Sin esto, si algo falla a
+        // mitad de camino (ej. AddToRoleAsync), el usuario queda sin ningún rol asignado.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
         var rolesActuales = await userManager.GetRolesAsync(usuario);
         if (rolesActuales.Count > 0)
         {
-            await userManager.RemoveFromRolesAsync(usuario, rolesActuales);
+            var resultadoRemover = await userManager.RemoveFromRolesAsync(usuario, rolesActuales);
+            if (!resultadoRemover.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"No se pudo remover los roles actuales del usuario '{usuarioId}'.");
+            }
         }
 
-        await userManager.AddToRoleAsync(usuario, nuevoRol);
+        var resultadoAgregar = await userManager.AddToRoleAsync(usuario, nuevoRol);
+        if (!resultadoAgregar.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"No se pudo asignar el rol '{nuevoRol}' al usuario '{usuarioId}'.");
+        }
 
         // Mismo motivo que en BloquearAsync: invalida el SecurityStamp para que
         // PersistingRevalidatingAuthenticationStateProvider fuerce el circuito a
         // revalidar y refleje el nuevo rol, en vez de operar con permisos viejos.
-        await userManager.UpdateSecurityStampAsync(usuario);
+        var resultadoStamp = await userManager.UpdateSecurityStampAsync(usuario);
+        if (!resultadoStamp.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"No se pudo invalidar el SecurityStamp del usuario '{usuarioId}'.");
+        }
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task BloquearAsync(Guid usuarioId, CancellationToken cancellationToken)
