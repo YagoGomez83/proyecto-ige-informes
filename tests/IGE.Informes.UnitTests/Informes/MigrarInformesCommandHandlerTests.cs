@@ -226,6 +226,43 @@ public class MigrarInformesCommandHandlerTests
     }
 
     [Fact]
+    public async Task MigrarInformes_LoteConPdfExitosoYConAdvertencia_ElReporteIncluyeElDestinoExtraidoDelPdf()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo()
+            .ConResultado(CrearExtraidoExitoso("600/2023"))
+            .ConResultado(CrearExtraidoSinIdRegistro() with { Destino = "Comisaría 5ta" });
+        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+
+        var command = CrearCommand(
+            dependencia.Id,
+            new PdfMigrarDto(ContenidoPdfFalso, "600-2023.pdf"),
+            new PdfMigrarDto(ContenidoPdfFalso, "sin-id.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        var detalleExitoso = reporte.Detalle.Single(d => d.NombreArchivo == "600-2023.pdf");
+        var detalleAdvertencia = reporte.Detalle.Single(d => d.NombreArchivo == "sin-id.pdf");
+
+        Assert.Equal("AV. INFRACCION LEY 23.737", detalleExitoso.DestinoExtraido);
+        Assert.Equal("Comisaría 5ta", detalleAdvertencia.DestinoExtraido);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_PdfNoLegible_ElReporteNoTraeDestinoExtraido()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo().ConExcepcion(new InvalidOperationException("PDF corrupto"));
+        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "corrupto.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Null(reporte.Detalle.Single().DestinoExtraido);
+    }
+
+    [Fact]
     public async Task MigrarInformes_DependenciaDestinoInexistente_RechazaConEntidadNoEncontrada()
     {
         var dbContext = new TestAppDbContext();

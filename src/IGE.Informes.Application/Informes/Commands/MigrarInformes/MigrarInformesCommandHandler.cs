@@ -57,7 +57,7 @@ public sealed class MigrarInformesCommandHandler(
 
             if (extraido.RequiereRevisionManual)
             {
-                detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.ConAdvertencia, "No se reconoció el ID Registro."));
+                detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.ConAdvertencia, "No se reconoció el ID Registro.", extraido.Destino));
                 continue;
             }
 
@@ -65,7 +65,7 @@ public sealed class MigrarInformesCommandHandler(
 
             if (idsRegistrados.Contains(idRegistro) || idsRegistradosEnLote.Contains(idRegistro))
             {
-                detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.ConAdvertencia, $"ID Registro duplicado: {idRegistro}."));
+                detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.ConAdvertencia, $"ID Registro duplicado: {idRegistro}.", extraido.Destino));
                 continue;
             }
 
@@ -88,7 +88,7 @@ public sealed class MigrarInformesCommandHandler(
             dbContext.Informes.Add(informe);
             idsRegistradosEnLote.Add(idRegistro);
 
-            detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.Exitoso, null));
+            detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.Exitoso, null, extraido.Destino));
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

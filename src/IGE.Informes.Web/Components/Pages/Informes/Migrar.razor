@@ -24,6 +24,12 @@
             extractor que la carga individual y genera un reporte al finalizar. Los Informes
             migrados quedan en estado Borrador, sin Caso de Análisis de origen.
         </p>
+        <p class="body-sm mb-3">
+            La Dependencia destino elegida abajo se aplica a todo el lote. El reporte va a
+            mostrar el "Destino" que el PDF trae escrito (comisaría/dependencia original) para
+            que puedas identificar sin abrir cada archivo cuáles Informes migrados hay que
+            corregirles la Dependencia real después, desde su ficha.
+        </p>
 
         <div class="mb-3">
             <label class="label-md" for="dependenciaDestino">Dependencia destino (se aplica a todo el lote)</label>
@@ -76,6 +82,7 @@ else
             <thead>
                 <tr>
                     <th class="label-md">Archivo</th>
+                    <th class="label-md">Destino (según PDF)</th>
                     <th class="label-md">Resultado</th>
                     <th class="label-md">Motivo</th>
                 </tr>
@@ -85,6 +92,7 @@ else
                 {
                     <tr>
                         <td class="body-sm mono-data">@item.NombreArchivo</td>
+                        <td class="body-sm">@(item.DestinoExtraido ?? "—")</td>
                         <td class="body-sm">
                             @switch (item.Resultado)
                             {

@@ -12,7 +12,18 @@ public enum ResultadoMigracionArchivo
     Fallido,
 }
 
-public sealed record MigracionArchivoResultDto(string NombreArchivo, ResultadoMigracionArchivo Resultado, string? Motivo);
+/// <summary>
+/// <paramref name="DestinoExtraido"/> es el texto crudo de "Destino" tal
+/// como aparece escrito en el PDF (ej. "Comisaría 2da") — el parser lo
+/// extrae pero el sistema no lo mapea a una Dependencia real del catálogo
+/// (los nombres no siempre calzan exacto). Se muestra en el reporte para
+/// que el Admin identifique de un vistazo a qué comisaría/dependencia
+/// corresponde cada Informe migrado, sin tener que abrir el PDF, y así
+/// corrija la Dependencia real desde la ficha del Informe después (HU-02).
+/// Null si el PDF no pudo parsearse o no traía ese campo.
+/// </summary>
+public sealed record MigracionArchivoResultDto(
+    string NombreArchivo, ResultadoMigracionArchivo Resultado, string? Motivo, string? DestinoExtraido = null);
 
 public sealed record MigracionLoteResultDto(
     int TotalProcesados,
