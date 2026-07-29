@@ -36,6 +36,11 @@ else
 
     <div class="card" style="max-width: 640px;">
         <div class="mb-3">
+            <label class="label-md" for="fechaAnalisis">Fecha de Análisis</label>
+            <input id="fechaAnalisis" type="date" class="form-control" @bind="_fechaAnalisis" />
+        </div>
+
+        <div class="mb-3">
             <label class="label-md" for="relato">Relato</label>
             <textarea id="relato" class="form-control" rows="6" @bind="_relato"></textarea>
         </div>
@@ -85,6 +90,7 @@ else
     private bool _guardando;
     private string? _errorMessage;
 
+    private DateOnly _fechaAnalisis;
     private string? _relato;
     private string _dependenciaDestinoId = string.Empty;
     private string? _causaCaratula;
@@ -98,6 +104,7 @@ else
 
         if (_informe is not null)
         {
+            _fechaAnalisis = _informe.FechaAnalisis;
             _relato = _informe.Relato;
             _dependenciaDestinoId = _informe.DependenciaDestinoId.ToString();
             _causaCaratula = _informe.CausaCaratula;
@@ -121,7 +128,8 @@ else
                 string.IsNullOrWhiteSpace(_dependenciaDestinoId) ? null : Guid.Parse(_dependenciaDestinoId),
                 _causaCaratula,
                 _piezaSumarial,
-                _circunscripcion));
+                _circunscripcion,
+                _fechaAnalisis));
 
             NavigationManager.NavigateTo($"informes/{InformeId}");
         }

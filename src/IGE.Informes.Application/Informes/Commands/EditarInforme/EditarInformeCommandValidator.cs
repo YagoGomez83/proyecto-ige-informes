@@ -11,5 +11,9 @@ public sealed class EditarInformeCommandValidator : AbstractValidator<EditarInfo
         RuleFor(x => x.CausaCaratula).MaximumLength(500);
         RuleFor(x => x.CausaNroPiezaSumarial).MaximumLength(100);
         RuleFor(x => x.CausaCircunscripcionJudicial).MaximumLength(200);
+        RuleFor(x => x.FechaAnalisis)
+            .Must(fecha => fecha <= DateOnly.FromDateTime(DateTime.UtcNow))
+            .WithMessage("La Fecha de Análisis no puede ser futura.")
+            .When(x => x.FechaAnalisis is not null);
     }
 }

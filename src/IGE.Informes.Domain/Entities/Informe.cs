@@ -145,6 +145,16 @@ public sealed class Informe : IAuditable
         CausaId = causaId;
     }
 
+    public void CorregirFechaAnalisis(DateOnly fechaAnalisis)
+    {
+        if (Estado == EstadoInforme.Publicado)
+        {
+            throw new InvalidOperationException("Un Informe Publicado es inmutable — no se puede corregir la Fecha de Análisis.");
+        }
+
+        FechaAnalisis = fechaAnalisis;
+    }
+
     public void AsignarDependenciaDestino(Guid dependenciaDestinoId)
     {
         if (dependenciaDestinoId == Guid.Empty)

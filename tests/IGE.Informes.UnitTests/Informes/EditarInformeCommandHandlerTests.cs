@@ -161,6 +161,85 @@ public class EditarInformeCommandHandlerTests
     }
 
     [Fact]
+    public async Task EditarInforme_CorrigeFechaAnalisis_PersisteLaFechaNueva()
+    {
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: null,
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null,
+            FechaAnalisis: new DateOnly(2022, 8, 9));
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informeActualizado = await dbContext.Informes.FindAsync(informe.Id);
+        Assert.NotNull(informeActualizado);
+        Assert.Equal(new DateOnly(2022, 8, 9), informeActualizado.FechaAnalisis);
+    }
+
+    [Fact]
+    public async Task EditarInforme_SinTocarFechaAnalisis_MantieneLaFechaOriginal()
+    {
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        var fechaOriginal = informe.FechaAnalisis;
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: "Solo el relato.",
+            DependenciaDestinoId: null,
+            CausaCaratula: null,
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null);
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informeActualizado = await dbContext.Informes.FindAsync(informe.Id);
+        Assert.NotNull(informeActualizado);
+        Assert.Equal(fechaOriginal, informeActualizado.FechaAnalisis);
+    }
+
+    [Fact]
+    public void EditarInformeCommandValidator_FechaAnalisisFutura_EsRechazada()
+    {
+        var validator = new EditarInformeCommandValidator();
+        var command = new EditarInformeCommand(
+            Guid.NewGuid(),
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: null,
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null,
+            FechaAnalisis: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1));
+
+        var resultado = validator.Validate(command);
+
+        Assert.False(resultado.IsValid);
+    }
+
+    [Fact]
+    public void EditarInformeCommandValidator_SinFechaAnalisis_EsAceptado()
+    {
+        var validator = new EditarInformeCommandValidator();
+        var command = new EditarInformeCommand(
+            Guid.NewGuid(),
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: null,
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null);
+
+        var resultado = validator.Validate(command);
+
+        Assert.True(resultado.IsValid);
+    }
+
+    [Fact]
     public async Task EditarInforme_NuevaDependenciaDestinoInexistente_RechazaConEntidadNoEncontradaException()
     {
         var (dbContext, _, _, informe) = await PrepararAsync();

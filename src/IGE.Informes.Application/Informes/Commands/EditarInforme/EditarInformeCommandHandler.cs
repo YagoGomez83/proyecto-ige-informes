@@ -20,6 +20,11 @@ public sealed class EditarInformeCommandHandler(IAppDbContext dbContext, ICurren
                 $"El Informe '{informe.IdRegistro}' ya está Publicado y es inmutable — no se pueden editar sus metadatos.");
         }
 
+        if (request.FechaAnalisis is { } fechaAnalisis)
+        {
+            informe.CorregirFechaAnalisis(fechaAnalisis);
+        }
+
         if (request.DependenciaDestinoId is { } dependenciaDestinoId)
         {
             var dependenciaExiste = await dbContext.Dependencias.AnyAsync(d => d.Id == dependenciaDestinoId, cancellationToken);

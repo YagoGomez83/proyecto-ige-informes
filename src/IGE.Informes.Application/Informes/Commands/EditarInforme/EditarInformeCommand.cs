@@ -18,4 +18,5 @@ public sealed record EditarInformeCommand(
     Guid? DependenciaDestinoId,
     string? CausaCaratula,
     string? CausaNroPiezaSumarial,
-    string? CausaCircunscripcionJudicial) : IRequest;
+    string? CausaCircunscripcionJudicial,
+    DateOnly? FechaAnalisis = null) : IRequest;
