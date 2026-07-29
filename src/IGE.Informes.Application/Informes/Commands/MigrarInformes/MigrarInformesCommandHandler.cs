@@ -1,3 +1,4 @@
+using IGE.Informes.Application.Common;
 using IGE.Informes.Application.Common.Exceptions;
 using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Domain.Entities;
@@ -10,8 +11,16 @@ public sealed class MigrarInformesCommandHandler(
     IAppDbContext dbContext,
     ICurrentUserService currentUserService,
     IInformePdfParser parser,
-    IAuditLogger auditLogger) : IRequestHandler<MigrarInformesCommand, MigracionLoteResultDto>
+    IAuditLogger auditLogger,
+    TimeSpan? timeoutPorArchivo = null) : IRequestHandler<MigrarInformesCommand, MigracionLoteResultDto>
 {
+    // Parámetro configurable (default: PdfParserTimeoutHelper.TimeoutPorDefecto,
+    // 30s) solo para poder testear el timeout sin esperar 30s reales por
+    // test — DependencyInjection.cs no lo pasa, así que en producción
+    // siempre usa el default. Ver PdfParserTimeoutHelper para el porqué del
+    // timeout (mismo mecanismo que usa ParsearPdfInformeQueryHandler, HU-01).
+    private readonly TimeSpan? _timeoutPorArchivo = timeoutPorArchivo;
+
     public async Task<MigracionLoteResultDto> Handle(MigrarInformesCommand request, CancellationToken cancellationToken)
     {
         var dependenciaExiste = await dbContext.Dependencias.AnyAsync(d => d.Id == request.DependenciaDestinoId, cancellationToken);
@@ -43,15 +52,20 @@ public sealed class MigrarInformesCommandHandler(
             InformeExtraidoDto extraido;
             try
             {
-                using var stream = new MemoryStream(pdf.Contenido);
-                extraido = parser.Parsear(stream);
+                extraido = await parser.ParsearConTimeoutAsync(pdf.Contenido, cancellationToken, _timeoutPorArchivo);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception)
             {
                 // No se expone ex.Message al usuario final — podría filtrar
                 // detalles internos de la librería de parseo (paths, stack
                 // trace parcial), aunque el endpoint ya exige rol Admin.
-                detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.Fallido, "El archivo no es un PDF legible o no sigue la plantilla esperada."));
+                // Cubre tanto PDFs no legibles como el timeout de
+                // ParsearConTimeoutAsync (TimeoutException).
+                detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.Fallido, "El archivo no es un PDF legible, no sigue la plantilla esperada, o tardó demasiado en procesarse."));
                 continue;
             }
 

@@ -28,6 +28,21 @@ public sealed class FakeInformePdfParserPorArchivo : IInformePdfParser
         return this;
     }
 
+    /// <summary>
+    /// Simula un parseo que nunca termina en un tiempo razonable — para
+    /// probar el timeout por archivo de MigrarInformesCommandHandler sin
+    /// depender de un PDF real que cuelgue PdfPig.
+    /// </summary>
+    public FakeInformePdfParserPorArchivo ConDemora(TimeSpan demora, InformeExtraidoDto resultado)
+    {
+        _resultados.Enqueue(() =>
+        {
+            Thread.Sleep(demora);
+            return resultado;
+        });
+        return this;
+    }
+
     public InformeExtraidoDto Parsear(Stream pdfStream)
     {
         if (_resultados.Count == 0)

@@ -285,6 +285,37 @@ public class MigrarInformesCommandHandlerTests
     }
 
     [Fact]
+    public async Task MigrarInformes_PdfQueTardaMasQueElTimeout_CuentaComoFallidoYSigueConElRestoDelLote()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo()
+            .ConDemora(TimeSpan.FromSeconds(2), CrearExtraidoExitoso("999/2022"))
+            .ConResultado(CrearExtraidoExitoso("998/2022"));
+        var handler = new MigrarInformesCommandHandler(
+            dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger(),
+            timeoutPorArchivo: TimeSpan.FromMilliseconds(200));
+
+        var command = CrearCommand(
+            dependencia.Id,
+            new PdfMigrarDto(ContenidoPdfFalso, "lento.pdf"),
+            new PdfMigrarDto(ContenidoPdfFalso, "998-2022.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(2, reporte.TotalProcesados);
+        Assert.Equal(1, reporte.Fallidos);
+        Assert.Equal(1, reporte.Exitosos);
+
+        var detalleLento = reporte.Detalle.Single(d => d.NombreArchivo == "lento.pdf");
+        Assert.Equal(ResultadoMigracionArchivo.Fallido, detalleLento.Resultado);
+        Assert.Contains("tardó demasiado", detalleLento.Motivo, StringComparison.OrdinalIgnoreCase);
+
+        var informes = dbContext.Informes.ToList();
+        Assert.Single(informes);
+        Assert.Equal("998/2022", informes[0].IdRegistro);
+    }
+
+    [Fact]
     public async Task MigrarInformes_DependenciaDestinoInexistente_RechazaConEntidadNoEncontrada()
     {
         var dbContext = new TestAppDbContext();

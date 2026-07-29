@@ -1,3 +1,5 @@
+using IGE.Informes.Application.Common;
+using IGE.Informes.Application.Common.Exceptions;
 using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Domain.Entities;
 using MediatR;
@@ -5,13 +7,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IGE.Informes.Application.Informes.Queries.ParsearPdfInforme;
 
-public sealed class ParsearPdfInformeQueryHandler(IAppDbContext dbContext, IInformePdfParser parser, IAuditLogger auditLogger)
-    : IRequestHandler<ParsearPdfInformeQuery, ParsearPdfInformeResultDto>
+public sealed class ParsearPdfInformeQueryHandler(
+    IAppDbContext dbContext,
+    IInformePdfParser parser,
+    IAuditLogger auditLogger,
+    TimeSpan? timeoutParseo = null) : IRequestHandler<ParsearPdfInformeQuery, ParsearPdfInformeResultDto>
 {
     public async Task<ParsearPdfInformeResultDto> Handle(ParsearPdfInformeQuery request, CancellationToken cancellationToken)
     {
-        using var stream = new MemoryStream(request.ContenidoPdf);
-        var extraido = parser.Parsear(stream);
+        InformeExtraidoDto extraido;
+        try
+        {
+            extraido = await parser.ParsearConTimeoutAsync(request.ContenidoPdf, cancellationToken, timeoutParseo);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // No se expone ex.Message al usuario final (mismo criterio que
+            // MigrarInformesCommandHandler) — cubre tanto PDFs no legibles
+            // como el timeout de ParsearConTimeoutAsync (TimeoutException).
+            throw new ReglaDeNegocioVioladaException(
+                "No se pudo procesar el archivo: no es un PDF legible, no sigue la plantilla esperada, o tardó demasiado en procesarse.");
+        }
 
         var yaExiste = extraido.IdRegistro is not null
             && await dbContext.Informes.AnyAsync(i => i.IdRegistro == extraido.IdRegistro, cancellationToken);

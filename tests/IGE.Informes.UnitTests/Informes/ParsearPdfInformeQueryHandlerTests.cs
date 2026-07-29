@@ -1,3 +1,4 @@
+using IGE.Informes.Application.Common.Exceptions;
 using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Application.Informes.Queries.ParsearPdfInforme;
 using IGE.Informes.Domain.Entities;
@@ -7,6 +8,18 @@ namespace IGE.Informes.UnitTests.Informes;
 
 public class ParsearPdfInformeQueryHandlerTests
 {
+    [Fact]
+    public async Task PdfQueTardaMasQueElTimeout_RechazaConReglaDeNegocioViolada()
+    {
+        var dbContext = new TestAppDbContext();
+        var extraido = new InformeExtraidoDto("290/2026", new DateOnly(2026, 7, 14), null, null, null, null, [], [], []);
+        var parser = new FakeInformePdfParserPorArchivo().ConDemora(TimeSpan.FromSeconds(2), extraido);
+        var handler = new ParsearPdfInformeQueryHandler(dbContext, parser, new FakeAuditLogger(), timeoutParseo: TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAsync<ReglaDeNegocioVioladaException>(
+            () => handler.Handle(new ParsearPdfInformeQuery([1, 2, 3]), CancellationToken.None));
+    }
+
     [Fact]
     public async Task Devuelve_los_datos_extraidos_sin_persistir_nada()
     {
