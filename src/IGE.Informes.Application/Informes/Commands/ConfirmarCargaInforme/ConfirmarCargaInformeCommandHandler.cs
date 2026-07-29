@@ -9,7 +9,8 @@ namespace IGE.Informes.Application.Informes.Commands.ConfirmarCargaInforme;
 public sealed class ConfirmarCargaInformeCommandHandler(
     IAppDbContext dbContext,
     ICurrentUserService currentUserService,
-    IFileStorage fileStorage) : IRequestHandler<ConfirmarCargaInformeCommand, Guid>
+    IFileStorage fileStorage,
+    IAntivirusScanner antivirusScanner) : IRequestHandler<ConfirmarCargaInformeCommand, Guid>
 {
     private const string TipoMimePdf = "application/pdf";
 
@@ -71,6 +72,18 @@ public sealed class ConfirmarCargaInformeCommandHandler(
         {
             causa = new Causa(request.CausaCaratula, request.CausaNroPiezaSumarial, request.CausaCircunscripcionJudicial);
             dbContext.Causas.Add(causa);
+        }
+
+        // Escaneo antivirus antes de persistir en MinIO (ver
+        // docs/06-seguridad-amenazas.md, "Ingesta de PDFs" — "subida de
+        // archivo malicioso disfrazado de PDF"). Fail-closed: si ClamAV no
+        // responde, AntivirusNoDisponibleException se propaga sin capturar
+        // — se prefiere rechazar la carga a aceptar un archivo sin escanear.
+        var estaLimpio = await antivirusScanner.EstaLimpioAsync(request.ContenidoPdf, cancellationToken);
+        if (!estaLimpio)
+        {
+            throw new ReglaDeNegocioVioladaException(
+                "El archivo fue rechazado por el escaneo antivirus — no se subió ni se guardó ningún dato.");
         }
 
         using var streamPdf = new MemoryStream(request.ContenidoPdf);

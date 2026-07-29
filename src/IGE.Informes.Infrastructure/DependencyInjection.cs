@@ -1,5 +1,6 @@
 using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Application.Informes.Queries.BuscarInformes;
+using IGE.Informes.Infrastructure.Antivirus;
 using IGE.Informes.Infrastructure.Auditing;
 using IGE.Informes.Infrastructure.Busqueda;
 using IGE.Informes.Infrastructure.FileStorage;
@@ -51,6 +52,9 @@ public static class DependencyInjection
 
         services.Configure<MinioOptions>(configuration.GetSection(MinioOptions.SectionName));
         services.AddSingleton<IFileStorage, MinioFileStorage>();
+
+        services.Configure<ClamAvOptions>(configuration.GetSection(ClamAvOptions.SectionName));
+        services.AddSingleton<IAntivirusScanner, ClamAvAntivirusScanner>();
 
         services.AddSingleton<IInformePdfParser, InformePdfParserAdapter>();
 

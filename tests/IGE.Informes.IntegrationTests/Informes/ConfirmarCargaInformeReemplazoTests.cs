@@ -28,6 +28,12 @@ public class ConfirmarCargaInformeReemplazoTests : IAsyncLifetime
             Task.FromResult($"https://fake.local/{clave}");
     }
 
+    private sealed class FakeAntivirusScanner : IAntivirusScanner
+    {
+        public Task<bool> EstaLimpioAsync(byte[] contenido, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+    }
+
     public async Task InitializeAsync() => await _postgres.StartAsync();
 
     public async Task DisposeAsync() => await _postgres.DisposeAsync();
@@ -72,7 +78,7 @@ public class ConfirmarCargaInformeReemplazoTests : IAsyncLifetime
         Guid informeId;
         await using (var dbContext = new AppDbContext(options))
         {
-            var handler = new ConfirmarCargaInformeCommandHandler(dbContext, currentUserService, fileStorage);
+            var handler = new ConfirmarCargaInformeCommandHandler(dbContext, currentUserService, fileStorage, new FakeAntivirusScanner());
             informeId = await handler.Handle(comandoInicial, CancellationToken.None);
         }
 
@@ -85,7 +91,7 @@ public class ConfirmarCargaInformeReemplazoTests : IAsyncLifetime
 
         await using (var dbContext = new AppDbContext(options))
         {
-            var handler = new ConfirmarCargaInformeCommandHandler(dbContext, currentUserService, fileStorage);
+            var handler = new ConfirmarCargaInformeCommandHandler(dbContext, currentUserService, fileStorage, new FakeAntivirusScanner());
             var informeIdReemplazo = await handler.Handle(comandoReemplazo, CancellationToken.None);
 
             Assert.Equal(informeId, informeIdReemplazo);

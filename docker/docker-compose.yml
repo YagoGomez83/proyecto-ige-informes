@@ -28,6 +28,8 @@ services:
       - Minio__SecretKey=${MINIO_ROOT_PASSWORD}
       - Minio__BucketName=ige-informes
       - Minio__UseSsl=false
+      - ClamAv__Host=clamav
+      - ClamAv__Port=3310
     volumes:
       - dataprotection_keys:/keys
     depends_on:
@@ -35,11 +37,31 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      clamav:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    # ~1.2-1.5 GB en reposo con la base de firmas cargada (freshclam corre
+    # en el propio contenedor al arrancar) — mem_limit acotado porque la
+    # VM de producción tiene 6 GB totales compartidos con Postgres/MinIO/web
+    # (ver docs/07-plan-despliegue.md). Si el healthcheck tarda en pasar la
+    # primera vez, es la descarga inicial de la base de firmas (freshclam).
+    mem_limit: 2g
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
 
   postgres:
     image: postgres:16
@@ -77,3 +99,4 @@ volumes:
   caddy_data:
   caddy_config:
   dataprotection_keys:
+  clamav_data:

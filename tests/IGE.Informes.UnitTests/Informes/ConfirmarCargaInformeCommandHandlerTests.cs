@@ -1,4 +1,5 @@
 using IGE.Informes.Application.Common.Exceptions;
+using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Application.Informes.Commands.ConfirmarCargaInforme;
 using IGE.Informes.Domain.Entities;
 using IGE.Informes.UnitTests.TestDoubles;
@@ -42,7 +43,7 @@ public class ConfirmarCargaInformeCommandHandlerTests
     {
         var (dbContext, caso, dependencia) = await PrepararAsync();
         var fileStorage = new FakeFileStorage();
-        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), fileStorage);
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), fileStorage, new FakeAntivirusScanner());
 
         var informeId = await handler.Handle(CrearCommand(caso.Id, dependencia.Id), CancellationToken.None);
 
@@ -65,7 +66,7 @@ public class ConfirmarCargaInformeCommandHandlerTests
     {
         var (dbContext, caso, dependencia) = await PrepararAsync();
         var fileStorage = new FakeFileStorage();
-        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), fileStorage);
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), fileStorage, new FakeAntivirusScanner());
 
         await handler.Handle(CrearCommand(caso.Id, dependencia.Id), CancellationToken.None);
 
@@ -78,7 +79,7 @@ public class ConfirmarCargaInformeCommandHandlerTests
     {
         var (dbContext, caso, dependencia) = await PrepararAsync();
         var fileStorage = new FakeFileStorage();
-        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), fileStorage);
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), fileStorage, new FakeAntivirusScanner());
 
         var primeraCargaId = await handler.Handle(CrearCommand(caso.Id, dependencia.Id), CancellationToken.None);
 
@@ -106,7 +107,7 @@ public class ConfirmarCargaInformeCommandHandlerTests
         dbContext.Informes.Add(informePublicado);
         await dbContext.SaveChangesAsync();
 
-        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage());
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage(), new FakeAntivirusScanner());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(
             CrearCommand(caso.Id, dependencia.Id, reemplazar: true), CancellationToken.None));
@@ -120,7 +121,7 @@ public class ConfirmarCargaInformeCommandHandlerTests
         dbContext.Dependencias.Add(dependencia);
         await dbContext.SaveChangesAsync();
 
-        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage());
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage(), new FakeAntivirusScanner());
 
         await Assert.ThrowsAsync<EntidadNoEncontradaException>(() => handler.Handle(
             CrearCommand(Guid.NewGuid(), dependencia.Id), CancellationToken.None));
@@ -134,7 +135,7 @@ public class ConfirmarCargaInformeCommandHandlerTests
         dbContext.Camaras.Add(camara);
         await dbContext.SaveChangesAsync();
 
-        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage());
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage(), new FakeAntivirusScanner());
 
         var command = CrearCommand(caso.Id, dependencia.Id) with
         {
@@ -151,7 +152,7 @@ public class ConfirmarCargaInformeCommandHandlerTests
     public async Task Rechaza_un_CamaraId_que_no_existe_en_la_base()
     {
         var (dbContext, caso, dependencia) = await PrepararAsync();
-        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage());
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage(), new FakeAntivirusScanner());
 
         var command = CrearCommand(caso.Id, dependencia.Id) with
         {
@@ -159,5 +160,35 @@ public class ConfirmarCargaInformeCommandHandlerTests
         };
 
         await Assert.ThrowsAsync<EntidadNoEncontradaException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Rechaza_un_archivo_detectado_como_amenaza_y_no_lo_sube_ni_persiste_nada()
+    {
+        var (dbContext, caso, dependencia) = await PrepararAsync();
+        var fileStorage = new FakeFileStorage();
+        var antivirusScanner = new FakeAntivirusScanner { ResultadoLimpio = false };
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), fileStorage, antivirusScanner);
+
+        await Assert.ThrowsAsync<ReglaDeNegocioVioladaException>(() => handler.Handle(
+            CrearCommand(caso.Id, dependencia.Id), CancellationToken.None));
+
+        Assert.Empty(fileStorage.ArchivosSubidos);
+        Assert.Empty(dbContext.Informes);
+    }
+
+    [Fact]
+    public async Task ClamAvNoDisponible_RechazaLaCargaFailClosed()
+    {
+        var (dbContext, caso, dependencia) = await PrepararAsync();
+        var fileStorage = new FakeFileStorage();
+        var antivirusScanner = new FakeAntivirusScanner { LanzarNoDisponible = true };
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), fileStorage, antivirusScanner);
+
+        await Assert.ThrowsAsync<AntivirusNoDisponibleException>(() => handler.Handle(
+            CrearCommand(caso.Id, dependencia.Id), CancellationToken.None));
+
+        Assert.Empty(fileStorage.ArchivosSubidos);
+        Assert.Empty(dbContext.Informes);
     }
 }
