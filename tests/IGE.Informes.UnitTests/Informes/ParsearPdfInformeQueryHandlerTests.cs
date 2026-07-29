@@ -13,8 +13,8 @@ public class ParsearPdfInformeQueryHandlerTests
     {
         var dbContext = new TestAppDbContext();
         var extraido = new InformeExtraidoDto("290/2026", new DateOnly(2026, 7, 14), null, null, null, null, [], [], []);
-        var parser = new FakeInformePdfParserPorArchivo().ConDemora(TimeSpan.FromSeconds(2), extraido);
-        var handler = new ParsearPdfInformeQueryHandler(dbContext, parser, new FakeAuditLogger(), timeoutParseo: TimeSpan.FromMilliseconds(200));
+        var parser = new FakeInformePdfParserPorArchivo().ConDemora(TimeSpan.FromSeconds(5), extraido);
+        var handler = new ParsearPdfInformeQueryHandler(dbContext, parser, new FakeAuditLogger(), timeoutParseo: TimeSpan.FromSeconds(1));
 
         await Assert.ThrowsAsync<ReglaDeNegocioVioladaException>(
             () => handler.Handle(new ParsearPdfInformeQuery([1, 2, 3]), CancellationToken.None));

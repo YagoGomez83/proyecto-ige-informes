@@ -289,11 +289,11 @@ public class MigrarInformesCommandHandlerTests
     {
         var (dbContext, dependencia) = await PrepararAsync();
         var parser = new FakeInformePdfParserPorArchivo()
-            .ConDemora(TimeSpan.FromSeconds(2), CrearExtraidoExitoso("999/2022"))
+            .ConDemora(TimeSpan.FromSeconds(5), CrearExtraidoExitoso("999/2022"))
             .ConResultado(CrearExtraidoExitoso("998/2022"));
         var handler = new MigrarInformesCommandHandler(
             dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger(),
-            timeoutPorArchivo: TimeSpan.FromMilliseconds(200));
+            timeoutPorArchivo: TimeSpan.FromSeconds(1));
 
         var command = CrearCommand(
             dependencia.Id,
