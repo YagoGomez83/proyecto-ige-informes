@@ -5,6 +5,11 @@
 > un servidor Linux (Ubuntu Server 22.04/24.04 LTS o similar) con Docker
 > instalado, sin política de backup institucional previa sobre la que
 > apoyarse, y sin balanceador de carga externo.
+>
+> **Confirmado (2026-07-29)**: el acceso es exclusivamente LAN/VPN
+> institucional, sin exposición directa a Internet y sin CA institucional
+> disponible — ver decisión de TLS más abajo. El destino externo de backups
+> todavía no está disponible — sigue como 🔶 pendiente, ver sección Backups.
 
 ## Topología
 
@@ -31,11 +36,22 @@
 - Todos los servicios corren como contenedores Docker orquestados por
   **Docker Compose** (ver ADR-003).
 - El servidor **no está expuesto a Internet**: solo accesible desde la LAN
-  institucional o vía VPN si hay usuarios remotos. 🔶 *A confirmar: ¿algún
-  analista necesita acceso fuera de la red institucional?*
-- TLS terminado en el reverse proxy con certificado propio (interno) o
-  emitido por una CA institucional si existe. Nunca HTTP plano, ni siquiera
-  dentro de la LAN.
+  institucional o vía VPN si hay usuarios remotos. **Confirmado (2026-07-29)**:
+  no hay acceso fuera de la red institucional.
+- TLS terminado en el reverse proxy. **Decisión tomada (2026-07-29)**: se usa
+  `tls internal` de Caddy (CA local autofirmada, generada automáticamente por
+  Caddy — ver `docker/Caddyfile`), sin CA institucional, porque el acceso es
+  exclusivamente LAN/VPN interna y no hay una CA real disponible. Cada
+  cliente (navegador) que acceda por primera vez debe confiar manualmente en
+  el certificado autofirmado (advertencia normal de Chrome/Firefox la
+  primera vez) — no hay distribución automatizada de la CA a los equipos
+  cliente en esta v1, queda a cargo de cada usuario/soporte técnico
+  aceptarla una vez. Si en el futuro la institución provee una CA propia o
+  se decide exponer el servicio con un dominio público, cambiar el bloque
+  `tls internal` del Caddyfile por `tls /ruta/cert.pem /ruta/key.pem` (CA
+  institucional) o quitar la directiva `tls` por completo (Let's Encrypt
+  automático de Caddy, requiere dominio público resolviendo al servidor).
+  Nunca HTTP plano, ni siquiera dentro de la LAN.
 
 ## Servicios del `docker-compose.yml`
 
@@ -72,8 +88,14 @@ se recomienda:
 
 - Los backups se copian **fuera del servidor** (NAS institucional, otro
   servidor, o almacenamiento externo) — un backup que vive en el mismo disco
-  que falla no sirve. 🔶 *A confirmar: destino disponible para backups
-  externos.*
+  que falla no sirve. 🔶 **Pendiente (confirmado 2026-07-29): todavía no hay
+  destino externo disponible.** Hasta que la institución provea uno, el
+  volumen `backups` sigue siendo local al servidor — esto significa que hoy
+  el sistema **no tiene protección real ante la pérdida completa del
+  servidor** (falla de disco, incendio, robo), solo ante errores de
+  aplicación/humanos que no toquen el disco de backups. No bloquea el
+  desarrollo, pero si el go-live se acerca sin resolver esto, escalarlo
+  explícitamente antes de considerar el sistema "listo para producción".
 - **Prueba de restauración**: se ejecuta un simulacro de restauración
   completa (DB + MinIO) al menos una vez antes de ir a producción, y luego
   trimestralmente. Un backup nunca probado es un backup que no existe.
