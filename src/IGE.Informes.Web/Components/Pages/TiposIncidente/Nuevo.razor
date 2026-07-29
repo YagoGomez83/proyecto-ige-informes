@@ -1,0 +1,78 @@
+@page "/tipos-incidente/nuevo"
+@attribute [Authorize(Roles = "Admin")]
+@using System.ComponentModel.DataAnnotations
+@using FluentValidation
+@using IGE.Informes.Application.TiposIncidente.Commands.CrearTipoIncidente
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nuevo Tipo de Incidente · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Nuevo Tipo de Incidente</h1>
+
+<div class="card" style="max-width: 480px;">
+    <EditForm Model="_input" OnValidSubmit="RegistrarAsync" FormName="nuevo-tipo-incidente">
+        <DataAnnotationsValidator />
+
+        @if (_errorMessage is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+        }
+
+        <div class="mb-3">
+            <label class="label-md" for="codigo">Código</label>
+            <InputText id="codigo" class="form-control" @bind-Value="_input.Codigo" placeholder="Ej: 25" />
+        </div>
+
+        <div class="mb-3">
+            <label class="label-md" for="descripcion">Descripción</label>
+            <InputText id="descripcion" class="form-control" @bind-Value="_input.Descripcion" placeholder="Ej: Persona sospechosa" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Tipo de Incidente</button>
+            <a class="btn-secondary" href="tipos-incidente">Cancelar</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly InputModel _input = new();
+    private string? _errorMessage;
+    private bool _guardando;
+
+    private async Task RegistrarAsync()
+    {
+        _errorMessage = null;
+        _guardando = true;
+
+        try
+        {
+            await Sender.Send(new CrearTipoIncidenteCommand(_input.Codigo, _input.Descripcion));
+
+            NavigationManager.NavigateTo("tipos-incidente");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo registrar el Tipo de Incidente. Verificá que el código no esté repetido.";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "El código es obligatorio.")]
+        public string Codigo { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La descripción es obligatoria.")]
+        public string Descripcion { get; set; } = string.Empty;
+    }
+}

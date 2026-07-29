@@ -1,0 +1,58 @@
+@page "/tipos-incidente"
+@attribute [Authorize]
+@using IGE.Informes.Application.TiposIncidente.Queries.ListarTiposIncidente
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Tipos de Incidente · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Tipos de Incidente</h1>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <a class="btn-primary" href="tipos-incidente/nuevo">Nuevo Tipo de Incidente</a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@if (_tiposIncidente is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_tiposIncidente.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay tipos de incidente cargados.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Código</th>
+                    <th class="label-md">Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tipoIncidente in _tiposIncidente)
+                {
+                    <tr>
+                        <td class="body-md">@tipoIncidente.Codigo</td>
+                        <td class="body-md">@tipoIncidente.Descripcion</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<TipoIncidenteDto>? _tiposIncidente;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tiposIncidente = await Sender.Send(new ListarTiposIncidenteQuery());
+    }
+}

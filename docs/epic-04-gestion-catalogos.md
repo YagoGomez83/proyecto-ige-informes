@@ -1,4 +1,4 @@
-# Épica 04 · Gestión de Catálogos (Dependencias, Cámaras, Barrios, Localidades, Centros de Control)
+# Épica 04 · Gestión de Catálogos (Dependencias, Cámaras, Barrios, Localidades, Centros de Control, Tipos de Incidente)
 
 ## HU-11 · Alta y jurisdicción geográfica de Dependencias
 
@@ -179,6 +179,52 @@ Característica: Jerarquía de Unidad Regional
     Cuando consulto la ficha de esa Unidad Regional
     Entonces veo listadas todas las Comisarías que dependen de ella
 ```
+
+---
+
+## HU-18 · Catálogo de Tipos de Incidente
+
+**Como** Administrador
+**Quiero** mantener un catálogo de Tipos de Incidente (código + descripción)
+**Para** clasificar los Casos de Análisis con los códigos operativos reales
+(ej. "25 - Persona sospechosa", "02 - Asalto a mano armada"), sin depender de
+cargarlos a mano en la base de datos
+
+> Contexto: el modelo `TipoIncidente` y su listado ya existían desde la Fase 1
+> (`ObtenerCasoPorIdQueryHandler`, `RegistrarCasoCommand`, etc. ya lo
+> consumen), pero no existía ningún Command de alta ni página de gestión —
+> los únicos registros eran cargados a mano en la base para pruebas. Esta HU
+> cierra ese gap siguiendo el mismo patrón que HU-13 (Barrios).
+
+```gherkin
+Característica: Catálogo de Tipos de Incidente
+
+  Escenario: Alta de un Tipo de Incidente
+    Dado que completo el código "25" y la descripción "Persona sospechosa"
+    Cuando confirmo el alta
+    Entonces queda disponible para asignarse a cualquier Caso de Análisis
+
+  Escenario: Código duplicado
+    Dado que ya existe un Tipo de Incidente con el código "25"
+    Cuando intento dar de alta otro Tipo de Incidente con el mismo código
+    Entonces el sistema rechaza el alta y me indica que el código ya existe
+```
+
+### Notas de modelado
+
+- No es una entidad nueva — `TipoIncidente` (`Codigo` + `Descripcion`) ya
+  existe en `Domain` desde la Fase 1, con índice único por `Codigo` ya
+  configurado en `TipoIncidenteConfiguration`. Esta HU solo agrega el Command
+  de escritura (`CrearTipoIncidenteCommand`) y la UI, reutilizando el Query
+  de listado (`ListarTiposIncidenteQuery`) que ya existía.
+- Mismo criterio de auditoría que Barrio/Localidad/CCC: catálogo de baja
+  sensibilidad sin PII, sin auditoría de alta/lectura.
+- `[Autorizar(Roles.Admin)]` en el Command, página en `/configuracion` junto
+  al resto de los catálogos.
+- Carga masiva de los códigos históricos reales: pendiente de que se
+  consiga el listado completo (ver deuda en `08-plan-implementacion.md`) —
+  esta HU deja el mecanismo de alta manual listo para cargarlos uno por uno
+  o para un futuro importador si el volumen lo justifica.
 
 ---
 
