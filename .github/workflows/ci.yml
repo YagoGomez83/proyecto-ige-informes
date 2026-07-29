@@ -53,7 +53,7 @@ jobs:
         run: docker build -f docker/Dockerfile -t ige-informes-web:ci .
 
       - name: Escanear imagen Docker con Trivy (OWASP A08)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ige-informes-web:ci
           severity: "HIGH,CRITICAL"
