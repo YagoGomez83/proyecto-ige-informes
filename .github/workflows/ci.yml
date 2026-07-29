@@ -49,6 +49,17 @@ jobs:
             exit 1
           fi
 
+      - name: Build imagen Docker de web
+        run: docker build -f docker/Dockerfile -t ige-informes-web:ci .
+
+      - name: Escanear imagen Docker con Trivy (OWASP A08)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ige-informes-web:ci
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
+          ignore-unfixed: true
+
       - name: Publish test results
         uses: dorny/test-reporter@v1
         if: always()

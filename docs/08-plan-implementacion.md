@@ -198,12 +198,16 @@ abajo (no bloqueante para habilitar el sistema a los primeros usuarios,
 sí antes de un despliegue a producción sin supervisión).
 
 **Deuda registrada (no bloqueante)**:
-- A08 OWASP: el CI (`.github/workflows/ci.yml`) corre
-  `dotnet list package --vulnerable --include-transitive` y falla el build
-  ante cualquier paquete NuGet con vulnerabilidad conocida. **Resuelto
-  parcialmente** — sigue faltando escaneo de la imagen Docker (Trivy).
-- 2FA (TOTP) es autoservicio, no obligatorio para ningún rol — a decidir
-  si se exige para Supervisor/Admin antes de producción.
+- ~~A08 OWASP: falta escaneo de imagen Docker (Trivy).~~ **Resuelto**: el CI
+  (`.github/workflows/ci.yml`) corre `dotnet list package --vulnerable
+  --include-transitive` (paquetes NuGet) y además construye la imagen
+  Docker de `web` y la escanea con Trivy (severidad HIGH/CRITICAL,
+  `ignore-unfixed`), fallando el build ante cualquier hallazgo de
+  cualquiera de los dos escaneos.
+- ~~2FA (TOTP) es autoservicio, no obligatorio para ningún rol.~~
+  **Resuelto** (commit `0062441`): 2FA obligatorio para Admin/Supervisor,
+  sin período de gracia — ver `docs/06-seguridad-amenazas.md`, sección 1.
+  Esta entrada había quedado desactualizada tras la implementación real.
 - No hay UI de gestión de usuarios (alta/cambio de rol/bloqueo) — todo el
   proceso de `09-onboarding-offboarding-usuarios.md` es manual.
   **(Resuelto en HU-17.)**
@@ -252,10 +256,12 @@ Dependencia, todo desde la UI sin tocar la base de datos directamente.
 **Deuda registrada (no bloqueante)**: la migración `AddBarrioYJurisdiccion`
 crea el índice único `IX_Dependencias_Nombre` sin un paso previo de
 detección/consolidación de duplicados — señalado por el `security-reviewer`.
-No aplica en el entorno actual (sin duplicados verificado), pero si se
-despliega contra un entorno con datos cargados manualmente antes de esta
-fase, la migración podría fallar a mitad de camino. Revisar antes de un
-despliegue a un entorno con datos preexistentes de `Dependencia`.
+No aplica en el entorno actual (sin duplicados verificado). **Confirmado
+que tampoco aplica al despliegue en la VM de producción**: arranca con una
+base vacía, corriendo todas las migraciones en orden desde cero, sin
+ningún dato preexistente de `Dependencia` cargado por fuera de EF Core —
+si en el futuro se planea importar/restaurar Dependencias de otro sistema
+antes de correr la app, revisar este punto entonces.
 
 ---
 
