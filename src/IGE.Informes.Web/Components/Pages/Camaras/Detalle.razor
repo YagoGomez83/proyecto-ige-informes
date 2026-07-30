@@ -40,6 +40,11 @@ else
         <a class="btn-secondary" href="camaras">Volver al listado</a>
     </div>
 
+    @if (_mensajeExito is not null)
+    {
+        <div class="status-chip status-chip--safe mb-3">@_mensajeExito</div>
+    }
+
     <div class="card mb-3">
         <h2 class="headline-sm mb-2">Datos generales</h2>
         <dl class="row mb-0">
@@ -166,6 +171,7 @@ else
     private string? _localidadSeleccionadaId;
     private string? _centroControlSeleccionadoId;
     private string? _errorMessage;
+    private string? _mensajeExito;
     private bool _procesando;
 
     protected override async Task OnInitializedAsync()
@@ -225,6 +231,7 @@ else
         }
 
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
@@ -232,6 +239,7 @@ else
             await Sender.Send(new AsignarDependenciaACamaraCommand(CamaraId, Guid.Parse(_dependenciaSeleccionadaId)));
             _dependenciaSeleccionadaId = null;
             await CargarAsync();
+            _mensajeExito = "Dependencia asignada correctamente.";
         }
         catch (Exception)
         {
@@ -251,6 +259,7 @@ else
         }
 
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
@@ -258,6 +267,7 @@ else
             await Sender.Send(new AsignarLocalidadACamaraCommand(CamaraId, Guid.Parse(_localidadSeleccionadaId)));
             _localidadSeleccionadaId = null;
             await CargarAsync();
+            _mensajeExito = "Localidad asignada correctamente.";
         }
         catch (Exception)
         {
@@ -277,6 +287,7 @@ else
         }
 
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
@@ -284,6 +295,7 @@ else
             await Sender.Send(new AsignarCentroControlCamarasACamaraCommand(CamaraId, Guid.Parse(_centroControlSeleccionadoId)));
             _centroControlSeleccionadoId = null;
             await CargarAsync();
+            _mensajeExito = "Centro de Control asignado correctamente.";
         }
         catch (Exception)
         {
@@ -304,12 +316,14 @@ else
         }
 
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
         {
             await Sender.Send(new CompletarUbicacionCamaraCommand(CamaraId, _ubicacion));
             await CargarAsync();
+            _mensajeExito = "Ubicación completada correctamente.";
         }
         catch (Exception)
         {
@@ -324,12 +338,14 @@ else
     private async Task CambiarTipoAsync()
     {
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
         {
             await Sender.Send(new CambiarTipoCamaraCommand(CamaraId, _tipoSeleccionado));
             await CargarAsync();
+            _mensajeExito = "Tipo de cámara actualizado correctamente.";
         }
         catch (Exception)
         {

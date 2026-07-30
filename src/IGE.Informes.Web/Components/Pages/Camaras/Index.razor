@@ -1,6 +1,8 @@
 @page "/camaras"
 @attribute [Authorize]
 @using IGE.Informes.Application.Camaras.Queries.ListarCamaras
+@using IGE.Informes.Application.Camaras.Queries.ListarCamarasPaginado
+@using IGE.Informes.Application.Common.Dtos
 @using MediatR
 @inject ISender Sender
 
@@ -61,13 +63,30 @@ else
             </tbody>
         </table>
     </div>
+
+    <Paginador Pagina="_pagina" TotalPaginas="_resultado!.TotalPaginas" TotalItems="_resultado.TotalItems" PaginaCambiada="CambiarPaginaAsync" />
 }
 
 @code {
+    private PagedResult<CamaraResumenDto>? _resultado;
     private IReadOnlyCollection<CamaraResumenDto>? _camaras;
+    private int _pagina = 1;
 
     protected override async Task OnInitializedAsync()
     {
-        _camaras = await Sender.Send(new ListarCamarasQuery());
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _resultado = await Sender.Send(new ListarCamarasPaginadoQuery(_pagina));
+        _camaras = _resultado.Items;
+    }
+
+    private async Task CambiarPaginaAsync(int nuevaPagina)
+    {
+        _pagina = nuevaPagina;
+        _camaras = null;
+        await CargarAsync();
     }
 }

@@ -1,6 +1,8 @@
 @page "/dependencias"
 @attribute [Authorize]
+@using IGE.Informes.Application.Common.Dtos
 @using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
+@using IGE.Informes.Application.Dependencias.Queries.ListarDependenciasPaginado
 @using MediatR
 @inject ISender Sender
 
@@ -52,13 +54,30 @@ else
             </tbody>
         </table>
     </div>
+
+    <Paginador Pagina="_pagina" TotalPaginas="_resultado!.TotalPaginas" TotalItems="_resultado.TotalItems" PaginaCambiada="CambiarPaginaAsync" />
 }
 
 @code {
+    private PagedResult<DependenciaDto>? _resultado;
     private IReadOnlyCollection<DependenciaDto>? _dependencias;
+    private int _pagina = 1;
 
     protected override async Task OnInitializedAsync()
     {
-        _dependencias = await Sender.Send(new ListarDependenciasQuery());
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _resultado = await Sender.Send(new ListarDependenciasPaginadoQuery(_pagina));
+        _dependencias = _resultado.Items;
+    }
+
+    private async Task CambiarPaginaAsync(int nuevaPagina)
+    {
+        _pagina = nuevaPagina;
+        _dependencias = null;
+        await CargarAsync();
     }
 }

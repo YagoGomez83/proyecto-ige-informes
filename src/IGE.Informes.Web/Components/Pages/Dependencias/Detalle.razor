@@ -26,6 +26,11 @@ else
         <a class="btn-secondary" href="dependencias">Volver al listado</a>
     </div>
 
+    @if (_mensajeExito is not null)
+    {
+        <div class="status-chip status-chip--safe mb-3">@_mensajeExito</div>
+    }
+
     <div class="card mb-3">
         <h2 class="headline-sm mb-2">Datos generales</h2>
         <dl class="row mb-0">
@@ -119,6 +124,7 @@ else
     private string? _barrioSeleccionadoId;
     private string? _unidadRegionalSeleccionadaId;
     private string? _errorMessage;
+    private string? _mensajeExito;
     private bool _procesando;
 
     protected override async Task OnInitializedAsync()
@@ -155,6 +161,7 @@ else
         }
 
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
@@ -162,6 +169,7 @@ else
             await Sender.Send(new AsignarBarrioADependenciaCommand(DependenciaId, Guid.Parse(_barrioSeleccionadoId)));
             _barrioSeleccionadoId = null;
             await CargarAsync();
+            _mensajeExito = "Barrio asignado correctamente.";
         }
         catch (Exception)
         {
@@ -181,6 +189,7 @@ else
         }
 
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
@@ -188,6 +197,7 @@ else
             await Sender.Send(new AsignarUnidadRegionalADependenciaCommand(DependenciaId, Guid.Parse(_unidadRegionalSeleccionadaId)));
             _unidadRegionalSeleccionadaId = null;
             await CargarAsync();
+            _mensajeExito = "Unidad Regional asignada correctamente.";
         }
         catch (Exception)
         {
