@@ -134,6 +134,11 @@ cada Cámara, sin duplicar nombres escritos de forma distinta
 > Nota: `Localidad` es un catálogo geográfico distinto de `Barrio` — ver
 > `docs/01-glosario-dominio.md`. `Barrio` es la jurisdicción de una
 > `Dependencia`; `Localidad` es un atributo de dónde está una `Camara`.
+> Desde HU-13, `Barrio` puede asociarse opcionalmente a una `Localidad`
+> (`Barrio.LocalidadId`) — no como jerarquía formal, solo para distinguir
+> Barrios homónimos en ciudades distintas. El listado de Localidades
+> muestra cuántos Barrios referencian a cada una, como dato informativo
+> para el Administrador (no bloquea ni condiciona el alta/uso).
 
 ```gherkin
 Característica: Catálogo de Localidades
@@ -147,6 +152,19 @@ Característica: Catálogo de Localidades
     Dado que ya existe una Localidad llamada "Estancia Grande"
     Cuando intento dar de alta otra Localidad con el mismo nombre
     Entonces el sistema rechaza el alta y me indica que el nombre ya existe
+
+  Escenario: Listado muestra Barrios asociados
+    Dado que la Localidad "San Luis" tiene 2 Barrios con LocalidadId
+    apuntando a ella
+    Cuando veo el listado de Localidades
+    Entonces la fila de "San Luis" indica "2 Barrios"
+
+  Escenario: Localidad sin Barrios asociados todavía
+    Dado que la Localidad "Potrero de Los Funes" no tiene ningún Barrio
+    con LocalidadId apuntando a ella
+    Cuando veo el listado de Localidades
+    Entonces la fila de "Potrero de Los Funes" lo indica visualmente
+    (ej. "Sin Barrios asociados"), distinto de un dato numérico
 ```
 
 ---

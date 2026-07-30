@@ -37,6 +37,7 @@ else
             <thead>
                 <tr>
                     <th class="label-md">Nombre</th>
+                    <th class="label-md">Barrios asociados</th>
                 </tr>
             </thead>
             <tbody>
@@ -44,6 +45,16 @@ else
                 {
                     <tr>
                         <td class="body-md">@localidad.Nombre</td>
+                        <td class="body-md">
+                            @if (localidad.CantidadBarrios == 0)
+                            {
+                                <span class="body-sm">Sin Barrios asociados</span>
+                            }
+                            else
+                            {
+                                @($"{localidad.CantidadBarrios} Barrio{(localidad.CantidadBarrios == 1 ? "" : "s")}")
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>

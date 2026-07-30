@@ -11,7 +11,10 @@ public sealed class ListarLocalidadesQueryHandler(IAppDbContext dbContext)
     {
         return await dbContext.Localidades.AsNoTracking()
             .OrderBy(l => l.Nombre)
-            .Select(l => new LocalidadDto(l.Id, l.Nombre))
+            .Select(l => new LocalidadDto(
+                l.Id,
+                l.Nombre,
+                dbContext.Barrios.Count(b => b.LocalidadId == l.Id)))
             .ToListAsync(cancellationToken);
     }
 }
