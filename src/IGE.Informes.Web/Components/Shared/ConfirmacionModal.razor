@@ -1,0 +1,47 @@
+@if (Visible)
+{
+    <div class="modal-backdrop show" style="z-index: 1040;"></div>
+    <div class="modal d-block" tabindex="-1" style="z-index: 1050;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="headline-sm mb-0">@Titulo</h2>
+                </div>
+                <div class="modal-body">
+                    <p class="body-md mb-0">@Mensaje</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" @onclick="Cancelar" disabled="@Procesando">Cancelar</button>
+                    <button type="button" class="btn-primary" @onclick="Confirmar" disabled="@Procesando">@TextoConfirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public bool Visible { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Mensaje { get; set; } = string.Empty;
+
+    [Parameter]
+    public string TextoConfirmar { get; set; } = "Confirmar";
+
+    [Parameter]
+    public bool Procesando { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirmar { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelar { get; set; }
+
+    private async Task Confirmar() => await OnConfirmar.InvokeAsync();
+
+    private async Task Cancelar() => await OnCancelar.InvokeAsync();
+}

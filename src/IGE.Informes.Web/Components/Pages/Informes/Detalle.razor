@@ -39,7 +39,7 @@ else
         <div class="d-flex gap-2">
             @if (_informe.Estado == EstadoInforme.Borrador)
             {
-                <button type="button" class="btn-primary" @onclick="PublicarAsync" disabled="@_publicando">Publicar</button>
+                <button type="button" class="btn-primary" @onclick="() => _mostrarConfirmacionPublicar = true" disabled="@_publicando">Publicar</button>
                 <a class="btn-secondary" href="@($"informes/{_informe.Id}/editar")">Editar</a>
             }
             @if (_informe.CasoAnalisisId is not null)
@@ -71,6 +71,14 @@ else
             <dd class="col-sm-9 body-md">@(_informe.PdfPath ?? "Pendiente de carga")</dd>
         </dl>
     </div>
+
+    <ConfirmacionModal Visible="_mostrarConfirmacionPublicar"
+                        Titulo="Publicar Informe"
+                        Mensaje="@($"¿Confirmás publicar el Informe {_informe.IdRegistro}? Una vez publicado queda inmutable y no se puede volver a editar.")"
+                        TextoConfirmar="Publicar"
+                        Procesando="_publicando"
+                        OnConfirmar="PublicarAsync"
+                        OnCancelar="() => _mostrarConfirmacionPublicar = false" />
 }
 
 @code {
@@ -80,6 +88,7 @@ else
     private InformeDto? _informe;
     private bool _cargado;
     private bool _publicando;
+    private bool _mostrarConfirmacionPublicar;
     private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -100,10 +109,12 @@ else
         }
         catch (InvalidOperationException ex)
         {
+            _mostrarConfirmacionPublicar = false;
             _errorMessage = ex.Message;
         }
         catch (Exception)
         {
+            _mostrarConfirmacionPublicar = false;
             _errorMessage = "No se pudo publicar el Informe. Verificá que tenga Causa y Dependencia completas.";
         }
         finally

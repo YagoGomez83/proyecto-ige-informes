@@ -37,6 +37,11 @@ else
         <a class="btn-secondary" href="casos">Volver al listado</a>
     </div>
 
+    @if (_mensajeExito is not null)
+    {
+        <div class="status-chip status-chip--safe mb-3">@_mensajeExito</div>
+    }
+
     <div class="card mb-3">
         <h2 class="headline-sm mb-2">Datos generales</h2>
         <dl class="row mb-0">
@@ -175,6 +180,7 @@ else
     private ResultadoCaso _resultadoSeleccionado = ResultadoCaso.Positivo;
     private string _vehiculoTexto = string.Empty;
     private string? _errorMessage;
+    private string? _mensajeExito;
     private bool _procesando;
     private IReadOnlyCollection<InformeResumenDto>? _informes;
     private IReadOnlyCollection<DependenciaDto>? _dependencias;
@@ -196,12 +202,14 @@ else
     private async Task CerrarCasoAsync()
     {
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
         {
             await Sender.Send(new CerrarCasoCommand(CasoId, _resultadoSeleccionado));
             await CargarAsync();
+            _mensajeExito = "Caso cerrado correctamente.";
         }
         catch (Exception)
         {
@@ -221,6 +229,7 @@ else
         }
 
         _errorMessage = null;
+        _mensajeExito = null;
         _procesando = true;
 
         try
@@ -228,6 +237,7 @@ else
             await Sender.Send(new VincularVehiculoTextoCommand(CasoId, _vehiculoTexto));
             _vehiculoTexto = string.Empty;
             await CargarAsync();
+            _mensajeExito = "Vehículo vinculado correctamente.";
         }
         catch (Exception)
         {
