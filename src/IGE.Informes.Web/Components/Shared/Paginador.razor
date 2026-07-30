@@ -1,0 +1,24 @@
+@if (TotalPaginas > 1)
+{
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="body-sm">Página @Pagina de @TotalPaginas (@TotalItems en total)</span>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn-secondary" disabled="@(Pagina <= 1)" @onclick="() => PaginaCambiada.InvokeAsync(Pagina - 1)">Anterior</button>
+            <button type="button" class="btn-secondary" disabled="@(Pagina >= TotalPaginas)" @onclick="() => PaginaCambiada.InvokeAsync(Pagina + 1)">Siguiente</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public int Pagina { get; set; }
+
+    [Parameter, EditorRequired]
+    public int TotalPaginas { get; set; }
+
+    [Parameter, EditorRequired]
+    public int TotalItems { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<int> PaginaCambiada { get; set; }
+}
