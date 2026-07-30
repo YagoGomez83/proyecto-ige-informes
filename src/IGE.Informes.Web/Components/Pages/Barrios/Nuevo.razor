@@ -3,6 +3,7 @@
 @using System.ComponentModel.DataAnnotations
 @using FluentValidation
 @using IGE.Informes.Application.Barrios.Commands.CrearBarrio
+@using IGE.Informes.Application.Localidades.Queries.ListarLocalidades
 @using MediatR
 @inject ISender Sender
 @inject NavigationManager NavigationManager
@@ -25,6 +26,20 @@
             <InputText id="nombre" class="form-control" @bind-Value="_input.Nombre" placeholder="Ej: Barrio Norte" />
         </div>
 
+        <div class="mb-3">
+            <label class="label-md" for="localidad">Localidad (opcional)</label>
+            <select id="localidad" class="form-control" @bind="_localidadSeleccionadaId">
+                <option value="">Sin Localidad</option>
+                @if (_localidades is not null)
+                {
+                    @foreach (var localidad in _localidades)
+                    {
+                        <option value="@localidad.Id">@localidad.Nombre</option>
+                    }
+                }
+            </select>
+        </div>
+
         <div class="d-flex gap-2">
             <button type="submit" class="btn-primary" disabled="@_guardando">Guardar Barrio</button>
             <a class="btn-secondary" href="barrios">Cancelar</a>
@@ -34,8 +49,15 @@
 
 @code {
     private readonly InputModel _input = new();
+    private IReadOnlyCollection<LocalidadDto>? _localidades;
+    private string? _localidadSeleccionadaId;
     private string? _errorMessage;
     private bool _guardando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _localidades = await Sender.Send(new ListarLocalidadesQuery());
+    }
 
     private async Task RegistrarAsync()
     {
@@ -44,7 +66,11 @@
 
         try
         {
-            await Sender.Send(new CrearBarrioCommand(_input.Nombre));
+            var localidadId = string.IsNullOrWhiteSpace(_localidadSeleccionadaId)
+                ? (Guid?)null
+                : Guid.Parse(_localidadSeleccionadaId);
+
+            await Sender.Send(new CrearBarrioCommand(_input.Nombre, localidadId));
 
             NavigationManager.NavigateTo("barrios");
         }

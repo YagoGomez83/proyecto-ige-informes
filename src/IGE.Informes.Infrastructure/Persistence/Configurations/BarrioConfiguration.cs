@@ -14,6 +14,11 @@ public sealed class BarrioConfiguration : IEntityTypeConfiguration<Barrio>
 
         builder.Property(b => b.Nombre).HasMaxLength(200).IsRequired();
 
-        builder.HasIndex(b => b.Nombre).IsUnique();
+        builder.HasIndex(b => new { b.Nombre, b.LocalidadId }).IsUnique();
+
+        builder.HasOne<Localidad>()
+            .WithMany()
+            .HasForeignKey(b => b.LocalidadId)
+            .IsRequired(false);
     }
 }

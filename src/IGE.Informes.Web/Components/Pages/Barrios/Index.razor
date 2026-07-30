@@ -32,6 +32,7 @@ else
             <thead>
                 <tr>
                     <th class="label-md">Nombre</th>
+                    <th class="label-md">Localidad</th>
                 </tr>
             </thead>
             <tbody>
@@ -39,6 +40,7 @@ else
                 {
                     <tr>
                         <td class="body-md">@barrio.Nombre</td>
+                        <td class="body-md">@(barrio.LocalidadNombre ?? "—")</td>
                     </tr>
                 }
             </tbody>

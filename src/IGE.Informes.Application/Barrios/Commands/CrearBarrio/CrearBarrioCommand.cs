@@ -4,4 +4,4 @@ using MediatR;
 namespace IGE.Informes.Application.Barrios.Commands.CrearBarrio;
 
 [Autorizar(Roles.Admin)]
-public sealed record CrearBarrioCommand(string Nombre) : IRequest<Guid>;
+public sealed record CrearBarrioCommand(string Nombre, Guid? LocalidadId) : IRequest<Guid>;

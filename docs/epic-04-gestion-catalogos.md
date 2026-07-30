@@ -79,22 +79,47 @@ Característica: Alta manual de Cámaras
 ## HU-13 · Catálogo de Barrios
 
 **Como** Administrador
-**Quiero** mantener un catálogo de Barrios
-**Para** reutilizarlos como jurisdicción geográfica de distintas Dependencias sin
-duplicar nombres escritos de forma distinta
+**Quiero** mantener un catálogo de Barrios, asociado opcionalmente a la
+Localidad donde está
+**Para** reutilizarlos como jurisdicción geográfica de distintas Dependencias
+sin duplicar nombres escritos de forma distinta, y sin que un mismo nombre de
+Barrio en dos ciudades distintas (ej. "Barrio Norte" en San Luis y en Villa
+Mercedes) choquen entre sí
+
+> Extensión (2026-07-29): originalmente `Barrio.Nombre` era único a nivel
+> global, sin relación con `Localidad`. Se detectó que dos ciudades distintas
+> pueden tener un barrio con el mismo nombre — la unicidad pasa a ser por
+> combinación (Nombre, Localidad), no por Nombre solo.
 
 ```gherkin
 Característica: Catálogo de Barrios
 
-  Escenario: Alta de un Barrio
-    Dado que completo el nombre de un Barrio nuevo
+  Escenario: Alta de un Barrio con Localidad
+    Dado que completo el nombre de un Barrio nuevo y selecciono una Localidad existente
     Cuando confirmo el alta
-    Entonces queda disponible para asignarse a cualquier Dependencia
+    Entonces queda disponible para asignarse a cualquier Dependencia, con esa Localidad asociada
 
-  Escenario: Nombre duplicado
-    Dado que ya existe un Barrio llamado "Barrio Norte"
-    Cuando intento dar de alta otro Barrio con el mismo nombre
-    Entonces el sistema rechaza el alta y me indica que el nombre ya existe
+  Escenario: Alta de un Barrio sin Localidad
+    Dado que completo el nombre de un Barrio nuevo y no selecciono ninguna Localidad
+    Cuando confirmo el alta
+    Entonces el Barrio queda creado igual, sin Localidad asociada
+
+  Escenario: Nombre duplicado dentro de la misma Localidad
+    Dado que ya existe un Barrio llamado "Barrio Norte" en la Localidad "San Luis"
+    Cuando intento dar de alta otro Barrio con el mismo nombre en la misma Localidad "San Luis"
+    Entonces el sistema rechaza el alta y me indica que el nombre ya existe en esa Localidad
+
+  Escenario: Mismo nombre en Localidades distintas
+    Dado que ya existe un Barrio llamado "Barrio Norte" en la Localidad "San Luis"
+    Cuando doy de alta otro Barrio llamado "Barrio Norte" en la Localidad "Villa Mercedes"
+    Entonces el sistema permite el alta, ya que son Localidades distintas
+
+  Escenario: Mismo nombre sin Localidad en ambos casos
+    Dado que ya existe un Barrio llamado "Barrio Norte" sin Localidad asociada
+    Cuando doy de alta otro Barrio llamado "Barrio Norte" tampoco sin Localidad asociada
+    Entonces el sistema permite el alta, porque todavía no se sabe la Localidad
+    de ninguno de los dos y no se puede garantizar que sean distintos ni que
+    sean el mismo
 ```
 
 ---
