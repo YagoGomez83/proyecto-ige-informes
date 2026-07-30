@@ -46,7 +46,7 @@
         {
             await Sender.Send(new CrearLocalidadCommand(_input.Nombre));
 
-            NavigationManager.NavigateTo("localidades");
+            NavigationManager.NavigateTo("localidades?creado=true");
         }
         catch (FluentValidation.ValidationException ex)
         {

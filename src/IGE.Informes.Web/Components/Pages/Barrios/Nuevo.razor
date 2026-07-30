@@ -72,7 +72,7 @@
 
             await Sender.Send(new CrearBarrioCommand(_input.Nombre, localidadId));
 
-            NavigationManager.NavigateTo("barrios");
+            NavigationManager.NavigateTo("barrios?creado=true");
         }
         catch (FluentValidation.ValidationException ex)
         {

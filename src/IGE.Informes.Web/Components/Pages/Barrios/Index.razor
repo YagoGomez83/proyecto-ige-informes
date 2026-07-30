@@ -15,6 +15,11 @@
     </AuthorizeView>
 </div>
 
+@if (Creado)
+{
+    <div class="status-chip status-chip--safe mb-3">Barrio creado correctamente.</div>
+}
+
 @if (_barrios is null)
 {
     <p class="body-md">Cargando...</p>
@@ -49,6 +54,9 @@ else
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "creado")]
+    private bool Creado { get; set; }
+
     private IReadOnlyCollection<BarrioDto>? _barrios;
 
     protected override async Task OnInitializedAsync()
