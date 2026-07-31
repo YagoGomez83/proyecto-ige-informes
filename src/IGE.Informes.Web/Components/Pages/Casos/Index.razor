@@ -1,6 +1,8 @@
 @page "/casos"
 @attribute [Authorize]
 @using IGE.Informes.Application.CasosAnalisis.Queries.ListarCasos
+@using IGE.Informes.Application.CasosAnalisis.Queries.ListarCasosPaginado
+@using IGE.Informes.Application.Common.Dtos
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
@@ -53,13 +55,30 @@ else
             </tbody>
         </table>
     </div>
+
+    <Paginador Pagina="_pagina" TotalPaginas="_resultado!.TotalPaginas" TotalItems="_resultado.TotalItems" PaginaCambiada="CambiarPaginaAsync" />
 }
 
 @code {
+    private PagedResult<CasoAnalisisResumenDto>? _resultado;
     private IReadOnlyCollection<CasoAnalisisResumenDto>? _casos;
+    private int _pagina = 1;
 
     protected override async Task OnInitializedAsync()
     {
-        _casos = await Sender.Send(new ListarCasosQuery());
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _resultado = await Sender.Send(new ListarCasosPaginadoQuery(_pagina));
+        _casos = _resultado.Items;
+    }
+
+    private async Task CambiarPaginaAsync(int nuevaPagina)
+    {
+        _pagina = nuevaPagina;
+        _casos = null;
+        await CargarAsync();
     }
 }
