@@ -296,10 +296,23 @@ Fase 1) y reemplaza el alta manual de usuarios (deuda de Fase 0) por una UI.
 - [x] HU-13: catálogo de Barrios (`Barrio.LocalidadId` opcional, para
       distinguir Barrios homónimos en ciudades distintas).
 - [x] HU-18: catálogo de Tipos de Incidente — el modelo ya existía desde
-      Fase 1, esta HU agrega el Command de alta y la UI. **Deuda pendiente,
-      no bloqueante**: falta la carga masiva de los códigos históricos
-      reales del Excel (164, 162, 02, 25, etc.) — el mecanismo de alta
-      manual queda listo, pendiente de que se consiga el listado completo.
+      Fase 1, esta HU agrega el Command de alta y la UI. Carga masiva de
+      los 81 códigos históricos reales (relevados de
+      `docs/docuemntación-legacy/codigos.csv`, un `TipoIncidente` por
+      código numérico de 3 dígitos, no por cada subtipo de texto libre)
+      **resuelta**: importador dedicado
+      `IGE.Informes.DataMigration/Program.TiposIncidente.cs` (subcomando
+      `tipos-incidente`, dry-run por defecto, idempotente por `Codigo`).
+      Al correrlo se confirmó que **los 81 códigos ya estaban cargados en
+      la base de desarrollo** (sin registro en `AuditLogs`, es decir,
+      insertados directamente contra Postgres en algún momento anterior no
+      documentado en memoria, no vía el Command de la aplicación) — se
+      dejaron sin modificar, con 3 diferencias menores de formato frente al
+      catálogo prolijo del importador ("96" vs "096", "COVID" vs
+      "COVID-19", "C.E." vs una descripción más clara para "107") que no
+      ameritan tocar datos existentes sin necesidad real. El importador
+      queda disponible para cargar este catálogo en otros ambientes
+      (ej. la VM de producción, que arranca con base vacía).
 - [x] HU-17: Gestión de Usuarios — alta, cambio de rol, bloqueo/
       desbloqueo, reseteo de contraseña por un Admin, todo con las
       restricciones de auto-gestión (un Admin no puede cambiarse su propio
