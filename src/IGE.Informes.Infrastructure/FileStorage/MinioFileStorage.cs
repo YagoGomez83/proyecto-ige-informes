@@ -14,6 +14,7 @@ namespace IGE.Informes.Infrastructure.FileStorage;
 public sealed class MinioFileStorage : IFileStorage
 {
     private readonly IMinioClient _client;
+    private readonly IMinioClient _clientParaUrlsPublicas;
     private readonly MinioOptions _options;
 
     public MinioFileStorage(IOptions<MinioOptions> options)
@@ -21,6 +22,16 @@ public sealed class MinioFileStorage : IFileStorage
         _options = options.Value;
         _client = new MinioClient()
             .WithEndpoint(_options.Endpoint)
+            .WithCredentials(_options.AccessKey, _options.SecretKey)
+            .WithSSL(_options.UseSsl)
+            .Build();
+
+        // Cliente separado solo para firmar URLs prefirmadas con el host
+        // público (ver comentario en MinioOptions.EndpointPublico) — el SDK
+        // incluye el endpoint del cliente en la firma de la URL, así que no
+        // alcanza con reemplazar el host del string resultante a mano.
+        _clientParaUrlsPublicas = new MinioClient()
+            .WithEndpoint(_options.EndpointPublico ?? _options.Endpoint)
             .WithCredentials(_options.AccessKey, _options.SecretKey)
             .WithSSL(_options.UseSsl)
             .Build();
@@ -51,7 +62,7 @@ public sealed class MinioFileStorage : IFileStorage
             .WithObject(clave)
             .WithExpiry(_options.UrlDescargaExpiracionSegundos);
 
-        return await _client.PresignedGetObjectAsync(args);
+        return await _clientParaUrlsPublicas.PresignedGetObjectAsync(args);
     }
 
     private async Task AsegurarBucketAsync(CancellationToken cancellationToken)

@@ -14,5 +14,6 @@ public sealed record InformeDto(
     string? CausaCircunscripcionJudicial,
     Guid DependenciaDestinoId,
     string? PdfPath,
+    string? PdfUrl,
     EstadoInforme Estado,
     OrigenInforme Origen);

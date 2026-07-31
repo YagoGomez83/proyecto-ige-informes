@@ -6,7 +6,13 @@
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "same-origin"
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' wss:; frame-ancestors 'none'"
+		# frame-src acotado al origen público de MinIO (no un wildcard ni
+		# relajación de default-src): habilita el visor de PDF embebido en
+		# Informes/Detalle.razor, que carga desde una URL prefirmada de
+		# MinIO (otro origen/puerto que el resto de la app, servida acá).
+		# Ajustar el host:puerto si MINIO_ENDPOINT_PUBLICO cambia (ver
+		# docker-compose.yml).
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' wss:; frame-src 'self' http://localhost:9000 https://localhost:9000; frame-ancestors 'none'"
 	}
 
 	reverse_proxy web:8080

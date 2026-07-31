@@ -49,7 +49,7 @@ else
         </div>
     </div>
 
-    <div class="card">
+    <div class="card mb-3">
         <h2 class="headline-sm mb-2">Datos generales</h2>
         <dl class="row mb-0">
             @if (_informe.Origen == OrigenInforme.Migrado)
@@ -61,15 +61,39 @@ else
             <dt class="col-sm-3 label-md">Fecha de análisis</dt>
             <dd class="col-sm-9 body-md">@_informe.FechaAnalisis.ToString("dd/MM/yyyy")</dd>
 
-            <dt class="col-sm-3 label-md">Relato</dt>
-            <dd class="col-sm-9 body-md">@(_informe.Relato ?? "—")</dd>
-
             <dt class="col-sm-3 label-md">Carátula de la Causa</dt>
             <dd class="col-sm-9 body-md">@(_informe.CausaCaratula ?? "—")</dd>
-
-            <dt class="col-sm-3 label-md">PDF</dt>
-            <dd class="col-sm-9 body-md">@(_informe.PdfPath ?? "Pendiente de carga")</dd>
         </dl>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <h2 class="headline-sm mb-2">Relato</h2>
+                @if (string.IsNullOrWhiteSpace(_informe.Relato))
+                {
+                    <p class="body-md mb-0">—</p>
+                }
+                else
+                {
+                    <p class="body-md mb-0 informe-relato-texto">@_informe.Relato</p>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100 p-0">
+                <h2 class="headline-sm m-3 mb-2">PDF</h2>
+                @if (_informe.PdfUrl is not null)
+                {
+                    <iframe src="@_informe.PdfUrl" class="informe-pdf-visor" title="Vista previa del PDF del Informe"></iframe>
+                }
+                else
+                {
+                    <p class="body-md mx-3 mb-3">Pendiente de carga.</p>
+                }
+            </div>
+        </div>
     </div>
 
     <ConfirmacionModal Visible="_mostrarConfirmacionPublicar"
