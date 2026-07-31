@@ -165,4 +165,91 @@ public class InformePdfParserTests
         Assert.Null(evidencia.CodigoCamara);
         Assert.NotNull(evidencia.Descripcion);
     }
+
+    [Fact]
+    public void Marcas_de_paginacion_no_quedan_intercaladas_en_el_relato()
+    {
+        // PdfPig concatena el texto de todas las páginas sin distinguir
+        // pie/encabezado del contenido real — "Página X de Y" se repite en
+        // cada hoja y debe filtrarse antes de guardar el Relato (informe
+        // real 95/2022, ver memoria del proyecto).
+        using var pdf = GeneradorPdfDePrueba.GenerarPdf([
+            "ID REGISTRO: 95/2022",
+            "Página 2 de 10 Atento a nota recepcionada en éste centro,",
+            "la instrucción solicita se realice un informe. Página 3 de 10",
+            "IMÁGENES CAMARAS DE MONITOREO Imagen 1 – Se observa un vehículo.",
+        ]);
+
+        var resultado = InformePdfParser.Parsear(pdf);
+
+        Assert.NotNull(resultado.Relato);
+        Assert.DoesNotContain("Página", resultado.Relato);
+        Assert.Contains("Atento a nota recepcionada", resultado.Relato);
+    }
+
+    [Fact]
+    public void Paginacion_con_separador_distinto_a_la_palabra_de_tambien_se_filtra()
+    {
+        // Variante real observada: PdfPig extrae un glifo distinto en vez
+        // de la palabra "de" entre los dos números de página (ver informes
+        // reales 79-84/2022 y 88/2022, ver memoria del proyecto).
+        using var pdf = GeneradorPdfDePrueba.GenerarPdf([
+            "ID REGISTRO: 81/2022",
+            "Página 2 | 25 Atento a nota recepcionada se solicita un informe.",
+        ]);
+
+        var resultado = InformePdfParser.Parsear(pdf);
+
+        Assert.NotNull(resultado.Relato);
+        Assert.DoesNotContain("Página", resultado.Relato);
+        Assert.Contains("Atento a nota recepcionada", resultado.Relato);
+    }
+
+    [Fact]
+    public void LimpiarRelatoExistente_saca_paginacion_y_corta_en_la_primera_imagen()
+    {
+        // Caso real (Informe 95/2022 migrado sin PDF original, no se puede
+        // re-parsear desde el archivo — ver subcomando "limpiar-relatos" de
+        // IGE.Informes.DataMigration) — el Relato ya persistido tenía el
+        // documento completo por el bug ya corregido del parser.
+        var relatoContaminado =
+            "Página 2 de 10 Atento a nota recepcionada se solicita un informe especial. " +
+            "Página 3 de 10 IMÁGENES CAMARAS DE MONITOREO Imagen 1 – Se observa un vehículo.";
+
+        var limpio = InformePdfParser.LimpiarRelatoExistente(relatoContaminado);
+
+        Assert.NotNull(limpio);
+        Assert.DoesNotContain("Página", limpio);
+        Assert.DoesNotContain("Imagen 1", limpio);
+        Assert.Contains("Atento a nota recepcionada", limpio);
+    }
+
+    [Fact]
+    public void LimpiarRelatoExistente_devuelve_null_si_no_queda_texto_tras_limpiar()
+    {
+        var limpio = InformePdfParser.LimpiarRelatoExistente("Página 2 de 10   ");
+
+        Assert.Null(limpio);
+    }
+
+    [Fact]
+    public void Formato_imagen_sin_simbolo_de_grado_tambien_corta_el_relato_y_genera_evidencia()
+    {
+        // Variante real del formato de encabezado de imagen: "Imagen 1 –"
+        // en vez de "IMAGEN N° 1 –" (informe real 95/2022) — el parser
+        // original solo reconocía la segunda forma, y sin match el Relato
+        // se quedaba con el documento entero (evidencias, datos del
+        // automotor, firmantes).
+        using var pdf = GeneradorPdfDePrueba.GenerarPdf([
+            "ID REGISTRO: 95/2022",
+            "Atento a nota recepcionada se solicita un informe especial.",
+            "Imagen 1 – Se observa un vehículo símil características circulando.",
+        ]);
+
+        var resultado = InformePdfParser.Parsear(pdf);
+
+        Assert.Equal("Atento a nota recepcionada se solicita un informe especial.", resultado.Relato);
+        var evidencia = Assert.Single(resultado.Evidencias);
+        Assert.Equal(1, evidencia.NumeroImagen);
+    }
 }

@@ -42,6 +42,41 @@ public static partial class InformePdfParser
     }
 
     /// <summary>
+    /// Limpia un Relato ya extraído y persistido (no un PDF crudo) con las
+    /// mismas reglas de normalización de paginación y corte en la primera
+    /// mención de imagen que usa <see cref="Parsear"/> — para Informes
+    /// migrados sin el PDF original guardado (no se puede re-parsear desde
+    /// el archivo), cuyo Relato quedó contaminado con "Página X de Y" y
+    /// contenido posterior a las imágenes por un bug ya corregido del
+    /// parser (ver IGE.Informes.DataMigration, subcomando
+    /// "limpiar-relatos"). Devuelve null si tras la limpieza no queda texto.
+    ///
+    /// A diferencia de <see cref="Parsear"/> (protegido por
+    /// PdfParserTimeoutHelper a nivel de Application), este método público
+    /// puede invocarse fuera de ese pipeline — usa Regex.Match con timeout
+    /// explícito en vez de los [GeneratedRegex] internos (hallazgo del
+    /// security-reviewer: sin esto, no había ningún límite de tiempo en
+    /// esta ruta, aunque Informe.Relato está acotado a 8000 caracteres por
+    /// InformeConfiguration, lo que hace el riesgo práctico de ReDoS bajo).
+    /// </summary>
+    public static string? LimpiarRelatoExistente(string relato)
+    {
+        var timeout = TimeSpan.FromSeconds(2);
+
+        var normalizado = Regex.Replace(relato, PaginacionPattern, " ", RegexOptions.IgnoreCase, timeout);
+        normalizado = Regex.Replace(normalizado, EspaciosMultiplesPattern, " ", RegexOptions.None, timeout).Trim();
+
+        var finMatch = Regex.Match(normalizado, ImagenPattern, RegexOptions.IgnoreCase, timeout);
+        var limpio = finMatch.Success ? normalizado[..finMatch.Index].Trim() : normalizado;
+
+        return string.IsNullOrWhiteSpace(limpio) ? null : limpio;
+    }
+
+    private const string PaginacionPattern = @"P[áa]gina\s*\d+\s*(?:de|[^\w\s]{1,2})\s*\d+";
+    private const string EspaciosMultiplesPattern = @"\s+";
+    private const string ImagenPattern = @"IMAGEN\s*(?:N°\s*)?(\d+(?:\s*Y\s*(?:N°\s*)?\d+)*)\s*[–-]\s*";
+
+    /// <summary>
     /// Normaliza espacios/saltos de línea y comillas tipográficas antes de
     /// aplicar cualquier regex — el PDF puede partir un campo en 2 líneas
     /// (ver skill: "Destino... puede partirse en 2 líneas").
@@ -53,6 +88,13 @@ public static partial class InformePdfParser
             .Replace('”', '"')
             .Replace("\r\n", "\n")
             .Replace('\r', '\n');
+
+        // Ruido de paginación repetido en cada hoja ("Página 2 de 10", etc.)
+        // — PdfPig concatena el texto de todas las páginas sin distinguir
+        // encabezado/pie de página del contenido real, así que estas marcas
+        // quedan intercaladas en medio del relato/evidencias si no se
+        // filtran acá, antes de que el resto del parser procese el texto.
+        normalizado = PaginacionRegex().Replace(normalizado, " ");
 
         return EspaciosMultiplesRegex().Replace(normalizado, " ");
     }
@@ -309,6 +351,15 @@ public static partial class InformePdfParser
     [GeneratedRegex(@"\s+")]
     private static partial Regex EspaciosMultiplesRegex();
 
+    // El separador entre los dos números varía: "de" es lo normal, pero en
+    // algunos PDFs reales PdfPig extrae un glifo distinto en esa posición
+    // (visto como "|" en el texto extraído — probablemente un carácter
+    // decorativo del documento original mal mapeado por la extracción de
+    // texto, no un error del parser en sí) — se tolera cualquier separador
+    // corto no alfanumérico además de la palabra "de".
+    [GeneratedRegex(@"P[áa]gina\s*\d+\s*(?:de|[^\w\s]{1,2})\s*\d+", RegexOptions.IgnoreCase)]
+    private static partial Regex PaginacionRegex();
+
     [GeneratedRegex(@"ID\s*REGISTRO\s*:\s*(\d+/\d{4})", RegexOptions.IgnoreCase)]
     private static partial Regex IdRegistroRegex();
 
@@ -333,7 +384,11 @@ public static partial class InformePdfParser
     [GeneratedRegex(@"DNI\s*N?°?:?\s*([\d.]+)", RegexOptions.IgnoreCase)]
     private static partial Regex DniRegex();
 
-    [GeneratedRegex(@"IMAGEN\s*N°\s*(\d+(?:\s*Y\s*N°\s*\d+)*)\s*[–-]\s*", RegexOptions.IgnoreCase)]
+    // "N°" es opcional: algunos informes reales usan "IMAGEN N° 1 –" y
+    // otros directamente "Imagen 1 –", sin el símbolo de grado (ver skill
+    // pdf-informe-parser — la plantilla real varía más de lo documentado
+    // originalmente contra los 3 PDFs sintéticos de referencia).
+    [GeneratedRegex(@"IMAGEN\s*(?:N°\s*)?(\d+(?:\s*Y\s*(?:N°\s*)?\d+)*)\s*[–-]\s*", RegexOptions.IgnoreCase)]
     private static partial Regex ImagenRegex();
 
     [GeneratedRegex(@"(\d+)")]
