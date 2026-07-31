@@ -1,152 +1,376 @@
 @page "/busqueda"
 @attribute [Authorize]
+@using IGE.Informes.Application.CasosAnalisis.Queries.BuscarCasos
+@using IGE.Informes.Application.CasosAnalisis.Queries.ListarCasos
 @using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
 @using IGE.Informes.Application.Informes.Queries.BuscarInformes
+@using IGE.Informes.Application.Personas.Queries.BuscarPersonas
 @using IGE.Informes.Application.TiposIncidente.Queries.ListarTiposIncidente
+@using IGE.Informes.Application.Vehiculos.Queries.BuscarVehiculos
+@using IGE.Informes.Application.Vehiculos.Queries.ListarVehiculos
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
 @inject NavigationManager NavigationManager
 
-<PageTitle>Búsqueda de Informes · IGE 4.0</PageTitle>
+<PageTitle>Búsqueda · IGE 4.0</PageTitle>
 
-<h1 class="headline-md mb-3">Búsqueda de Informes</h1>
+<h1 class="headline-md mb-3">Búsqueda</h1>
 
-<div class="card mb-3">
-    <div class="row g-3">
-        <div class="col-md-4">
-            <label class="label-md" for="dependencia">Dependencia</label>
-            <select id="dependencia" class="form-control" @bind="_dependenciaId">
-                <option value="">Todas</option>
-                @if (_dependencias is not null)
-                {
-                    @foreach (var dependencia in _dependencias)
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <button type="button" class="nav-link @(EsPestaniaActiva(Pestania.Informes))" @onclick="@(() => CambiarPestaniaAsync(Pestania.Informes))">Informes</button>
+    </li>
+    <li class="nav-item">
+        <button type="button" class="nav-link @(EsPestaniaActiva(Pestania.Casos))" @onclick="@(() => CambiarPestaniaAsync(Pestania.Casos))">Casos de Análisis</button>
+    </li>
+    <li class="nav-item">
+        <button type="button" class="nav-link @(EsPestaniaActiva(Pestania.Vehiculos))" @onclick="@(() => CambiarPestaniaAsync(Pestania.Vehiculos))">Vehículos</button>
+    </li>
+    <li class="nav-item">
+        <button type="button" class="nav-link @(EsPestaniaActiva(Pestania.Personas))" @onclick="@(() => CambiarPestaniaAsync(Pestania.Personas))">Personas</button>
+    </li>
+</ul>
+
+@if (_pestaniaActiva == Pestania.Informes)
+{
+    <div class="card mb-3">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="label-md" for="dependencia">Dependencia</label>
+                <select id="dependencia" class="form-control" @bind="_dependenciaId">
+                    <option value="">Todas</option>
+                    @if (_dependencias is not null)
                     {
-                        <option value="@dependencia.Id">@dependencia.Nombre</option>
+                        @foreach (var dependencia in _dependencias)
+                        {
+                            <option value="@dependencia.Id">@dependencia.Nombre</option>
+                        }
                     }
-                }
-            </select>
-        </div>
+                </select>
+            </div>
 
-        <div class="col-md-4">
-            <label class="label-md" for="tipoIncidente">Código de incidente</label>
-            <select id="tipoIncidente" class="form-control" @bind="_tipoIncidenteId">
-                <option value="">Todos</option>
-                @if (_tiposIncidente is not null)
-                {
-                    @foreach (var tipo in _tiposIncidente)
+            <div class="col-md-4">
+                <label class="label-md" for="tipoIncidente">Código de incidente</label>
+                <select id="tipoIncidente" class="form-control" @bind="_tipoIncidenteId">
+                    <option value="">Todos</option>
+                    @if (_tiposIncidente is not null)
                     {
-                        <option value="@tipo.Id">@tipo.Codigo - @tipo.Descripcion</option>
+                        @foreach (var tipo in _tiposIncidente)
+                        {
+                            <option value="@tipo.Id">@tipo.Codigo - @tipo.Descripcion</option>
+                        }
                     }
-                }
-            </select>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="label-md" for="dominio">Dominio de vehículo vinculado</label>
+                <input id="dominio" class="form-control mono-data" @bind="_dominioVehiculo" placeholder="Ej: IAK796" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="label-md" for="dniPersona">DNI o nombre de persona vinculada</label>
+                <input id="dniPersona" class="form-control" @bind="_dniOPersona" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="label-md" for="fechaDesde">Fecha desde</label>
+                <input id="fechaDesde" type="date" class="form-control" @bind="_fechaDesde" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="label-md" for="fechaHasta">Fecha hasta</label>
+                <input id="fechaHasta" type="date" class="form-control" @bind="_fechaHasta" />
+            </div>
+
+            <div class="col-12">
+                <label class="label-md" for="textoLibreInformes">Texto libre en el relato</label>
+                <input id="textoLibreInformes" class="form-control" @bind="_textoLibreInformes" placeholder="Ej: narcotráfico" />
+            </div>
         </div>
 
-        <div class="col-md-4">
-            <label class="label-md" for="dominio">Dominio de vehículo</label>
-            <input id="dominio" class="form-control mono-data" @bind="_dominioVehiculo" placeholder="Ej: IAK796" />
-        </div>
-
-        <div class="col-md-4">
-            <label class="label-md" for="dniPersona">DNI o nombre de persona</label>
-            <input id="dniPersona" class="form-control" @bind="_dniOPersona" />
-        </div>
-
-        <div class="col-md-4">
-            <label class="label-md" for="fechaDesde">Fecha desde</label>
-            <input id="fechaDesde" type="date" class="form-control" @bind="_fechaDesde" />
-        </div>
-
-        <div class="col-md-4">
-            <label class="label-md" for="fechaHasta">Fecha hasta</label>
-            <input id="fechaHasta" type="date" class="form-control" @bind="_fechaHasta" />
-        </div>
-
-        <div class="col-12">
-            <label class="label-md" for="textoLibre">Texto libre en el relato</label>
-            <input id="textoLibre" class="form-control" @bind="_textoLibre" placeholder="Ej: narcotráfico" />
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn-primary" @onclick="BuscarInformesAsync" disabled="@_buscando">Buscar</button>
+            <button type="button" class="btn-secondary" @onclick="LimpiarInformesAsync" disabled="@_buscando">Limpiar filtros</button>
         </div>
     </div>
 
-    <div class="d-flex gap-2 mt-3">
-        <button type="button" class="btn-primary" @onclick="BuscarAsync" disabled="@_buscando">Buscar</button>
-        <button type="button" class="btn-secondary" @onclick="LimpiarAsync" disabled="@_buscando">Limpiar filtros</button>
-    </div>
-</div>
-
-@if (_errorMessage is not null)
-{
-    <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
-}
-
-@if (_resultados is not null)
-{
-    <p class="body-sm mb-2">@_resultados.Count resultado(s).</p>
-
-    @if (_resultados.Count == 0)
+    @if (_errorMessage is not null)
     {
-        <p class="body-md">No se encontraron Informes con esos criterios.</p>
+        <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
     }
-    else
+
+    @if (_resultadosInformes is not null)
     {
-        <div class="card">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th class="label-md">ID Registro</th>
-                        <th class="label-md">Fecha de análisis</th>
-                        <th class="label-md">Estado</th>
-                        <th class="label-md">Relato</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var informe in _resultados)
-                    {
-                        <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(informe.Id))">
-                            <td class="body-sm mono-data">@informe.IdRegistro</td>
-                            <td class="body-sm">@informe.FechaAnalisis.ToString("dd/MM/yyyy")</td>
-                            <td class="body-sm">
-                                @if (informe.Estado == EstadoInforme.Publicado)
-                                {
-                                    <StatusChip Texto="Publicado" Semantica="ChipSemantica.Safe" />
-                                }
-                                else
-                                {
-                                    <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
-                                }
-                            </td>
-                            <td class="body-sm">@(informe.Relato ?? "—")</td>
+        <p class="body-sm mb-2">@_resultadosInformes.Count resultado(s).</p>
+
+        @if (_resultadosInformes.Count == 0)
+        {
+            <p class="body-md">No se encontraron Informes con esos criterios.</p>
+        }
+        else
+        {
+            <div class="card p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="label-md">ID Registro</th>
+                            <th class="label-md">Fecha de análisis</th>
+                            <th class="label-md">Estado</th>
+                            <th class="label-md">Relato</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var informe in _resultadosInformes)
+                        {
+                            <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(informe.Id))">
+                                <td class="body-sm mono-data">@informe.IdRegistro</td>
+                                <td class="body-sm">@informe.FechaAnalisis.ToString("dd/MM/yyyy")</td>
+                                <td class="body-sm">
+                                    @if (informe.Estado == EstadoInforme.Publicado)
+                                    {
+                                        <StatusChip Texto="Publicado" Semantica="ChipSemantica.Safe" />
+                                    }
+                                    else
+                                    {
+                                        <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
+                                    }
+                                </td>
+                                <td class="body-sm">@(informe.Relato ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+}
+else if (_pestaniaActiva == Pestania.Casos)
+{
+    <div class="card mb-3">
+        <label class="label-md" for="textoLibreCasos">Texto libre</label>
+        <input id="textoLibreCasos" class="form-control" @bind="_textoLibreCasos" placeholder="Ej: narcotráfico, número de llamado, patente involucrada" />
+        <p class="body-sm mt-1 mb-0">Busca en observaciones, elemento sustraído, vehículo involucrado (texto libre) y número de llamado al 911.</p>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn-primary" @onclick="BuscarCasosAsync" disabled="@_buscando">Buscar</button>
+            <button type="button" class="btn-secondary" @onclick="LimpiarCasosAsync" disabled="@_buscando">Limpiar</button>
         </div>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+    }
+
+    @if (_resultadosCasos is not null)
+    {
+        <p class="body-sm mb-2">@_resultadosCasos.Count resultado(s).</p>
+
+        @if (_resultadosCasos.Count == 0)
+        {
+            <p class="body-md">No se encontraron Casos con ese texto.</p>
+        }
+        else
+        {
+            <div class="card p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="label-md">Fecha</th>
+                            <th class="label-md">Estado</th>
+                            <th class="label-md">Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var caso in _resultadosCasos)
+                        {
+                            var estadoChip = CasoAnalisisChips.Para(caso.Estado);
+                            var resultadoChip = CasoAnalisisChips.Para(caso.Resultado);
+
+                            <tr style="cursor: pointer;" @onclick="@(() => IrAlCaso(caso.Id))">
+                                <td class="body-sm">@caso.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td><StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" /></td>
+                                <td><StatusChip Texto="@resultadoChip.Texto" Semantica="resultadoChip.Semantica" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+}
+else if (_pestaniaActiva == Pestania.Vehiculos)
+{
+    <div class="card mb-3">
+        <label class="label-md" for="textoLibreVehiculos">Texto libre</label>
+        <input id="textoLibreVehiculos" class="form-control" @bind="_textoLibreVehiculos" placeholder="Ej: dominio, marca, modelo o característica" />
+        <p class="body-sm mt-1 mb-0">Busca vehículos por Dominio, Marca, Modelo o Características, tengan o no un Informe/Caso asociado.</p>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn-primary" @onclick="BuscarVehiculosAsync" disabled="@_buscando">Buscar</button>
+            <button type="button" class="btn-secondary" @onclick="LimpiarVehiculosAsync" disabled="@_buscando">Limpiar</button>
+        </div>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+    }
+
+    @if (_resultadosVehiculos is not null)
+    {
+        <p class="body-sm mb-2">@_resultadosVehiculos.Count resultado(s).</p>
+
+        @if (_resultadosVehiculos.Count == 0)
+        {
+            <p class="body-md">No se encontraron Vehículos con ese texto.</p>
+        }
+        else
+        {
+            <div class="card p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="label-md">Dominio</th>
+                            <th class="label-md">Marca / Modelo</th>
+                            <th class="label-md">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var vehiculo in _resultadosVehiculos)
+                        {
+                            var estadoChip = VehiculoChips.Para(vehiculo.Estado);
+
+                            <tr style="cursor: pointer;" @onclick="@(() => IrAlVehiculo(vehiculo.Id))">
+                                <td class="mono-data">@(vehiculo.Dominio ?? "—")</td>
+                                <td class="body-sm">@vehiculo.Marca @vehiculo.Modelo</td>
+                                <td><StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+}
+else if (_pestaniaActiva == Pestania.Personas)
+{
+    <div class="card mb-3">
+        <label class="label-md" for="textoLibrePersonas">Texto libre</label>
+        <input id="textoLibrePersonas" class="form-control" @bind="_textoLibrePersonas" placeholder="Ej: nombre, DNI o característica" />
+        <p class="body-sm mt-1 mb-0">Busca personas por Nombre, DNI o Características, tengan o no un Informe/Caso asociado.</p>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn-primary" @onclick="BuscarPersonasAsync" disabled="@_buscando">Buscar</button>
+            <button type="button" class="btn-secondary" @onclick="LimpiarPersonasAsync" disabled="@_buscando">Limpiar</button>
+        </div>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+    }
+
+    @if (_resultadosPersonas is not null)
+    {
+        <p class="body-sm mb-2">@_resultadosPersonas.Count resultado(s).</p>
+
+        @if (_resultadosPersonas.Count == 0)
+        {
+            <p class="body-md">No se encontraron Personas con ese texto.</p>
+        }
+        else
+        {
+            <div class="card p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="label-md">Nombre</th>
+                            <th class="label-md">DNI</th>
+                            <th class="label-md">Rol</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var persona in _resultadosPersonas)
+                        {
+                            <tr style="cursor: pointer;" @onclick="@(() => IrALaPersona(persona.Id))">
+                                <td class="body-sm">@(persona.Nombre ?? "Sin identificar")</td>
+                                <td class="mono-data">@(persona.Dni ?? "—")</td>
+                                <td class="body-sm">@persona.Rol</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     }
 }
 
 @code {
+    private enum Pestania { Informes, Casos, Vehiculos, Personas }
+
+    private Pestania _pestaniaActiva = Pestania.Informes;
+
     private IReadOnlyCollection<DependenciaDto>? _dependencias;
     private IReadOnlyCollection<TipoIncidenteDto>? _tiposIncidente;
-    private IReadOnlyCollection<InformeBusquedaResultDto>? _resultados;
+    private IReadOnlyCollection<InformeBusquedaResultDto>? _resultadosInformes;
+    private IReadOnlyCollection<CasoAnalisisResumenDto>? _resultadosCasos;
+    private IReadOnlyCollection<VehiculoResumenDto>? _resultadosVehiculos;
+    private IReadOnlyCollection<PersonaBusquedaResultDto>? _resultadosPersonas;
 
     private string _dependenciaId = string.Empty;
     private string _tipoIncidenteId = string.Empty;
     private string? _dominioVehiculo;
     private string? _dniOPersona;
-    private string? _textoLibre;
     private DateTime? _fechaDesde;
     private DateTime? _fechaHasta;
+    private string? _textoLibreInformes;
+    private string? _textoLibreCasos;
+    private string? _textoLibreVehiculos;
+    private string? _textoLibrePersonas;
 
     private bool _buscando;
     private string? _errorMessage;
+
+    [SupplyParameterFromQuery(Name = "q")]
+    private string? TextoLibreInicial { get; set; }
+
+    private string EsPestaniaActiva(Pestania pestania) => _pestaniaActiva == pestania ? "active" : "";
+
+    private Task CambiarPestaniaAsync(Pestania pestania)
+    {
+        _pestaniaActiva = pestania;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
 
     protected override async Task OnInitializedAsync()
     {
         _dependencias = await Sender.Send(new ListarDependenciasQuery());
         _tiposIncidente = await Sender.Send(new ListarTiposIncidenteQuery());
+
+        // El buscador del header (MainLayout) redirige acá con ?q=... — se
+        // busca en las 4 entidades para no perder el hallazgo, sin importar
+        // en cuál viva.
+        if (!string.IsNullOrWhiteSpace(TextoLibreInicial))
+        {
+            _textoLibreInformes = TextoLibreInicial;
+            await BuscarInformesAsync();
+
+            if (TextoLibreInicial.Trim().Length >= 3)
+            {
+                _textoLibreCasos = TextoLibreInicial;
+                _textoLibreVehiculos = TextoLibreInicial;
+                _textoLibrePersonas = TextoLibreInicial;
+
+                await Task.WhenAll(BuscarCasosAsync(), BuscarVehiculosAsync(), BuscarPersonasAsync());
+            }
+        }
     }
 
-    private async Task BuscarAsync()
+    private async Task BuscarInformesAsync()
     {
         _errorMessage = null;
         _buscando = true;
@@ -158,11 +382,11 @@
                 TipoIncidenteId: string.IsNullOrWhiteSpace(_tipoIncidenteId) ? null : Guid.Parse(_tipoIncidenteId),
                 DominioVehiculo: string.IsNullOrWhiteSpace(_dominioVehiculo) ? null : _dominioVehiculo,
                 DniOPersona: string.IsNullOrWhiteSpace(_dniOPersona) ? null : _dniOPersona,
-                TextoLibre: string.IsNullOrWhiteSpace(_textoLibre) ? null : _textoLibre,
+                TextoLibre: string.IsNullOrWhiteSpace(_textoLibreInformes) ? null : _textoLibreInformes,
                 FechaDesde: _fechaDesde is null ? null : DateOnly.FromDateTime(_fechaDesde.Value),
                 FechaHasta: _fechaHasta is null ? null : DateOnly.FromDateTime(_fechaHasta.Value));
 
-            _resultados = await Sender.Send(query);
+            _resultadosInformes = await Sender.Send(query);
         }
         catch (Exception)
         {
@@ -174,18 +398,123 @@
         }
     }
 
+    private async Task BuscarCasosAsync()
+    {
+        _errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_textoLibreCasos) || _textoLibreCasos.Trim().Length < 3)
+        {
+            _errorMessage = "Ingresá al menos 3 caracteres para buscar.";
+            return;
+        }
+
+        _buscando = true;
+        try
+        {
+            _resultadosCasos = await Sender.Send(new BuscarCasosQuery(_textoLibreCasos));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo completar la búsqueda. Intentá de nuevo.";
+        }
+        finally
+        {
+            _buscando = false;
+        }
+    }
+
+    private async Task BuscarVehiculosAsync()
+    {
+        _errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_textoLibreVehiculos) || _textoLibreVehiculos.Trim().Length < 3)
+        {
+            _errorMessage = "Ingresá al menos 3 caracteres para buscar.";
+            return;
+        }
+
+        _buscando = true;
+        try
+        {
+            _resultadosVehiculos = await Sender.Send(new BuscarVehiculosQuery(_textoLibreVehiculos));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo completar la búsqueda. Intentá de nuevo.";
+        }
+        finally
+        {
+            _buscando = false;
+        }
+    }
+
+    private async Task BuscarPersonasAsync()
+    {
+        _errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_textoLibrePersonas) || _textoLibrePersonas.Trim().Length < 3)
+        {
+            _errorMessage = "Ingresá al menos 3 caracteres para buscar.";
+            return;
+        }
+
+        _buscando = true;
+        try
+        {
+            _resultadosPersonas = await Sender.Send(new BuscarPersonasQuery(_textoLibrePersonas));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo completar la búsqueda. Intentá de nuevo.";
+        }
+        finally
+        {
+            _buscando = false;
+        }
+    }
+
     private void IrAlInforme(Guid informeId) => NavigationManager.NavigateTo($"informes/{informeId}");
 
-    private Task LimpiarAsync()
+    private void IrAlCaso(Guid casoId) => NavigationManager.NavigateTo($"casos/{casoId}");
+
+    private void IrAlVehiculo(Guid vehiculoId) => NavigationManager.NavigateTo($"vehiculos/{vehiculoId}");
+
+    private void IrALaPersona(Guid personaId) => NavigationManager.NavigateTo($"personas/{personaId}");
+
+    private Task LimpiarInformesAsync()
     {
         _dependenciaId = string.Empty;
         _tipoIncidenteId = string.Empty;
         _dominioVehiculo = null;
         _dniOPersona = null;
-        _textoLibre = null;
         _fechaDesde = null;
         _fechaHasta = null;
-        _resultados = null;
+        _textoLibreInformes = null;
+        _resultadosInformes = null;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task LimpiarCasosAsync()
+    {
+        _textoLibreCasos = null;
+        _resultadosCasos = null;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task LimpiarVehiculosAsync()
+    {
+        _textoLibreVehiculos = null;
+        _resultadosVehiculos = null;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task LimpiarPersonasAsync()
+    {
+        _textoLibrePersonas = null;
+        _resultadosPersonas = null;
         _errorMessage = null;
         return Task.CompletedTask;
     }

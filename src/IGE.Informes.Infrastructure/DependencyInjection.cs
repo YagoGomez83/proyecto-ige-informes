@@ -1,5 +1,10 @@
+using IGE.Informes.Application.CasosAnalisis.Queries.BuscarCasos;
+using IGE.Informes.Application.CasosAnalisis.Queries.ListarCasos;
 using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Application.Informes.Queries.BuscarInformes;
+using IGE.Informes.Application.Personas.Queries.BuscarPersonas;
+using IGE.Informes.Application.Vehiculos.Queries.BuscarVehiculos;
+using IGE.Informes.Application.Vehiculos.Queries.ListarVehiculos;
 using IGE.Informes.Infrastructure.Antivirus;
 using IGE.Informes.Infrastructure.Auditing;
 using IGE.Informes.Infrastructure.Busqueda;
@@ -58,13 +63,19 @@ public static class DependencyInjection
 
         services.AddSingleton<IInformePdfParser, InformePdfParserAdapter>();
 
-        // Único Handler que vive en Infrastructure en vez de Application:
-        // depende de EF.Functions.ToTsVector/PlainToTsQuery (Npgsql), que
-        // Application no puede referenciar — ver el comentario en
-        // BuscarInformesQueryHandler. MediatR no lo descubre por escaneo de
-        // ensamblado (solo escanea Application), así que se registra
-        // explícitamente acá.
+        // Handlers que viven en Infrastructure en vez de Application: dependen
+        // de EF.Functions.ToTsVector/PlainToTsQuery/ILike (Npgsql), que
+        // Application no puede referenciar — ver el comentario en cada
+        // Handler. MediatR no los descubre por escaneo de ensamblado (solo
+        // escanea Application), así que se registran explícitamente acá.
+        // Olvidar este registro no rompe la compilación ni los tests
+        // unitarios (solo los de integración con Postgres real lo ejercitan)
+        // — el síntoma en producción es un catch silencioso en la página
+        // Blazor que llama al Handler, sin ningún log de la excepción real.
         services.AddScoped<IRequestHandler<BuscarInformesQuery, IReadOnlyCollection<InformeBusquedaResultDto>>, BuscarInformesQueryHandler>();
+        services.AddScoped<IRequestHandler<BuscarVehiculosQuery, IReadOnlyCollection<VehiculoResumenDto>>, BuscarVehiculosQueryHandler>();
+        services.AddScoped<IRequestHandler<BuscarPersonasQuery, IReadOnlyCollection<PersonaBusquedaResultDto>>, BuscarPersonasQueryHandler>();
+        services.AddScoped<IRequestHandler<BuscarCasosQuery, IReadOnlyCollection<CasoAnalisisResumenDto>>, BuscarCasosQueryHandler>();
 
         return services;
     }

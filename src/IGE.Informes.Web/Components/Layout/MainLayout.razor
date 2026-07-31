@@ -19,10 +19,11 @@
         <div class="top-row px-4">
             <span class="topbar-title">Analítica de Video - IGE 4.0</span>
             <div class="topbar-search">
-                <svg class="topbar-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <svg class="topbar-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" @onclick="IrABusqueda">
                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.098zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" fill="currentColor" />
                 </svg>
-                <input type="search" class="topbar-search-input" placeholder="Buscar por código o matrícula…" />
+                <input type="search" class="topbar-search-input" placeholder="Buscar por código o matrícula…"
+                       @bind="_textoBusqueda" @bind:event="oninput" @onkeydown="OnBusquedaKeyDownAsync" />
             </div>
         </div>
 
@@ -40,6 +41,29 @@
 
 @code {
     private const string RutaSetup2faObligatorio = "Account/ConfigurarDosFactoresObligatorio";
+
+    private string? _textoBusqueda;
+
+    private Task OnBusquedaKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            IrABusqueda();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void IrABusqueda()
+    {
+        if (string.IsNullOrWhiteSpace(_textoBusqueda))
+        {
+            NavigationManager.NavigateTo("busqueda");
+            return;
+        }
+
+        NavigationManager.NavigateTo($"busqueda?q={Uri.EscapeDataString(_textoBusqueda)}");
+    }
 
     // Defensa en profundidad: Login.razor ya redirige acá tras un login
     // exitoso sin 2FA para Admin/Supervisor, pero este chequeo evita que

@@ -1,8 +1,10 @@
 using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Domain.Entities;
+using IGE.Informes.Infrastructure.Busqueda;
 using IGE.Informes.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace IGE.Informes.Infrastructure.Persistence;
 
@@ -40,6 +42,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // Extensión unaccent: la búsqueda combinada (extensión de HU-05 sobre
+        // Vehiculo/Persona/CasoAnalisis) usa EF.Functions.ILike + unaccent()
+        // para que buscar "perez" encuentre "Pérez" — sin esto, ILike es
+        // case-insensitive pero sensible a acentos.
+        builder.HasPostgresExtension("unaccent");
+
+        // El [DbFunction] de FuncionesPostgres.Unaccent no se descubre por
+        // convención porque no está referenciado desde ningún mapeo de
+        // entidad — hay que registrarlo explícitamente acá.
+        builder.HasDbFunction(typeof(FuncionesPostgres).GetMethod(nameof(FuncionesPostgres.Unaccent), [typeof(string)])!)
+            .HasName("unaccent");
 
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
