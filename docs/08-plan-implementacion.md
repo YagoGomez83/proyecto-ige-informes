@@ -219,7 +219,11 @@ sí antes de un despliegue a producción sin supervisión).
   `docs/09-onboarding-offboarding-usuarios.md`).
 - El volumen de backups (`docker-compose.backup.yml`) es local en el
   entorno de desarrollo/simulacro — en producción debe montarse sobre
-  almacenamiento externo al servidor antes de confiar en él.
+  almacenamiento externo al servidor antes de confiar en él. **En
+  progreso** (ver Fase 7 y `07-plan-despliegue.md`): NAS institucional
+  (QNAP) configurado del lado del NAS, falta confirmar el mount NFS contra
+  un host Linux real y repetir el simulacro de restauración contra ese
+  destino.
 
 ---
 
@@ -262,6 +266,84 @@ base vacía, corriendo todas las migraciones en orden desde cero, sin
 ningún dato preexistente de `Dependencia` cargado por fuera de EF Core —
 si en el futuro se planea importar/restaurar Dependencias de otro sistema
 antes de correr la app, revisar este punto entonces.
+
+---
+
+## Fase 7 · Extensión de Épica 04 + Gestión de Usuarios — ✅ CERRADA
+
+Agregada después del cierre de la Fase 6, sin estar en el plan original.
+Extiende el modelo geográfico/jerárquico de Dependencias y Cámaras con datos
+reales relevados, completa el catálogo de Tipos de Incidente (deuda de
+Fase 1) y reemplaza el alta manual de usuarios (deuda de Fase 0) por una UI.
+
+- [x] Entidad `Localidad` (catálogo geográfico distinto de `Barrio`: dónde
+      está instalada una `Camara`, no la jurisdicción de una `Dependencia`).
+      HU-14.
+- [x] Entidad `CentroControlCamaras` (CCC, Sigla+Nombre). HU-15.
+- [x] `Dependencia.UnidadRegionalId` (auto-referencia nullable, una Unidad
+      Regional agrupa varias Comisarías; validación de tipo en el Handler,
+      no en `Domain`). HU-16.
+- [x] `Camara.Codigo` deja de ser único (dato real: instalaciones agrupadas
+      como "PLI" tienen hasta 22 cámaras bajo el mismo código) y se amplía a
+      VARCHAR(50) (código real de 28 caracteres relevado). Cambio de regla
+      de negocio validado con datos reales, no especulativo.
+- [x] **Migración** de Cámaras desde Excel real (`docs/camaras.xlsx`,
+      gitignoreado, nunca se commitea — contiene ubicaciones/jurisdicciones
+      policiales): 851 Cámaras, 54 Localidades, 4 CCC, 6 Unidades
+      Regionales, 71 Jurisdicciones. Importador en
+      `IGE.Informes.DataMigration/Program.Camaras.cs` (subcomando `camaras`,
+      dry-run por defecto).
+- [x] HU-13: catálogo de Barrios (`Barrio.LocalidadId` opcional, para
+      distinguir Barrios homónimos en ciudades distintas).
+- [x] HU-18: catálogo de Tipos de Incidente — el modelo ya existía desde
+      Fase 1, esta HU agrega el Command de alta y la UI. **Deuda pendiente,
+      no bloqueante**: falta la carga masiva de los códigos históricos
+      reales del Excel (164, 162, 02, 25, etc.) — el mecanismo de alta
+      manual queda listo, pendiente de que se consiga el listado completo.
+- [x] HU-17: Gestión de Usuarios — alta, cambio de rol, bloqueo/
+      desbloqueo, reseteo de contraseña por un Admin, todo con las
+      restricciones de auto-gestión (un Admin no puede cambiarse su propio
+      rol, bloquearse ni resetearse su propia contraseña desde esta
+      pantalla). Reemplaza el proceso manual de
+      `docs/09-onboarding-offboarding-usuarios.md`. Invalida el
+      `SecurityStamp` en cambio de rol/bloqueo/reseteo para cortar sesiones
+      Blazor activas (cierra deuda de Fase 5).
+- [x] CI con GitHub Actions (`.github/workflows/ci.yml`): build + tests
+      unitarios + tests de integración en cada push/PR a `master`, branch
+      protection activa en `master`. Escaneo de dependencias vulnerables
+      (OWASP A08, `dotnet list package --vulnerable`) + Trivy sobre la
+      imagen Docker — cierra la deuda A08 de Fase 5.
+- [x] Atomicidad de `CambiarRolAsync`/`CrearUsuarioAsync` (transacción
+      explícita, verificación de `IdentityResult` de cada paso) — evita
+      estado inconsistente (usuario sin rol) ante un fallo a mitad de
+      camino.
+- [x] 2FA obligatorio para Admin/Supervisor, sin período de gracia — cierra
+      deuda de Fase 0/5.
+- [x] TLS interno (`tls internal` de Caddy) confirmado como decisión final
+      para este despliegue (LAN/VPN institucional, sin CA propia
+      disponible) — documentado en `07-plan-despliegue.md`, no es deuda.
+- [x] ClamAV integrado para escaneo de archivos subidos (Informes/PDFs) —
+      hardening pre-VM.
+- [x] Tope de migración masiva de PDFs (500→100→40) y timeout del parser de
+      PDF — hardening pre-VM, evita que una carga masiva o un PDF
+      malformado cuelgue el proceso.
+
+**Criterio de cierre**: el Administrador gestiona usuarios, Barrios,
+Localidades, CCC y jerarquía de Unidades Regionales sin tocar la base de
+datos directamente, y el catálogo de Cámaras refleja datos reales
+relevados. **Cumplido y verificado en navegador y en CI real**
+(ver memoria del proyecto para detalle de commits).
+
+**Deuda registrada (no bloqueante)**:
+- Carga masiva de códigos históricos reales de `TipoIncidente` — pendiente
+  de que el usuario consiga el listado completo (no es
+  `docs/documentación-legacy/causes.csv`, ese es el catálogo de Causas
+  judiciales, otra cosa).
+- Backups: destino externo (NAS institucional u otro) todavía sin resolver
+  — en progreso al momento de escribir esto (ver `07-plan-despliegue.md` y
+  memoria del proyecto), bloqueante para confiar en los backups ante
+  pérdida completa del servidor, no para habilitar el sistema a usuarios.
+- Instalación de la VM de producción (VMware ESXi) en curso, sin cerrar.
 
 ---
 
