@@ -71,3 +71,66 @@ h1:focus {
     .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
         text-align: start;
     }
+
+/* Vistas públicas (login y flujo de autenticación) — usadas por PublicLayout
+   y las páginas que lo aplican (Login, LoginWith2fa, Lockout, InvalidUser,
+   ConfigurarDosFactoresObligatorio). Sin CSS isolation porque el layout y
+   sus páginas son componentes .razor distintos. */
+.login-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg) var(--space-md);
+    background: var(--color-surface);
+}
+
+.login-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.login-brand-icon {
+    color: var(--color-primary);
+    margin-bottom: var(--space-xs);
+}
+
+.login-brand-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin: 0;
+}
+
+.login-brand-subtitle {
+    color: var(--color-on-surface-variant);
+    margin: 0.25rem 0 0;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 26rem;
+    padding: var(--space-md);
+}
+
+.login-field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+}
+
+.login-footer-note {
+    text-align: center;
+    color: var(--color-on-surface-variant);
+    border-top: 1px solid var(--color-outline-variant);
+    padding-top: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.login-copyright {
+    text-align: center;
+    margin-top: var(--space-md);
+    max-width: 26rem;
+}

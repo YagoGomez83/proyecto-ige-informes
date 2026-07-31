@@ -1,0 +1,23 @@
+.dashboard-kpi-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.dashboard-kpi-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.dashboard-kpi-value--warning {
+    color: var(--color-warning);
+}
+
+.dashboard-kpi-value--alert {
+    color: var(--color-alert);
+}
+
+.dashboard-kpi-value--safe {
+    color: var(--color-safe);
+}

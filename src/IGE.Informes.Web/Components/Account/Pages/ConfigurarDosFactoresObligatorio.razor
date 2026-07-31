@@ -1,4 +1,5 @@
 @page "/Account/ConfigurarDosFactoresObligatorio"
+@layout PublicLayout
 @attribute [Authorize]
 
 @using System.ComponentModel.DataAnnotations
@@ -15,41 +16,39 @@
 
 <PageTitle>Configuración obligatoria de 2FA · IGE 4.0</PageTitle>
 
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card">
-            <h1 class="headline-md mb-2">Configuración obligatoria de seguridad</h1>
-            <p class="body-sm mb-3">
-                Tu rol (@rol) requiere verificación en dos pasos. Configurala
-                ahora para poder continuar — no vas a poder acceder al resto
-                del sistema hasta completar este paso.
-            </p>
+<div class="login-screen">
+    <div class="card login-card">
+        <h1 class="headline-md mb-2">Configuración obligatoria de seguridad</h1>
+        <p class="body-sm mb-3">
+            Tu rol (@rol) requiere verificación en dos pasos. Configurala
+            ahora para poder continuar — no vas a poder acceder al resto
+            del sistema hasta completar este paso.
+        </p>
 
-            @if (message is not null)
-            {
-                <div class="status-chip status-chip--alert mb-3">@message</div>
-            }
+        @if (message is not null)
+        {
+            <div class="status-chip status-chip--alert mb-3">@message</div>
+        }
 
-            @if (sharedKey is not null)
-            {
-                <div class="mb-3">
-                    <p class="body-sm">Escaneá el código QR o ingresá esta clave manualmente en tu app de autenticación (Google Authenticator, Authy, etc.):</p>
-                    <code class="mono-data">@sharedKey</code>
+        @if (sharedKey is not null)
+        {
+            <div class="mb-3">
+                <p class="body-sm">Escaneá el código QR o ingresá esta clave manualmente en tu app de autenticación (Google Authenticator, Authy, etc.):</p>
+                <code class="mono-data">@sharedKey</code>
+            </div>
+
+            <EditForm Model="Input" method="post" OnValidSubmit="OnValidSubmitAsync" FormName="setup-2fa-obligatorio">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert" />
+                <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Code" class="form-control mono-data" autocomplete="off" placeholder="Código de 6 dígitos" />
+                    <label>Código de verificación</label>
+                    <ValidationMessage For="() => Input.Code" class="text-danger" />
                 </div>
-
-                <EditForm Model="Input" method="post" OnValidSubmit="OnValidSubmitAsync" FormName="setup-2fa-obligatorio">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary class="text-danger" role="alert" />
-                    <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-                    <div class="form-floating mb-3">
-                        <InputText @bind-Value="Input.Code" class="form-control mono-data" autocomplete="off" placeholder="Código de 6 dígitos" />
-                        <label>Código de verificación</label>
-                        <ValidationMessage For="() => Input.Code" class="text-danger" />
-                    </div>
-                    <button type="submit" class="btn-primary">Verificar y continuar</button>
-                </EditForm>
-            }
-        </div>
+                <button type="submit" class="btn-primary">Verificar y continuar</button>
+            </EditForm>
+        }
     </div>
 </div>
 

@@ -1,4 +1,5 @@
 @page "/Account/LoginWith2fa"
+@layout PublicLayout
 
 @using System.ComponentModel.DataAnnotations
 @using IGE.Informes.Application.Common.Interfaces
@@ -12,33 +13,31 @@
 
 <PageTitle>Verificación en dos pasos</PageTitle>
 
-<div class="row justify-content-center">
-    <div class="col-md-4">
-        <div class="card">
-            <h1 class="headline-md mb-2">Verificación en dos pasos</h1>
-            <p class="body-sm mb-3">Ingresá el código de tu aplicación de autenticación.</p>
+<div class="login-screen">
+    <div class="card login-card">
+        <h1 class="headline-md mb-2">Verificación en dos pasos</h1>
+        <p class="body-sm mb-3">Ingresá el código de tu aplicación de autenticación.</p>
 
-            <StatusMessage Message="@message" />
+        <StatusMessage Message="@message" />
 
-            <EditForm Model="Input" method="post" OnValidSubmit="OnValidSubmitAsync" FormName="login-with-2fa">
-                <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-                <input type="hidden" name="RememberMe" value="@RememberMe" />
-                <DataAnnotationsValidator />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.TwoFactorCode" class="form-control mono-data" autocomplete="off" />
-                    <label>Código de autenticación</label>
-                    <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label>
-                        <InputCheckbox @bind-Value="Input.RememberMachine" />
-                        Recordar este equipo
-                    </label>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Verificar</button>
-            </EditForm>
-        </div>
+        <EditForm Model="Input" method="post" OnValidSubmit="OnValidSubmitAsync" FormName="login-with-2fa">
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            <input type="hidden" name="RememberMe" value="@RememberMe" />
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.TwoFactorCode" class="form-control mono-data" autocomplete="off" />
+                <label>Código de autenticación</label>
+                <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
+            </div>
+            <div class="checkbox mb-3">
+                <label>
+                    <InputCheckbox @bind-Value="Input.RememberMachine" />
+                    Recordar este equipo
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Verificar</button>
+        </EditForm>
     </div>
 </div>
 

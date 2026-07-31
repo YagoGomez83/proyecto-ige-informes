@@ -1,8 +1,57 @@
 @page "/"
 @attribute [Authorize]
+@using IGE.Informes.Application.Dashboard.Queries.ObtenerResumenDashboard
+@using MediatR
+@inject ISender Sender
 
 <PageTitle>IGE 4.0 · Informes</PageTitle>
 
-<h1 class="headline-md">IGE 4.0 · Sistema de Gestión de Casos e Informes</h1>
+<h1 class="headline-md mb-3">IGE 4.0 · Sistema de Gestión de Casos e Informes</h1>
 
-<p class="body-md">Sesión iniciada correctamente.</p>
+@if (_resumen is not null)
+{
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="card dashboard-kpi-card">
+                <span class="label-md">Casos Abiertos</span>
+                <span class="dashboard-kpi-value dashboard-kpi-value--warning">@_resumen.CasosAbiertos</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-kpi-card">
+                <span class="label-md">Vehículos con Alerta Vigente</span>
+                <span class="dashboard-kpi-value dashboard-kpi-value--alert">@_resumen.VehiculosConAlertaVigente</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-kpi-card">
+                <span class="label-md">Informes en Borrador</span>
+                <span class="dashboard-kpi-value dashboard-kpi-value--warning">@_resumen.InformesEnBorrador</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-kpi-card">
+                <span class="label-md">Informes Publicados</span>
+                <span class="dashboard-kpi-value dashboard-kpi-value--safe">@_resumen.InformesPublicados</span>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <h2 class="headline-sm mb-2">Accesos rápidos</h2>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn-primary" href="casos">Casos de Análisis</a>
+        <a class="btn-secondary" href="vehiculos">Vehículos</a>
+        <a class="btn-secondary" href="busqueda">Búsqueda</a>
+    </div>
+</div>
+
+@code {
+    private ResumenDashboardDto? _resumen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _resumen = await Sender.Send(new ObtenerResumenDashboardQuery());
+    }
+}
