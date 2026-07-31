@@ -1,4 +1,3 @@
-@page "/informes"
 @page "/alertas"
 @attribute [Authorize]
 @inject NavigationManager NavigationManager
@@ -11,7 +10,6 @@
 @code {
     private string Titulo => new Uri(NavigationManager.Uri).AbsolutePath switch
     {
-        "/informes" => "Informes",
         "/alertas" => "Alertas",
         _ => "Próximamente",
     };

@@ -1,0 +1,89 @@
+@page "/informes"
+@attribute [Authorize]
+@using IGE.Informes.Application.Common.Dtos
+@using IGE.Informes.Application.Informes.Queries.ListarInformesPaginado
+@using IGE.Informes.Application.Informes.Queries.ListarInformesPorCaso
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Informes · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Informes</h1>
+
+@if (_informes is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_informes.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay informes cargados.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">ID Registro</th>
+                    <th class="label-md">Fecha de análisis</th>
+                    <th class="label-md">Estado</th>
+                    <th class="label-md"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var informe in _informes)
+                {
+                    <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(informe.Id))">
+                        <td class="body-sm mono-data">@informe.IdRegistro</td>
+                        <td class="body-sm">@informe.FechaAnalisis.ToString("dd/MM/yyyy")</td>
+                        <td class="body-sm">
+                            @if (informe.Estado == EstadoInforme.Publicado)
+                            {
+                                <StatusChip Texto="Publicado" Semantica="ChipSemantica.Safe" />
+                            }
+                            else
+                            {
+                                <StatusChip Texto="Borrador" Semantica="ChipSemantica.Warning" />
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a class="btn-secondary" href="@($"informes/{informe.Id}")">Ver</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <Paginador Pagina="_pagina" TotalPaginas="_resultado!.TotalPaginas" TotalItems="_resultado.TotalItems" PaginaCambiada="CambiarPaginaAsync" />
+}
+
+@code {
+    private PagedResult<InformeResumenDto>? _resultado;
+    private IReadOnlyCollection<InformeResumenDto>? _informes;
+    private int _pagina = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _resultado = await Sender.Send(new ListarInformesPaginadoQuery(_pagina));
+        _informes = _resultado.Items;
+    }
+
+    private async Task CambiarPaginaAsync(int nuevaPagina)
+    {
+        _pagina = nuevaPagina;
+        _informes = null;
+        await CargarAsync();
+    }
+
+    private void IrAlInforme(Guid informeId) => NavigationManager.NavigateTo($"informes/{informeId}");
+}
