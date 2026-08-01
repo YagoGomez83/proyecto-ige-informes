@@ -1,0 +1,164 @@
+@page "/alertas"
+@attribute [Authorize]
+@using IGE.Informes.Application.Alertas.Commands.MarcarAlertaAtendida
+@using IGE.Informes.Application.Alertas.Queries.ListarAlertas
+@using IGE.Informes.Application.Common.Dtos
+@using IGE.Informes.Domain.Entities
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Alertas · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Alertas</h1>
+</div>
+
+<div class="form-check mb-3">
+    <input type="checkbox" class="form-check-input" id="soloNoAtendidas" @bind="_soloNoAtendidas" @bind:after="CargarAsync" />
+    <label class="form-check-label body-sm" for="soloNoAtendidas">Solo no atendidas</label>
+</div>
+
+@if (_errorMessage is not null)
+{
+    <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+}
+
+@if (_alertas is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_alertas.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">No hay alertas para mostrar.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Tipo</th>
+                    <th class="label-md">Vehículo / Persona</th>
+                    <th class="label-md">Informe</th>
+                    <th class="label-md">Informe previo</th>
+                    <th class="label-md">Fecha</th>
+                    <th class="label-md">Estado</th>
+                    <th class="label-md"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var alerta in _alertas)
+                {
+                    <tr>
+                        <td class="body-sm">
+                            @if (alerta.Tipo == TipoAlerta.ReincidenciaOtroInforme)
+                            {
+                                <StatusChip Texto="Reincidencia" Semantica="ChipSemantica.Warning" />
+                            }
+                            else
+                            {
+                                <StatusChip Texto="Carga huérfana" Semantica="ChipSemantica.Neutral" />
+                            }
+                        </td>
+                        <td class="body-sm">
+                            @if (alerta.VehiculoId is not null)
+                            {
+                                <a href="@($"vehiculos/{alerta.VehiculoId}")">@alerta.VehiculoResumen</a>
+                            }
+                            else
+                            {
+                                <a href="@($"personas/{alerta.PersonaId}")">@alerta.PersonaResumen</a>
+                            }
+                        </td>
+                        <td class="body-sm">
+                            <a href="@($"informes/{alerta.InformeId}")" class="mono-data">@alerta.InformeIdRegistro</a>
+                        </td>
+                        <td class="body-sm">
+                            @if (alerta.InformePrevioId is not null)
+                            {
+                                <a href="@($"informes/{alerta.InformePrevioId}")" class="mono-data">@alerta.InformePrevioIdRegistro</a>
+                            }
+                            else
+                            {
+                                <span>—</span>
+                            }
+                        </td>
+                        <td class="body-sm">@alerta.FechaGeneracion.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="body-sm">
+                            @if (alerta.Atendida)
+                            {
+                                <StatusChip Texto="Atendida" Semantica="ChipSemantica.Safe" />
+                            }
+                            else
+                            {
+                                <StatusChip Texto="Pendiente" Semantica="ChipSemantica.Warning" />
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (!alerta.Atendida)
+                            {
+                                <button type="button" class="btn-secondary" @onclick="() => MarcarAtendidaAsync(alerta.Id)" disabled="@_procesando">
+                                    Marcar atendida
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <Paginador Pagina="_pagina" TotalPaginas="_resultado!.TotalPaginas" TotalItems="_resultado.TotalItems" PaginaCambiada="CambiarPaginaAsync" />
+}
+
+@code {
+    private PagedResult<AlertaDto>? _resultado;
+    private IReadOnlyCollection<AlertaDto>? _alertas;
+    private int _pagina = 1;
+    private bool _soloNoAtendidas;
+    private bool _procesando;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _pagina = 1;
+        _resultado = await Sender.Send(new ListarAlertasQuery(_pagina, SoloNoAtendidas: _soloNoAtendidas ? true : null));
+        _alertas = _resultado.Items;
+    }
+
+    private async Task CambiarPaginaAsync(int nuevaPagina)
+    {
+        _pagina = nuevaPagina;
+        _alertas = null;
+        _resultado = await Sender.Send(new ListarAlertasQuery(_pagina, SoloNoAtendidas: _soloNoAtendidas ? true : null));
+        _alertas = _resultado.Items;
+    }
+
+    private async Task MarcarAtendidaAsync(Guid alertaId)
+    {
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            await Sender.Send(new MarcarAlertaAtendidaCommand(alertaId));
+            await CargarAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo marcar la alerta como atendida.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+}

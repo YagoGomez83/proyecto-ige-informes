@@ -16,4 +16,10 @@ public sealed record InformeDto(
     string? PdfPath,
     string? PdfUrl,
     EstadoInforme Estado,
-    OrigenInforme Origen);
+    OrigenInforme Origen,
+    IReadOnlyCollection<VehiculoVinculadoDto> VehiculosVinculados,
+    IReadOnlyCollection<PersonaVinculadaDto> PersonasVinculadas);
+
+public sealed record VehiculoVinculadoDto(Guid Id, string Marca, string Modelo, string? Dominio);
+
+public sealed record PersonaVinculadaDto(Guid Id, string? Nombre, string? Dni, RolPersona Rol);

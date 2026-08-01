@@ -73,6 +73,63 @@ public class ObtenerInformePorIdQueryHandlerTests
     }
 
     [Fact]
+    public async Task Sin_evidencias_vinculadas_devuelve_colecciones_vacias_de_vehiculos_y_personas()
+    {
+        var dbContext = new TestAppDbContext();
+        var informe = new Informe("290/2026", new DateOnly(2026, 7, 21), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        dbContext.Informes.Add(informe);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ObtenerInformePorIdQueryHandler(dbContext, new FakeAuditLogger(), new FakeFileStorage());
+
+        var dto = await handler.Handle(new ObtenerInformePorIdQuery(informe.Id), CancellationToken.None);
+
+        Assert.NotNull(dto);
+        Assert.Empty(dto.VehiculosVinculados);
+        Assert.Empty(dto.PersonasVinculadas);
+    }
+
+    [Fact]
+    public async Task Devuelve_los_vehiculos_y_personas_vinculados_via_Evidencia_sin_duplicar()
+    {
+        var dbContext = new TestAppDbContext();
+        var informe = new Informe("290/2026", new DateOnly(2026, 7, 21), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        dbContext.Informes.Add(informe);
+
+        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "ABC123");
+        var persona = new Persona(RolPersona.Testigo, nombre: "Juan Pérez");
+        dbContext.Vehiculos.Add(vehiculo);
+        dbContext.Personas.Add(persona);
+
+        var evidencia1 = new Evidencia(1, informe.Id);
+        evidencia1.VincularVehiculo(vehiculo.Id);
+        evidencia1.VincularPersona(persona.Id);
+        dbContext.Evidencias.Add(evidencia1);
+
+        // Segunda Evidencia con el mismo Vehículo/Persona — no debe duplicar
+        // en el resultado.
+        var evidencia2 = new Evidencia(2, informe.Id);
+        evidencia2.VincularVehiculo(vehiculo.Id);
+        evidencia2.VincularPersona(persona.Id);
+        dbContext.Evidencias.Add(evidencia2);
+
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ObtenerInformePorIdQueryHandler(dbContext, new FakeAuditLogger(), new FakeFileStorage());
+
+        var dto = await handler.Handle(new ObtenerInformePorIdQuery(informe.Id), CancellationToken.None);
+
+        Assert.NotNull(dto);
+        var vehiculoVinculado = Assert.Single(dto.VehiculosVinculados);
+        Assert.Equal(vehiculo.Id, vehiculoVinculado.Id);
+        Assert.Equal("ABC123", vehiculoVinculado.Dominio);
+
+        var personaVinculada = Assert.Single(dto.PersonasVinculadas);
+        Assert.Equal(persona.Id, personaVinculada.Id);
+        Assert.Equal("Juan Pérez", personaVinculada.Nombre);
+    }
+
+    [Fact]
     public async Task Devuelve_los_datos_de_la_Causa_cuando_el_informe_tiene_una_asignada()
     {
         var dbContext = new TestAppDbContext();

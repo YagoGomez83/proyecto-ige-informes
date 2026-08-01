@@ -31,6 +31,40 @@ public sealed class ObtenerInformePorIdQueryHandler(IAppDbContext dbContext, IAu
             ? null
             : await fileStorage.ObtenerUrlDescargaAsync(informe.PdfPath, cancellationToken);
 
+        var evidencias = await dbContext.Evidencias.AsNoTracking()
+            .Where(e => e.InformeId == informe.Id)
+            .ToListAsync(cancellationToken);
+
+        var vehiculoIds = evidencias.SelectMany(e => e.VehiculoIds).Distinct().ToList();
+        var personaIds = evidencias.SelectMany(e => e.PersonaIds).Distinct().ToList();
+
+        var vehiculosVinculados = vehiculoIds.Count == 0
+            ? []
+            : await dbContext.Vehiculos.AsNoTracking()
+                .Where(v => vehiculoIds.Contains(v.Id))
+                .Select(v => new VehiculoVinculadoDto(v.Id, v.Marca, v.Modelo, v.Dominio))
+                .ToListAsync(cancellationToken);
+
+        var personasVinculadas = personaIds.Count == 0
+            ? []
+            : await dbContext.Personas.AsNoTracking()
+                .Where(p => personaIds.Contains(p.Id))
+                .Select(p => new PersonaVinculadaDto(p.Id, p.Nombre, p.Dni, p.Rol))
+                .ToListAsync(cancellationToken);
+
+        // Un registro de auditoría por Id, no agregado — un acceso que
+        // expone varios DNI/dominios distintos debe poder reconstruirse
+        // individualmente (CLAUDE.md, sección Seguridad).
+        foreach (var vehiculo in vehiculosVinculados)
+        {
+            await auditLogger.RegistrarAccesoAsync("Lectura", nameof(Vehiculo), vehiculo.Id, cancellationToken);
+        }
+
+        foreach (var persona in personasVinculadas)
+        {
+            await auditLogger.RegistrarAccesoAsync("Lectura", nameof(Persona), persona.Id, cancellationToken);
+        }
+
         return new InformeDto(
             informe.Id,
             informe.IdRegistro,
@@ -45,6 +79,8 @@ public sealed class ObtenerInformePorIdQueryHandler(IAppDbContext dbContext, IAu
             informe.PdfPath,
             pdfUrl,
             informe.Estado,
-            informe.Origen);
+            informe.Origen,
+            vehiculosVinculados,
+            personasVinculadas);
     }
 }

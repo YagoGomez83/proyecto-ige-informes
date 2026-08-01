@@ -3,6 +3,7 @@ using System;
 using IGE.Informes.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IGE.Informes.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260801143025_AgregarPersonaVehiculo")]
+    partial class AgregarPersonaVehiculo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,54 +25,6 @@ namespace IGE.Informes.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "unaccent");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("IGE.Informes.Domain.Entities.Alerta", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Atendida")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("AtendidaPorUsuarioId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("FechaAtencion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("FechaGeneracion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("InformeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("InformePrevioId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PersonaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<Guid?>("VehiculoId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Atendida");
-
-                    b.HasIndex("InformeId");
-
-                    b.HasIndex("PersonaId");
-
-                    b.HasIndex("VehiculoId");
-
-                    b.ToTable("Alertas", (string)null);
-                });
 
             modelBuilder.Entity("IGE.Informes.Domain.Entities.AuditLog", b =>
                 {
@@ -415,12 +370,6 @@ namespace IGE.Informes.Infrastructure.Persistence.Migrations
                     b.Property<string>("Relato")
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 

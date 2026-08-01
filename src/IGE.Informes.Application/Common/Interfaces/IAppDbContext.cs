@@ -39,6 +39,10 @@ public interface IAppDbContext
 
     DbSet<PersonaImagen> PersonaImagenes { get; }
 
+    DbSet<PersonaVehiculo> PersonasVehiculo { get; }
+
+    DbSet<Alerta> Alertas { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

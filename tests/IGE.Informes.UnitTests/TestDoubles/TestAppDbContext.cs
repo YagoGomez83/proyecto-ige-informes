@@ -49,6 +49,10 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
 
     public DbSet<PersonaImagen> PersonaImagenes => Set<PersonaImagen>();
 
+    public DbSet<PersonaVehiculo> PersonasVehiculo => Set<PersonaVehiculo>();
+
+    public DbSet<Alerta> Alertas => Set<Alerta>();
+
     public void MarcarInformeAnalistaComoAgregado(InformeAnalista informeAnalista)
     {
         Entry(informeAnalista).State = EntityState.Added;

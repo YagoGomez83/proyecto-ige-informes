@@ -38,6 +38,22 @@ public sealed class InformeConfiguration : IEntityTypeConfiguration<Informe>
         builder.HasIndex(i => i.CausaId);
         builder.HasIndex(i => i.DependenciaDestinoId);
 
+        // Token de concurrencia optimista mapeado sobre la columna de
+        // sistema xmin que Postgres ya mantiene implícitamente en toda
+        // tabla (no crea una columna nueva) — propiedad shadow, no requiere
+        // agregar nada al Domain (Informe no conoce EF Core). Cierra la
+        // ventana de carrera entre PublicarInforme y cualquier otro Command
+        // que mute un Informe en Borrador (ej.
+        // VincularVehiculoInforme/VincularPersonaInforme): si el Informe
+        // cambió entre la lectura y el SaveChangesAsync, EF Core lanza
+        // DbUpdateConcurrencyException en vez de persistir silenciosamente
+        // sobre un estado ya viejo.
+        builder.Property<uint>("xmin")
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.Metadata
             .FindNavigation(nameof(Informe.Analistas))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);

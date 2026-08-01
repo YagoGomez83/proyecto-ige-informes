@@ -43,6 +43,17 @@ public sealed class PublicarInformeCommandHandler(IAppDbContext dbContext, ICurr
 
         informe.Publicar();
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // El Informe fue modificado (ej. se vinculó un Vehículo/Persona)
+            // entre la lectura y este guardado — token de concurrencia
+            // optimista sobre xmin, ver InformeConfiguration.
+            throw new InvalidOperationException(
+                "El Informe cambió mientras se publicaba — verificá su estado actual e intentá de nuevo.");
+        }
     }
 }

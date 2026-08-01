@@ -43,6 +43,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<PersonaImagen> PersonaImagenes => Set<PersonaImagen>();
 
+    public DbSet<PersonaVehiculo> PersonasVehiculo => Set<PersonaVehiculo>();
+
+    public DbSet<Alerta> Alertas => Set<Alerta>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

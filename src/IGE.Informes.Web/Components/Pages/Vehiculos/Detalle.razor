@@ -6,8 +6,11 @@
 @using IGE.Informes.Application.Vehiculos.Commands.AsignarCategoriaAlerta
 @using IGE.Informes.Application.Vehiculos.Commands.CambiarEstadoVehiculo
 @using IGE.Informes.Application.Vehiculos.Commands.DarDeBajaVehiculo
+@using IGE.Informes.Application.Personas.Queries.BuscarPersonas
 @using IGE.Informes.Application.Vehiculos.Commands.QuitarImagenVehiculo
+@using IGE.Informes.Application.Personas.Commands.VincularVehiculo
 @using IGE.Informes.Application.Vehiculos.Queries.ListarImagenesVehiculo
+@using IGE.Informes.Application.Vehiculos.Queries.ListarPersonasVinculadas
 @using IGE.Informes.Application.Vehiculos.Queries.ObtenerHistorialInformesVehiculo
 @using IGE.Informes.Application.Vehiculos.Queries.ObtenerVehiculoPorId
 @using IGE.Informes.Domain.Entities
@@ -155,6 +158,58 @@ else
         }
     </div>
 
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Personas vinculadas</h2>
+        @if (_personasVinculadas is null)
+        {
+            <p class="body-md">Cargando...</p>
+        }
+        else if (_personasVinculadas.Count == 0)
+        {
+            <p class="body-md">Ninguna persona vinculada todavía.</p>
+        }
+        else
+        {
+            <ul class="mb-3">
+                @foreach (var persona in _personasVinculadas)
+                {
+                    <li class="body-sm">
+                        <a href="@($"personas/{persona.Id}")">@(persona.Nombre ?? "Sin identificar")</a>
+                        @if (persona.Dni is not null)
+                        {
+                            <span class="mono-data"> — @persona.Dni</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        <div class="d-flex gap-2">
+            <input class="form-control" @bind="_dniOnombreBuscado" @bind:event="oninput" placeholder="Buscar persona por DNI o nombre..." disabled="@_vinculandoPersona" />
+            <button type="button" class="btn-secondary" @onclick="BuscarPersonasAsync" disabled="@_vinculandoPersona">Buscar</button>
+        </div>
+
+        @if (_resultadosPersonas is not null)
+        {
+            @if (_resultadosPersonas.Count == 0)
+            {
+                <p class="body-sm mt-2 mb-0">Sin resultados.</p>
+            }
+            else
+            {
+                <ul class="mt-2 mb-0">
+                    @foreach (var resultado in _resultadosPersonas)
+                    {
+                        <li class="body-sm">
+                            @(resultado.Nombre ?? "Sin identificar") (@(resultado.Dni ?? "sin DNI"))
+                            <button type="button" class="btn-secondary" @onclick="() => VincularPersonaAsync(resultado.Id)" disabled="@_vinculandoPersona">Vincular</button>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </div>
+
     <div class="card mt-3">
         <h2 class="headline-sm mb-2">Historial de Informes</h2>
         @if (_historial is null)
@@ -215,6 +270,10 @@ else
     private IReadOnlyCollection<CategoriaAlertaDto>? _categoriasAlerta;
     private IReadOnlyCollection<InformeHistorialDto>? _historial;
     private IReadOnlyCollection<VehiculoImagenDto>? _imagenes;
+    private IReadOnlyCollection<PersonaVinculadaResumenDto>? _personasVinculadas;
+    private IReadOnlyCollection<PersonaBusquedaResultDto>? _resultadosPersonas;
+    private string _dniOnombreBuscado = string.Empty;
+    private bool _vinculandoPersona;
     private string? _categoriaSeleccionadaId;
     private DateTime _fechaBaja = DateTime.Today;
     private string? _errorMessage;
@@ -230,6 +289,46 @@ else
         await CargarAsync();
         _historial = await Sender.Send(new ObtenerHistorialInformesVehiculoQuery(VehiculoId));
         await CargarImagenesAsync();
+        await CargarPersonasVinculadasAsync();
+    }
+
+    private async Task CargarPersonasVinculadasAsync()
+    {
+        _personasVinculadas = await Sender.Send(new ListarPersonasVinculadasQuery(VehiculoId));
+    }
+
+    private async Task BuscarPersonasAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_dniOnombreBuscado) || _dniOnombreBuscado.Trim().Length < 3)
+        {
+            _errorMessage = "Ingresá al menos 3 caracteres para buscar.";
+            return;
+        }
+
+        _errorMessage = null;
+        _resultadosPersonas = await Sender.Send(new BuscarPersonasQuery(_dniOnombreBuscado));
+    }
+
+    private async Task VincularPersonaAsync(Guid personaId)
+    {
+        _errorMessage = null;
+        _vinculandoPersona = true;
+
+        try
+        {
+            await Sender.Send(new VincularVehiculoACommand(personaId, VehiculoId));
+            _resultadosPersonas = null;
+            _dniOnombreBuscado = string.Empty;
+            await CargarPersonasVinculadasAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo vincular la persona.";
+        }
+        finally
+        {
+            _vinculandoPersona = false;
+        }
     }
 
     private async Task CargarImagenesAsync()

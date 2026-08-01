@@ -1,7 +1,12 @@
 @page "/informes/{InformeId:guid}"
 @attribute [Authorize]
 @using IGE.Informes.Application.Informes.Commands.PublicarInforme
+@using IGE.Informes.Application.Informes.Commands.VincularPersonaInforme
+@using IGE.Informes.Application.Informes.Commands.VincularVehiculoInforme
 @using IGE.Informes.Application.Informes.Queries.ObtenerInformePorId
+@using IGE.Informes.Application.Personas.Queries.BuscarPersonas
+@using IGE.Informes.Application.Vehiculos.Queries.BuscarVehiculos
+@using IGE.Informes.Application.Vehiculos.Queries.ListarVehiculos
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
@@ -96,6 +101,114 @@ else
         </div>
     </div>
 
+    <div class="row g-3 mt-1">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <h2 class="headline-sm mb-2">Vehículos vinculados</h2>
+                @if (_informe.VehiculosVinculados.Count == 0)
+                {
+                    <p class="body-md">Ningún vehículo vinculado todavía.</p>
+                }
+                else
+                {
+                    <ul class="mb-3">
+                        @foreach (var vehiculo in _informe.VehiculosVinculados)
+                        {
+                            <li class="body-sm">
+                                <a href="@($"vehiculos/{vehiculo.Id}")">@vehiculo.Marca @vehiculo.Modelo</a>
+                                @if (vehiculo.Dominio is not null)
+                                {
+                                    <span class="mono-data"> — @vehiculo.Dominio</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (_informe.Estado == EstadoInforme.Borrador)
+                {
+                    <div class="d-flex gap-2">
+                        <input class="form-control mono-data" @bind="_dominioBuscado" @bind:event="oninput" placeholder="Buscar por dominio..." disabled="@_vinculando" />
+                        <button type="button" class="btn-secondary" @onclick="BuscarVehiculosAsync" disabled="@_vinculando">Buscar</button>
+                    </div>
+
+                    @if (_resultadosVehiculos is not null)
+                    {
+                        @if (_resultadosVehiculos.Count == 0)
+                        {
+                            <p class="body-sm mt-2 mb-0">Sin resultados.</p>
+                        }
+                        else
+                        {
+                            <ul class="mt-2 mb-0">
+                                @foreach (var resultado in _resultadosVehiculos)
+                                {
+                                    <li class="body-sm">
+                                        @resultado.Marca @resultado.Modelo (@resultado.Dominio)
+                                        <button type="button" class="btn-secondary" @onclick="() => VincularVehiculoAsync(resultado.Id)" disabled="@_vinculando">Vincular</button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <h2 class="headline-sm mb-2">Personas vinculadas</h2>
+                @if (_informe.PersonasVinculadas.Count == 0)
+                {
+                    <p class="body-md">Ninguna persona vinculada todavía.</p>
+                }
+                else
+                {
+                    <ul class="mb-3">
+                        @foreach (var persona in _informe.PersonasVinculadas)
+                        {
+                            <li class="body-sm">
+                                <a href="@($"personas/{persona.Id}")">@(persona.Nombre ?? "Sin identificar")</a>
+                                @if (persona.Dni is not null)
+                                {
+                                    <span class="mono-data"> — @persona.Dni</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (_informe.Estado == EstadoInforme.Borrador)
+                {
+                    <div class="d-flex gap-2">
+                        <input class="form-control mono-data" @bind="_dniBuscado" @bind:event="oninput" placeholder="Buscar por DNI..." disabled="@_vinculando" />
+                        <button type="button" class="btn-secondary" @onclick="BuscarPersonasAsync" disabled="@_vinculando">Buscar</button>
+                    </div>
+
+                    @if (_resultadosPersonas is not null)
+                    {
+                        @if (_resultadosPersonas.Count == 0)
+                        {
+                            <p class="body-sm mt-2 mb-0">Sin resultados.</p>
+                        }
+                        else
+                        {
+                            <ul class="mt-2 mb-0">
+                                @foreach (var resultado in _resultadosPersonas)
+                                {
+                                    <li class="body-sm">
+                                        @(resultado.Nombre ?? "Sin identificar") (@(resultado.Dni ?? "sin DNI"))
+                                        <button type="button" class="btn-secondary" @onclick="() => VincularPersonaAsync(resultado.Id)" disabled="@_vinculando">Vincular</button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
     <ConfirmacionModal Visible="_mostrarConfirmacionPublicar"
                         Titulo="Publicar Informe"
                         Mensaje="@($"¿Confirmás publicar el Informe {_informe.IdRegistro}? Una vez publicado queda inmutable y no se puede volver a editar.")"
@@ -115,10 +228,84 @@ else
     private bool _mostrarConfirmacionPublicar;
     private string? _errorMessage;
 
+    private string _dominioBuscado = string.Empty;
+    private string _dniBuscado = string.Empty;
+    private IReadOnlyCollection<VehiculoResumenDto>? _resultadosVehiculos;
+    private IReadOnlyCollection<PersonaBusquedaResultDto>? _resultadosPersonas;
+    private bool _vinculando;
+
     protected override async Task OnInitializedAsync()
     {
         _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
         _cargado = true;
+    }
+
+    private async Task BuscarVehiculosAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_dominioBuscado) || _dominioBuscado.Trim().Length < 3)
+        {
+            _errorMessage = "Ingresá al menos 3 caracteres para buscar.";
+            return;
+        }
+
+        _errorMessage = null;
+        _resultadosVehiculos = await Sender.Send(new BuscarVehiculosQuery(_dominioBuscado));
+    }
+
+    private async Task BuscarPersonasAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_dniBuscado) || _dniBuscado.Trim().Length < 3)
+        {
+            _errorMessage = "Ingresá al menos 3 caracteres para buscar.";
+            return;
+        }
+
+        _errorMessage = null;
+        _resultadosPersonas = await Sender.Send(new BuscarPersonasQuery(_dniBuscado));
+    }
+
+    private async Task VincularVehiculoAsync(Guid vehiculoId)
+    {
+        _errorMessage = null;
+        _vinculando = true;
+
+        try
+        {
+            await Sender.Send(new VincularVehiculoInformeCommand(InformeId, vehiculoId));
+            _resultadosVehiculos = null;
+            _dominioBuscado = string.Empty;
+            _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo vincular el vehículo.";
+        }
+        finally
+        {
+            _vinculando = false;
+        }
+    }
+
+    private async Task VincularPersonaAsync(Guid personaId)
+    {
+        _errorMessage = null;
+        _vinculando = true;
+
+        try
+        {
+            await Sender.Send(new VincularPersonaInformeCommand(InformeId, personaId));
+            _resultadosPersonas = null;
+            _dniBuscado = string.Empty;
+            _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo vincular la persona.";
+        }
+        finally
+        {
+            _vinculando = false;
+        }
     }
 
     private async Task PublicarAsync()
