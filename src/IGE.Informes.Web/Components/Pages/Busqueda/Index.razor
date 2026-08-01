@@ -365,7 +365,14 @@ else if (_pestaniaActiva == Pestania.Personas)
                 _textoLibreVehiculos = TextoLibreInicial;
                 _textoLibrePersonas = TextoLibreInicial;
 
-                await Task.WhenAll(BuscarCasosAsync(), BuscarVehiculosAsync(), BuscarPersonasAsync());
+                // Secuencial, no Task.WhenAll: los tres Handlers comparten el
+                // mismo AppDbContext (Scoped al circuito de Blazor Server),
+                // que no admite SaveChangesAsync concurrentes -- en paralelo
+                // el AuditLog de lectura de dos búsquedas a la vez podía
+                // chocar con PK_AuditLogs duplicada.
+                await BuscarCasosAsync();
+                await BuscarVehiculosAsync();
+                await BuscarPersonasAsync();
             }
         }
     }
