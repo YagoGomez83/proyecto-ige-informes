@@ -20,4 +20,10 @@ public interface IFileStorage
     /// identificado por su clave.
     /// </summary>
     Task<string> ObtenerUrlDescargaAsync(string clave, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Elimina el archivo identificado por su clave. Idempotente: no falla
+    /// si la clave ya no existe.
+    /// </summary>
+    Task EliminarAsync(string clave, CancellationToken cancellationToken = default);
 }

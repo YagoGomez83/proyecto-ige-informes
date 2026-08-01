@@ -25,6 +25,12 @@ erDiagram
     EVIDENCIA }o--o{ VEHICULO : "documenta"
     EVIDENCIA }o--o{ PERSONA : "documenta"
     VEHICULO }o--o{ CATEGORIA_ALERTA : "etiquetado con"
+    VEHICULO ||--o{ VEHICULO_IMAGEN : "tiene"
+    PERSONA ||--o{ PERSONA_IMAGEN : "tiene"
+    PERSONA }o--o{ VEHICULO : "vinculada a (PersonaVehiculo)"
+    INFORME ||--o{ ALERTA : "puede disparar"
+    VEHICULO ||--o{ ALERTA : "involucrado en (opcional)"
+    PERSONA ||--o{ ALERTA : "involucrada en (opcional)"
     USUARIO ||--o{ AUDIT_LOG : "genera"
 
     DEPENDENCIA {
@@ -142,6 +148,42 @@ erDiagram
         text caracteristicas
     }
 
+    VEHICULO_IMAGEN {
+        guid id
+        guid vehiculo_id
+        string imagen_path
+        datetime fecha_carga
+        guid subida_por_usuario_id
+    }
+
+    PERSONA_IMAGEN {
+        guid id
+        guid persona_id
+        string imagen_path
+        datetime fecha_carga
+        guid subida_por_usuario_id
+    }
+
+    PERSONA_VEHICULO {
+        guid id
+        guid persona_id
+        guid vehiculo_id
+        datetime fecha_vinculacion
+    }
+
+    ALERTA {
+        guid id
+        string tipo "ReincidenciaOtroInforme|CargaHuerfana"
+        guid vehiculo_id "nullable, mutuamente excluyente con persona_id"
+        guid persona_id "nullable, mutuamente excluyente con vehiculo_id"
+        guid informe_id "el Informe que disparo la alerta"
+        guid informe_previo_id "nullable, solo para tipo=ReincidenciaOtroInforme"
+        datetime fecha_generacion
+        bool atendida
+        guid atendida_por_usuario_id "nullable"
+        datetime fecha_atencion "nullable"
+    }
+
     USUARIO {
         guid id
         string nombre
@@ -225,6 +267,28 @@ erDiagram
 18. `Camara.LocalidadId` y `Camara.CentroControlCamarasId` son nullables —
     igual criterio que `DependenciaId`: una Cámara puede darse de alta sin
     esos datos si todavía no se relevaron.
+19. Un `Vehiculo` puede tener 0 o más `VehiculoImagen`; no hay límite
+    máximo de fotos por Vehículo. Se administran desde la ficha del propio
+    Vehículo, no desde un Informe.
+20. Una `Persona` puede tener 0 o más `PersonaImagen`; mismo criterio que
+    la invariante 19.
+7.a `Evidencia.ImagenPath`/`Evidencia.CamaraId` son opcionales — además de
+    nacer del parseo de un PDF, una `Evidencia` puede crearse manualmente
+    desde la ficha del Informe para vincular un `Vehiculo`/`Persona` sin
+    archivo de imagen asociado (`ImagenPath = null`, `CamaraId = null`).
+    En ese caso, `NumeroImagen` se autoasigna como
+    `MAX(NumeroImagen del Informe) + 1` — no cambia la invariante de que
+    `NumeroImagen` sea positivo y único por Informe, solo agrega una regla
+    de asignación automática para el alta manual.
+21. `PersonaVehiculo` vincula una `Persona` y un `Vehiculo` de forma
+    directa e independiente de los `Informe`/`CasoAnalisis` en los que
+    ambos puedan aparecer — el par `(PersonaId, VehiculoId)` es único.
+22. `Alerta.VehiculoId` y `Alerta.PersonaId` son mutuamente excluyentes —
+    exactamente uno de los dos debe estar presente. `InformePrevioId` solo
+    aplica cuando `Tipo = ReincidenciaOtroInforme`. `Alerta` no tiene
+    destinatario individual: es visible para todo `Usuario` con rol
+    Analista/Supervisor/Admin, y cualquiera de esos roles puede marcarla
+    atendida, no solo quien la generó.
 
 ## Alcance de migración de datos (confirmado)
 

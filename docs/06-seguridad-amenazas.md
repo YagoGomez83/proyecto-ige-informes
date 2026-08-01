@@ -50,7 +50,16 @@ naturaleza del dato.
 
 **Incidente cerrado (2026-07-31)**: un bug en `InformePdfParser.ExtraerRelato` (el patrón de corte de fin de relato no reconocía la variante real "Imagen N" sin el símbolo "N°") hizo que el campo `Relato` de 14 Informes migrados (todos en `Borrador`, sin PDF original guardado) quedara con el documento completo en vez de solo el párrafo narrativo — incluyendo, en algunos casos, datos personales de un **tercero no vinculado al Informe** (titular real de un vehículo con DNI y dirección, extraído del bloque de "Registro de la Propiedad del Automotor" que el PDF incluye como referencia técnica). Corregido: patrón de corte ampliado + filtro de ruido de paginación ("Página X de Y") en `InformePdfParser`, y los 14 Informes ya existentes limpiados con el subcomando `limpiar-relatos` de `IGE.Informes.DataMigration` (dry-run por defecto, solo toca el campo `Relato`, nunca un Informe `Publicado`). **Exposición evaluada como baja**: mientras el dato estuvo persistido, era legible por cualquier usuario con rol Analista/Supervisor/Admin autorizado a `BuscarInformesQuery`/`ObtenerInformePorIdQuery` (no hubo acceso externo ni de roles no autorizados) — se confirmó además que el dato sensible quedaba fuera de los primeros 200 caracteres que muestra el listado de resultados de búsqueda (el párrafo narrativo legítimo siempre precede a los datos técnicos en la plantilla), por lo que no se mostraba en resultados de búsqueda, solo en el Detalle completo del Informe. Ver memoria del proyecto para el detalle completo de la investigación y el script de limpieza.
 
-### 4. Infraestructura on-premise
+### 4. Imágenes de Vehículo/Persona (upload) — HU-08/HU-09
+
+| Amenaza | Riesgo | Control |
+|---|---|---|
+| **T**ampering — subida de archivo malicioso disfrazado de imagen | Medio | Mismo patrón que la ingesta de PDFs (sección 3): whitelist de `TipoMime` (JPEG/PNG/WebP), tamaño máximo (10MB), escaneo con ClamAV antes de persistir en MinIO, fail-closed. Además, el `Content-Type` declarado por el navegador se **confirma contra los magic bytes reales** del contenido (`FormatoImagenHelper.CoincideConTipoDeclarado`, en `AgregarImagenVehiculoCommandValidator`) — no se confía únicamente en metadata controlada por el cliente. Hallazgo del security-reviewer al cerrar la Fase A: la primera versión solo validaba el `TipoMime` declarado, sin verificar el contenido — corregido antes de cerrar la fase |
+| **I**nformation Disclosure — imagen accesible por URL directa | Alto | Mismo mecanismo que PDFs/Evidencia: `ListarImagenesVehiculoQuery` nunca expone `ImagenPath` crudo, solo URLs prefirmadas de corta expiración resueltas en el Handler |
+| **T**ampering — eliminación de imagen sin borrar el archivo físico | Bajo | `QuitarImagenVehiculoCommand` (restringido a Supervisor/Admin) llama `IFileStorage.EliminarAsync` antes de borrar el registro — no queda un archivo huérfano en MinIO |
+| Path traversal en la clave de almacenamiento | Bajo (no explotable) | La clave de MinIO se genera siempre server-side (`{Guid.NewGuid():N}/{nombreArchivo}`) y el usuario nunca la referencia directamente — el Command de baja recibe `VehiculoImagenId` (Guid), no la clave. El SDK de MinIO trata el object key como string opaco (sin resolución de rutas tipo filesystem), por lo que no hay vector de traversal real aunque `nombreArchivo` no esté sanitizado |
+
+### 5. Infraestructura on-premise
 
 | Amenaza | Riesgo | Control |
 |---|---|---|

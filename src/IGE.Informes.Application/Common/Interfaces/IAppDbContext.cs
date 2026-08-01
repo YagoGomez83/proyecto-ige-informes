@@ -35,6 +35,8 @@ public interface IAppDbContext
 
     DbSet<Evidencia> Evidencias { get; }
 
+    DbSet<VehiculoImagen> VehiculoImagenes { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

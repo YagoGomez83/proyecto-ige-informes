@@ -2,12 +2,16 @@
 @attribute [Authorize]
 @using IGE.Informes.Application.CategoriasAlerta.Queries.ListarCategoriasAlerta
 @using IGE.Informes.Application.Common.Dtos
+@using IGE.Informes.Application.Vehiculos.Commands.AgregarImagenVehiculo
 @using IGE.Informes.Application.Vehiculos.Commands.AsignarCategoriaAlerta
 @using IGE.Informes.Application.Vehiculos.Commands.CambiarEstadoVehiculo
 @using IGE.Informes.Application.Vehiculos.Commands.DarDeBajaVehiculo
+@using IGE.Informes.Application.Vehiculos.Commands.QuitarImagenVehiculo
+@using IGE.Informes.Application.Vehiculos.Queries.ListarImagenesVehiculo
 @using IGE.Informes.Application.Vehiculos.Queries.ObtenerHistorialInformesVehiculo
 @using IGE.Informes.Application.Vehiculos.Queries.ObtenerVehiculoPorId
 @using IGE.Informes.Domain.Entities
+@using Microsoft.AspNetCore.Components.Forms
 @using MediatR
 @inject ISender Sender
 @inject NavigationManager NavigationManager
@@ -114,6 +118,43 @@ else
         </div>
     </div>
 
+    <div class="card mb-3">
+        <h2 class="headline-sm mb-2">Imágenes</h2>
+
+        <InputFile OnChange="AgregarImagenesAsync" accept="image/jpeg,image/png,image/webp" multiple disabled="@_subiendoImagen" />
+        @if (_subiendoImagen)
+        {
+            <p class="body-sm mt-2">Subiendo...</p>
+        }
+
+        @if (_imagenes is null)
+        {
+            <p class="body-md mt-2">Cargando imágenes...</p>
+        }
+        else if (_imagenes.Count == 0)
+        {
+            <p class="body-md mt-2 mb-0">Todavía no hay imágenes cargadas.</p>
+        }
+        else
+        {
+            <div class="vehiculo-imagenes-galeria mt-3">
+                @foreach (var imagen in _imagenes)
+                {
+                    <div class="vehiculo-imagen-item">
+                        <img src="@imagen.UrlDescarga" alt="Imagen del vehículo" loading="lazy" />
+                        <AuthorizeView Roles="Supervisor,Admin" Context="authContext">
+                            <Authorized>
+                                <button type="button" class="btn-secondary" @onclick="() => QuitarImagenAsync(imagen.Id)" disabled="@_subiendoImagen">
+                                    Eliminar
+                                </button>
+                            </Authorized>
+                        </AuthorizeView>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
     <div class="card mt-3">
         <h2 class="headline-sm mb-2">Historial de Informes</h2>
         @if (_historial is null)
@@ -173,16 +214,75 @@ else
     private bool _cargado;
     private IReadOnlyCollection<CategoriaAlertaDto>? _categoriasAlerta;
     private IReadOnlyCollection<InformeHistorialDto>? _historial;
+    private IReadOnlyCollection<VehiculoImagenDto>? _imagenes;
     private string? _categoriaSeleccionadaId;
     private DateTime _fechaBaja = DateTime.Today;
     private string? _errorMessage;
     private bool _procesando;
+    private bool _subiendoImagen;
+
+    private const long TamanioMaximoImagenBytes = 10 * 1024 * 1024;
+    private const int CantidadMaximaArchivosPorSeleccion = 20;
 
     protected override async Task OnInitializedAsync()
     {
         _categoriasAlerta = await Sender.Send(new ListarCategoriasAlertaQuery());
         await CargarAsync();
         _historial = await Sender.Send(new ObtenerHistorialInformesVehiculoQuery(VehiculoId));
+        await CargarImagenesAsync();
+    }
+
+    private async Task CargarImagenesAsync()
+    {
+        _imagenes = await Sender.Send(new ListarImagenesVehiculoQuery(VehiculoId));
+    }
+
+    private async Task AgregarImagenesAsync(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _subiendoImagen = true;
+
+        try
+        {
+            foreach (var archivo in e.GetMultipleFiles(CantidadMaximaArchivosPorSeleccion))
+            {
+                using var stream = archivo.OpenReadStream(TamanioMaximoImagenBytes);
+                using var memoria = new MemoryStream();
+                await stream.CopyToAsync(memoria);
+
+                await Sender.Send(new AgregarImagenVehiculoCommand(VehiculoId, memoria.ToArray(), archivo.Name, archivo.ContentType));
+            }
+
+            await CargarImagenesAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo subir una o más imágenes. Verificá el formato (JPEG/PNG/WebP) y el tamaño (máx. 10MB).";
+        }
+        finally
+        {
+            _subiendoImagen = false;
+        }
+    }
+
+    private async Task QuitarImagenAsync(Guid vehiculoImagenId)
+    {
+        _errorMessage = null;
+        _subiendoImagen = true;
+
+        try
+        {
+            await Sender.Send(new QuitarImagenVehiculoCommand(vehiculoImagenId));
+            await CargarImagenesAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo eliminar la imagen.";
+        }
+        finally
+        {
+            _subiendoImagen = false;
+        }
     }
 
     private async Task CargarAsync()

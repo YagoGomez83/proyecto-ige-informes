@@ -65,6 +65,15 @@ public sealed class MinioFileStorage : IFileStorage
         return await _clientParaUrlsPublicas.PresignedGetObjectAsync(args);
     }
 
+    public async Task EliminarAsync(string clave, CancellationToken cancellationToken = default)
+    {
+        var args = new RemoveObjectArgs()
+            .WithBucket(_options.BucketName)
+            .WithObject(clave);
+
+        await _client.RemoveObjectAsync(args, cancellationToken);
+    }
+
     private async Task AsegurarBucketAsync(CancellationToken cancellationToken)
     {
         var existeArgs = new BucketExistsArgs().WithBucket(_options.BucketName);

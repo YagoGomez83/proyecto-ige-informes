@@ -26,6 +26,9 @@ public class ConfirmarCargaInformeReemplazoTests : IAsyncLifetime
 
         public Task<string> ObtenerUrlDescargaAsync(string clave, CancellationToken cancellationToken = default) =>
             Task.FromResult($"https://fake.local/{clave}");
+
+        public Task EliminarAsync(string clave, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class FakeAntivirusScanner : IAntivirusScanner
