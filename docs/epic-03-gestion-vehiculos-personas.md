@@ -19,6 +19,12 @@ Característica: Gestión de vehículos
     Dado que estoy en la ficha de un vehículo
     Cuando subo una o más fotos
     Entonces quedan asociadas a ese vehículo y visibles en su ficha
+
+  Escenario: Vincular un vehículo a un Informe
+    Dado que estoy en la ficha de un Informe en estado "Borrador"
+    Cuando busco un vehículo del catálogo por su dominio y lo vinculo
+    Entonces el vehículo queda visible en la ficha del Informe
+    Y el Informe queda visible en el historial de ese vehículo
 ```
 
 ---
@@ -39,9 +45,23 @@ Característica: Gestión de personas
 
   Escenario: Vincular persona a un vehículo
     Dado que confirmo que una persona es el conductor de un vehículo
-    Cuando los vinculo desde la ficha del informe
+    Cuando los vinculo desde la ficha de cualquiera de los dos (vehículo o persona)
     Entonces esa relación queda visible en ambas fichas (vehículo y persona)
+
+  Escenario: Adjuntar imágenes a una persona
+    Dado que estoy en la ficha de una persona
+    Cuando subo una o más fotos
+    Entonces quedan asociadas a esa persona y visibles en su ficha
 ```
+
+> **Nota de implementación**: "vincular Persona a un Vehículo" (este escenario) es
+> un vínculo **directo** entre ambas entidades (`PersonaVehiculo`), independiente
+> de en qué Informe/Caso aparezcan — no confundir con "vincular un Vehículo o una
+> Persona a un Informe" (vía `Evidencia`, ver invariante 7/7.a en
+> `03-modelo-dominio.md`), que es una relación distinta y se documenta en HU-08
+> (vínculo Informe↔Vehículo) y en el flujo de carga de Informe. Ambos vínculos
+> conviven: una Persona puede estar vinculada a un Vehículo directamente y, por
+> separado, ambos pueden estar vinculados (o no) al mismo Informe.
 
 ---
 
