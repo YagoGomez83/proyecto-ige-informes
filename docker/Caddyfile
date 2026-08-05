@@ -1,5 +1,13 @@
 :443 {
-	tls internal
+	# on_demand: el sitio no tiene un hostname fijo (se accede por IP LAN,
+	# ver docs/07-plan-despliegue.md — sin dominio ni CA institucional), así
+	# que "tls internal" a secas no sabe para qué nombre pre-generar el
+	# certificado y el handshake falla con "no certificate available" para
+	# cualquier SNI real (localhost, la IP, etc). on_demand emite el
+	# certificado la primera vez que llega un ClientHello con ese nombre.
+	tls internal {
+		on_demand
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
