@@ -8,8 +8,25 @@
 >
 > **Confirmado (2026-07-29)**: el acceso es exclusivamente LAN/VPN
 > institucional, sin exposición directa a Internet y sin CA institucional
-> disponible — ver decisión de TLS más abajo. El destino externo de backups
-> todavía no está disponible — sigue como 🔶 pendiente, ver sección Backups.
+> disponible — ver decisión de TLS más abajo.
+>
+> **Actualizado (2026-07-30)**: destino externo de backups resuelto —
+> carpeta compartida NFS dedicada en el QNAP institucional (CATE911-NAS,
+> `10.52.12.56`), ver sección Backups. Configuración en
+> `docker/docker-compose.backup.yml`, 🔶 **todavía sin verificar
+> end-to-end**.
+>
+> **Actualizado (2026-08-05)**: VM de producción instalada — Ubuntu Server
+> 26.04 LTS (codename `resolute`), hostname `ige-informes`, IP
+> `192.168.70.50`, usuario `igeadmin`. Docker Engine 29.7.1 + Compose
+> plugin v5.4.0 y `nfs-common` instalados y verificados (`docker run
+> hello-world` OK). Export NFS del QNAP verificado con
+> `showmount -e 10.52.12.56`: la carpeta se expone como
+> `/ige-informes-backups` (sin el prefijo `RESGUARDO/`), permiso ya
+> autorizado para `192.168.70.50` — `docker-compose.backup.yml`
+> actualizado con el path correcto. Pendiente: clonar el repo en la VM,
+> configurar `.env` de producción y correr el simulacro de restauración
+> real contra este mount antes de dar por cerrado el 🔶 de backups.
 
 ## Topología
 
@@ -88,14 +105,21 @@ se recomienda:
 
 - Los backups se copian **fuera del servidor** (NAS institucional, otro
   servidor, o almacenamiento externo) — un backup que vive en el mismo disco
-  que falla no sirve. 🔶 **Pendiente (confirmado 2026-07-29): todavía no hay
-  destino externo disponible.** Hasta que la institución provea uno, el
-  volumen `backups` sigue siendo local al servidor — esto significa que hoy
-  el sistema **no tiene protección real ante la pérdida completa del
-  servidor** (falla de disco, incendio, robo), solo ante errores de
-  aplicación/humanos que no toquen el disco de backups. No bloquea el
-  desarrollo, pero si el go-live se acerca sin resolver esto, escalarlo
-  explícitamente antes de considerar el sistema "listo para producción".
+  que falla no sirve. **Resuelto (2026-07-30)**: destino externo es un QNAP
+  institucional (CATE911-NAS, modelo TS-431K, IP `10.52.12.56`), carpeta
+  compartida NFS dedicada `ige-informes-backups` sobre el volumen
+  `RESGUARDO`, exportada por NFSv3 con acceso restringido a la IP de la VM
+  de producción (`192.168.70.50`, confirmada 2026-08-05 tras la instalación
+  de Ubuntu Server), lectura/escritura, `sync`,
+  `no_root_squash` (necesario porque el sidecar de backup escribe como root
+  dentro del contenedor). El volumen `backups` de
+  `docker-compose.backup.yml` usa el driver NFS nativo de Docker apuntando
+  a ese export, con mount `soft` (para que una caída del QNAP no cuelgue el
+  contenedor de backup indefinidamente, solo falle ese backup puntual).
+  🔶 **Todavía sin verificar end-to-end contra la VM de producción real**
+  (bloqueado por la instalación de esa VM, ver memoria del proyecto) — antes
+  de confiar en este destino, repetir el simulacro de restauración ya
+  validado localmente pero apuntando al mount NFS real.
 - **Prueba de restauración**: se ejecuta un simulacro de restauración
   completa (DB + MinIO) al menos una vez antes de ir a producción, y luego
   trimestralmente. Un backup nunca probado es un backup que no existe.
@@ -116,9 +140,17 @@ se recomienda:
   volumen/imagen extra en un entorno de desarrollo que no lo necesita.
 - Cron programado a las 03:00 (`docker/backup/crontab`). Backup manual (sin
   esperar al cron): `docker exec <contenedor-backup> /scripts/entrypoint-job.sh`.
-- El volumen `backups` del compose es local — sirve para el simulacro y
-  desarrollo, pero en producción **debe** montarse sobre un disco/NAS
-  externo al servidor antes de confiar en él (ver 🔶 arriba).
+- El volumen `backups` del compose está configurado como mount NFS al QNAP
+  institucional (ver arriba) — en un entorno de desarrollo local sin acceso
+  a ese QNAP, `docker-compose.backup.yml` no va a poder montar el volumen;
+  usar el compose base solo (`docker-compose.yml`) sin el override de
+  backup para desarrollo.
+- **Requisito del host** (nuevo, VM de producción): el driver de volumen
+  NFS de Docker delega el mount al cliente NFS del kernel del host, así que
+  el paquete `nfs-common` debe estar instalado en el servidor Ubuntu antes
+  de `docker compose ... up -d` con este override —
+  `sudo apt install -y nfs-common`. Sin él, Docker falla al crear el
+  volumen con un error de mount, no al arrancar el contenedor.
 - **Simulacro de restauración ejecutado y verificado** (2026-07-27, entorno
   de desarrollo Docker local): `pg_dump` → `pg_restore` contra una base de
   prueba (`ige_informes_restore_test`, descartada después) reprodujo

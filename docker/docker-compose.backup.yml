@@ -29,9 +29,21 @@ services:
 
 volumes:
   backups:
-    # 🔶 En producción, este volumen debe estar montado sobre un disco/NAS
-    # externo al servidor (ver docs/07-plan-despliegue.md: "un backup que
-    # vive en el mismo disco que falla no sirve"). En un volumen Docker
-    # nombrado local (como acá) solo sirve para el simulacro de
-    # restauración y para desarrollo — no reemplaza copiar el contenido
-    # fuera del servidor.
+    # Destino externo: carpeta compartida NFS dedicada en el QNAP
+    # institucional (CATE911-NAS, 10.52.12.56), fuera del servidor donde
+    # corre la VM — ver docs/07-plan-despliegue.md ("un backup que vive en
+    # el mismo disco que falla no sirve"). Permiso NFS configurado en el
+    # QNAP para el host 192.168.70.50 (IP real de la VM ige-informes),
+    # lectura/escritura, sync, no_root_squash (necesario porque el sidecar
+    # escribe como root dentro del contenedor). NFSv3 (única versión
+    # habilitada en este QNAP).
+    #
+    # Path del export verificado 2026-08-05 con `showmount -e 10.52.12.56`
+    # desde la VM: el QNAP expone la carpeta compartida directamente como
+    # `/ige-informes-backups`, sin anteponer el nombre del volumen
+    # (`RESGUARDO`).
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=10.52.12.56,nfsvers=3,rw,soft,timeo=100,retrans=3
+      device: ":/ige-informes-backups"
