@@ -67,8 +67,44 @@ Console.WriteLine($"Leyendo '{rutaExcel}'...");
 var filas = LectorExcelVehiculos.LeerTodas(rutaExcel);
 Console.WriteLine($"  {filas.Count} filas con datos leídas de {HojasVehiculos.Todas.Count} hojas.");
 
-var consolidados = ConsolidadorVehiculos.Consolidar(filas);
-Console.WriteLine($"  Consolidados en {consolidados.Count} Vehiculos únicos.");
+var consolidadosLeidos = ConsolidadorVehiculos.Consolidar(filas);
+Console.WriteLine($"  Consolidados en {consolidadosLeidos.Count} Vehiculos únicos.");
+
+// El Excel de origen es una exportación recurrente de la misma planilla
+// maestra (re-descargada periódicamente) — no un lote nuevo aislado. Sin
+// este filtro, cada corrida re-insertaría como Vehiculo nuevo cualquier
+// Dominio ya migrado antes, generando duplicados en cada re-importación
+// (confirmado 2026-08-05: el archivo trae 1080+59+687+237 filas crudas,
+// muchas más que los Vehiculos ya cargados en Fase 2). Se compara por
+// Dominio normalizado — el mismo Dominio aparece con espacios/guiones
+// distintos entre hojas y entre corridas.
+static string NormalizarDominio(string dominio) =>
+    dominio.ToUpperInvariant().Replace(" ", "").Replace("-", "");
+
+var currentUserServiceTemp = new UsuarioMigracionService();
+var optionsLectura = new DbContextOptionsBuilder<AppDbContext>()
+    .UseNpgsql(connectionString)
+    .Options;
+
+HashSet<string> dominiosExistentes;
+await using (var dbContextLectura = new AppDbContext(optionsLectura))
+{
+    dominiosExistentes = (await dbContextLectura.Vehiculos
+            .Where(v => v.Dominio != null)
+            .Select(v => v.Dominio!)
+            .ToListAsync())
+        .Select(NormalizarDominio)
+        .ToHashSet();
+}
+
+Console.WriteLine($"  {dominiosExistentes.Count} Dominios ya existentes en la base.");
+
+var yaExistentes = consolidadosLeidos
+    .Where(v => v.Dominio is not null && dominiosExistentes.Contains(NormalizarDominio(v.Dominio)))
+    .ToList();
+var consolidados = consolidadosLeidos
+    .Where(v => v.Dominio is null || !dominiosExistentes.Contains(NormalizarDominio(v.Dominio)))
+    .ToList();
 
 var conDominio = consolidados.Count(v => v.Dominio is not null);
 var sinDominio = consolidados.Count - conDominio;
@@ -77,13 +113,15 @@ var categoriasUsadas = consolidados.SelectMany(v => v.CategoriasAlerta).Distinct
 
 Console.WriteLine();
 Console.WriteLine("=== Reporte de migración ===");
-Console.WriteLine($"Vehículos con Dominio:      {conDominio}");
-Console.WriteLine($"Vehículos sin Dominio:      {sinDominio}");
-Console.WriteLine($"Marcados Identificado:      {identificados}");
+Console.WriteLine($"Vehículos ya existentes (omitidos): {yaExistentes.Count}");
+Console.WriteLine($"Vehículos nuevos a insertar:         {consolidados.Count}");
+Console.WriteLine($"  Con Dominio:      {conDominio}");
+Console.WriteLine($"  Sin Dominio:      {sinDominio}");
+Console.WriteLine($"  Marcados Identificado:      {identificados}");
 Console.WriteLine($"Categorías de alerta usadas: {string.Join(", ", categoriasUsadas)}");
 Console.WriteLine($"AccionARealizar/AvisarA por defecto: {accionARealizarDefault} / \"{avisarADefault}\"");
 Console.WriteLine();
-Console.WriteLine("Ejemplos (primeros 5):");
+Console.WriteLine("Ejemplos de Vehículos NUEVOS a insertar (primeros 5):");
 foreach (var ejemplo in consolidados.Take(5))
 {
     Console.WriteLine($"  - {ejemplo.Dominio ?? "(sin dominio)"} | {ejemplo.Marca} {ejemplo.Modelo} | {ejemplo.Color} | Estado={ejemplo.Estado} | Categorías=[{string.Join(",", ejemplo.CategoriasAlerta)}]");
