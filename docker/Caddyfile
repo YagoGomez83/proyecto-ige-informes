@@ -10,9 +10,10 @@
 		# relajación de default-src): habilita el visor de PDF embebido en
 		# Informes/Detalle.razor, que carga desde una URL prefirmada de
 		# MinIO (otro origen/puerto que el resto de la app, servida acá).
-		# Ajustar el host:puerto si MINIO_ENDPOINT_PUBLICO cambia (ver
-		# docker-compose.yml).
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' wss:; frame-src 'self' http://localhost:9000 https://localhost:9000; frame-ancestors 'none'"
+		# Incluye localhost:9000 (dev local) y la IP de la VM de producción
+		# (192.168.70.50:9000, ver MINIO_ENDPOINT_PUBLICO en
+		# docker-compose.yml) — ajustar si el host de MinIO cambia.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' wss:; frame-src 'self' http://localhost:9000 https://localhost:9000 http://192.168.70.50:9000; frame-ancestors 'none'"
 	}
 
 	reverse_proxy web:8080
