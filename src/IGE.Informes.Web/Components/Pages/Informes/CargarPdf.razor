@@ -63,7 +63,7 @@ else
         </div>
 
         <div class="mb-3">
-            <label class="label-md" for="caso">Caso de Análisis de origen</label>
+            <label class="label-md" for="caso">Caso de Análisis de origen (opcional para PDFs históricos)</label>
             <select id="caso" class="form-control" @bind="_casoAnalisisId">
                 <option value="">Seleccionar...</option>
                 @if (_casos is not null)
@@ -248,9 +248,9 @@ else
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_idRegistro) || string.IsNullOrWhiteSpace(_casoAnalisisId) || string.IsNullOrWhiteSpace(_dependenciaDestinoId))
+        if (string.IsNullOrWhiteSpace(_idRegistro) || string.IsNullOrWhiteSpace(_dependenciaDestinoId))
         {
-            _errorMessage = "Completá el ID Registro, el Caso de origen y la Dependencia destino.";
+            _errorMessage = "Completá el ID Registro y la Dependencia destino.";
             return;
         }
 
@@ -268,7 +268,7 @@ else
                 _nombreArchivo,
                 _idRegistro,
                 DateOnly.FromDateTime(_fechaAnalisis),
-                Guid.Parse(_casoAnalisisId),
+                string.IsNullOrWhiteSpace(_casoAnalisisId) ? null : Guid.Parse(_casoAnalisisId),
                 Guid.Parse(_dependenciaDestinoId),
                 _causaCaratula,
                 _piezaSumarial,

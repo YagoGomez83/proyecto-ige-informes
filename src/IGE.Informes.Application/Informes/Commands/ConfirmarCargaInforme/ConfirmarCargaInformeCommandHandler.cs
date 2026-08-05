@@ -16,10 +16,13 @@ public sealed class ConfirmarCargaInformeCommandHandler(
 
     public async Task<Guid> Handle(ConfirmarCargaInformeCommand request, CancellationToken cancellationToken)
     {
-        var casoExiste = await dbContext.CasosAnalisis.AnyAsync(c => c.Id == request.CasoAnalisisId, cancellationToken);
-        if (!casoExiste)
+        if (request.CasoAnalisisId is { } casoAnalisisId)
         {
-            throw new EntidadNoEncontradaException(nameof(CasoAnalisis), request.CasoAnalisisId);
+            var casoExiste = await dbContext.CasosAnalisis.AnyAsync(c => c.Id == casoAnalisisId, cancellationToken);
+            if (!casoExiste)
+            {
+                throw new EntidadNoEncontradaException(nameof(CasoAnalisis), casoAnalisisId);
+            }
         }
 
         var dependenciaExiste = await dbContext.Dependencias.AnyAsync(d => d.Id == request.DependenciaDestinoId, cancellationToken);
@@ -105,13 +108,20 @@ public sealed class ConfirmarCargaInformeCommandHandler(
         }
         else
         {
-            informe = new Informe(
-                request.IdRegistro,
-                request.FechaAnalisis,
-                request.CasoAnalisisId,
-                request.DependenciaDestinoId,
-                usuarioId,
-                causa?.Id);
+            informe = request.CasoAnalisisId is { } casoId
+                ? new Informe(
+                    request.IdRegistro,
+                    request.FechaAnalisis,
+                    casoId,
+                    request.DependenciaDestinoId,
+                    usuarioId,
+                    causa?.Id)
+                : Informe.CrearMigrado(
+                    request.IdRegistro,
+                    request.FechaAnalisis,
+                    request.DependenciaDestinoId,
+                    usuarioId,
+                    causa?.Id);
 
             dbContext.Informes.Add(informe);
         }

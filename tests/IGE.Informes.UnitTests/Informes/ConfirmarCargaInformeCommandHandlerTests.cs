@@ -24,7 +24,7 @@ public class ConfirmarCargaInformeCommandHandlerTests
         return (dbContext, caso, dependencia);
     }
 
-    private static ConfirmarCargaInformeCommand CrearCommand(Guid casoId, Guid dependenciaId, bool reemplazar = false) => new(
+    private static ConfirmarCargaInformeCommand CrearCommand(Guid? casoId, Guid dependenciaId, bool reemplazar = false) => new(
         ContenidoPdfFalso,
         "290-2026.pdf",
         "290/2026",
@@ -111,6 +111,24 @@ public class ConfirmarCargaInformeCommandHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(
             CrearCommand(caso.Id, dependencia.Id, reemplazar: true), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CasoAnalisisId_nulo_crea_un_Informe_Migrado_sin_Caso_de_origen()
+    {
+        var dbContext = new TestAppDbContext();
+        var dependencia = new Dependencia("Comisaría 2°", TipoDependencia.Comisaria);
+        dbContext.Dependencias.Add(dependencia);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage(), new FakeAntivirusScanner());
+
+        var informeId = await handler.Handle(CrearCommand(null, dependencia.Id), CancellationToken.None);
+
+        var informe = await dbContext.Informes.FindAsync(informeId);
+        Assert.NotNull(informe);
+        Assert.Null(informe.CasoAnalisisId);
+        Assert.Equal(OrigenInforme.Migrado, informe.Origen);
     }
 
     [Fact]

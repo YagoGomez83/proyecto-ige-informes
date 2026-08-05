@@ -13,6 +13,10 @@ public sealed record EvidenciaConfirmadaDto(
 /// Persiste el Informe (Borrador) + sus Evidencia a partir de los datos
 /// ya revisados/corregidos por el Analista en la pantalla de confirmación
 /// (HU-01) — nunca los datos crudos del parser sin pasar por esa revisión.
+/// CasoAnalisisId es nullable: un PDF histórico completado a mano (porque
+/// la migración masiva de HU-04 lo dejó "Con advertencia") tampoco tiene
+/// Caso de Análisis de origen, igual que los que sí migraron automáticos
+/// — mismo criterio que Informe.CrearMigrado (Origen=Migrado).
 /// </summary>
 [Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
 public sealed record ConfirmarCargaInformeCommand(
@@ -20,7 +24,7 @@ public sealed record ConfirmarCargaInformeCommand(
     string NombreArchivo,
     string IdRegistro,
     DateOnly FechaAnalisis,
-    Guid CasoAnalisisId,
+    Guid? CasoAnalisisId,
     Guid DependenciaDestinoId,
     string? CausaCaratula,
     string? CausaNroPiezaSumarial,

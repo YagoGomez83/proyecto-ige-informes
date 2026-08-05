@@ -10,7 +10,11 @@ public sealed class ConfirmarCargaInformeCommandValidator : AbstractValidator<Co
         RuleFor(x => x.NombreArchivo).NotEmpty().MaximumLength(255);
         RuleFor(x => x.IdRegistro).NotEmpty().Matches(@"^\d+/\d{4}$")
             .WithMessage("El ID Registro debe tener el formato NNN/AAAA.");
-        RuleFor(x => x.CasoAnalisisId).NotEmpty();
+        // Nullable a propósito: un PDF histórico completado a mano no tiene
+        // Caso de Análisis de origen, igual que los migrados en lote (HU-04)
+        // — ver comentario en ConfirmarCargaInformeCommand. Cuando viene
+        // informado, no puede ser Guid.Empty.
+        RuleFor(x => x.CasoAnalisisId).NotEqual(Guid.Empty).When(x => x.CasoAnalisisId is not null);
         RuleFor(x => x.DependenciaDestinoId).NotEmpty();
         RuleFor(x => x.Relato).MaximumLength(8000);
         RuleFor(x => x.CausaCaratula).MaximumLength(500);
