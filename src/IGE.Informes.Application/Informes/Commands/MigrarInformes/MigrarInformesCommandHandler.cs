@@ -75,6 +75,36 @@ public sealed class MigrarInformesCommandHandler(
 
             if (extraido.RequiereRevisionManual)
             {
+                // A diferencia de la versión inicial de esta HU, el PDF ya no
+                // se descarta: se sube a MinIO (mismo fail-closed de
+                // antivirus que el resto de los caminos) y se persiste una
+                // MigracionPendiente con IdRegistro = null, para que el
+                // Administrador lo complete después sin volver a subir el
+                // archivo (HU-04, escenario "PDF con ID Registro no
+                // reconocido también queda pendiente, no se pierde"). No hay
+                // chequeo de "ID Registro duplicado en el lote" posible acá
+                // — todavía no hay ID Registro.
+                var estaLimpioSinId = await antivirusScanner.EstaLimpioAsync(pdf.Contenido, cancellationToken);
+                if (!estaLimpioSinId)
+                {
+                    detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.Fallido, "El archivo fue rechazado por el escaneo antivirus — no se subió ni se guardó ningún dato."));
+                    continue;
+                }
+
+                using var streamPdfSinId = new MemoryStream(pdf.Contenido);
+                var pdfPathSinId = await fileStorage.SubirAsync(pdf.NombreArchivo, streamPdfSinId, TipoMimePdf, cancellationToken);
+
+                var migracionPendienteSinId = new MigracionPendiente(
+                    null,
+                    pdfPathSinId,
+                    request.DependenciaDestinoId,
+                    usuarioId,
+                    extraido.CausaCaratula,
+                    extraido.PiezaSumarial,
+                    extraido.Relato);
+
+                dbContext.MigracionesPendientes.Add(migracionPendienteSinId);
+
                 detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.ConAdvertencia, "No se reconoció el ID Registro.", extraido.Destino));
                 continue;
             }

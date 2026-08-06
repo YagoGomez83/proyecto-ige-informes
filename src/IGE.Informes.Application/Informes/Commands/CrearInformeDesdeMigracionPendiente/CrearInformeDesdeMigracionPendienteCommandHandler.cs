@@ -20,15 +20,33 @@ public sealed class CrearInformeDesdeMigracionPendienteCommandHandler(
             .FirstOrDefaultAsync(m => m.Id == request.MigracionPendienteId, cancellationToken)
             ?? throw new EntidadNoEncontradaException(nameof(MigracionPendiente), request.MigracionPendienteId);
 
-        // Puede pasar si el mismo PDF se cargó individualmente (HU-01)
-        // mientras la MigracionPendiente seguía sin completar.
-        var yaExiste = await dbContext.Informes.AnyAsync(i => i.IdRegistro == migracionPendiente.IdRegistro, cancellationToken);
-        if (yaExiste)
+        // El ID Registro final es el de la entidad si ya lo tenía (no se
+        // pisa con lo que venga en el Command), o el que informa el
+        // Administrador si la MigracionPendiente no tenía uno propio —
+        // ver escenario Gherkin "Completar el ID Registro de una
+        // Migración Pendiente".
+        var idRegistroFinal = migracionPendiente.IdRegistro ?? request.IdRegistro;
+        if (string.IsNullOrWhiteSpace(idRegistroFinal))
         {
-            throw new EntidadDuplicadaException(nameof(Informe), nameof(Informe.IdRegistro), migracionPendiente.IdRegistro);
+            throw new ArgumentException(
+                "Esta migración pendiente no tiene ID Registro — hay que informarlo antes de completarla.",
+                nameof(request));
         }
 
-        var informe = migracionPendiente.CrearInformeMigrado(request.FechaAnalisis);
+        // Puede pasar si el mismo PDF se cargó individualmente (HU-01)
+        // mientras la MigracionPendiente seguía sin completar, o si el ID
+        // Registro que el Administrador tipeó ya pertenece a otro Informe
+        // — el rechazo ocurre acá, antes de tocar Add/Remove, para que la
+        // MigracionPendiente siga listada sin tocar y se pueda corregir
+        // el dato e intentar de nuevo (escenario Gherkin "El ID Registro
+        // ingresado ya existe").
+        var yaExiste = await dbContext.Informes.AnyAsync(i => i.IdRegistro == idRegistroFinal, cancellationToken);
+        if (yaExiste)
+        {
+            throw new EntidadDuplicadaException(nameof(Informe), nameof(Informe.IdRegistro), idRegistroFinal);
+        }
+
+        var informe = migracionPendiente.CrearInformeMigrado(request.FechaAnalisis, idRegistroFinal);
 
         dbContext.Informes.Add(informe);
         dbContext.MigracionesPendientes.Remove(migracionPendiente);

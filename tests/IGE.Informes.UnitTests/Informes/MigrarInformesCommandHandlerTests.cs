@@ -10,18 +10,21 @@ namespace IGE.Informes.UnitTests.Informes;
 /// <summary>
 /// HU-04 · Migración histórica de informes desde Drive
 /// (docs/epic-01-gestion-informes.md) — Característica "Migración masiva",
-/// escenarios "Migración por lote" y "PDF con Fecha de Análisis no
-/// reconocida queda pendiente, no se pierde". El segundo escenario cambia
-/// el comportamiento del Handler: a partir de ahora,
+/// escenarios "Migración por lote", "PDF con Fecha de Análisis no
+/// reconocida queda pendiente, no se pierde" y "PDF con ID Registro no
+/// reconocido también queda pendiente, no se pierde". Ambos escenarios de
+/// "queda pendiente" cambian el comportamiento del Handler:
 /// <see cref="MigrarInformesCommandHandler"/> recibe además
 /// <see cref="IFileStorage"/> y <see cref="IAntivirusScanner"/> (mismo
 /// puerto que ya usa ConfirmarCargaInformeCommandHandler) para poder subir
 /// el PDF a MinIO y persistir una <see cref="MigracionPendiente"/> en vez
-/// de descartar el archivo cuando la Fecha de Análisis no se reconoce.
-/// Estos tests están escritos antes de la implementación (TDD): deben
-/// fallar en rojo hasta que se agregue esa dependencia nueva al
-/// constructor del Handler y se cree
-/// IGE.Informes.Domain.Entities.MigracionPendiente.
+/// de descartar el archivo, ya sea que falte el ID Registro (queda
+/// <c>IdRegistro = null</c>) o la Fecha de Análisis. Estos tests están
+/// escritos antes de la implementación (TDD): deben fallar en rojo hasta
+/// que se agregue esa dependencia nueva al constructor del Handler, se
+/// cree IGE.Informes.Domain.Entities.MigracionPendiente, y el bloque
+/// "if (extraido.RequiereRevisionManual)" del Handler deje de solo agregar
+/// un detalle "Con advertencia" sin persistir.
 /// </summary>
 public class MigrarInformesCommandHandlerTests
 {
@@ -138,8 +141,17 @@ public class MigrarInformesCommandHandlerTests
         Assert.NotNull(detalleFallido.Motivo);
     }
 
+    // A partir de HU-04, escenario "PDF con ID Registro no reconocido
+    // también queda pendiente, no se pierde": cuando el ID Registro no se
+    // reconoce, el PDF ya no se descarta — sigue el mismo camino que
+    // "Fecha de Análisis no reconocida" (escaneo antivirus → subir a MinIO
+    // → crear MigracionPendiente), pero con IdRegistro = null. El test
+    // viejo "MigrarInformes_IdRegistroNoReconocido_CuentaComoAdvertenciaYNoPersiste"
+    // afirmaba el comportamiento anterior (no persiste nada) — reemplazado
+    // por los siguientes, que reflejan la realidad nueva.
+
     [Fact]
-    public async Task MigrarInformes_IdRegistroNoReconocido_CuentaComoAdvertenciaYNoPersiste()
+    public async Task MigrarInformes_IdRegistroNoReconocido_CuentaComoAdvertenciaYPersisteUnaMigracionPendienteConIdRegistroNulo()
     {
         var (dbContext, dependencia) = await PrepararAsync();
         var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoSinIdRegistro());
@@ -154,9 +166,79 @@ public class MigrarInformesCommandHandlerTests
         Assert.Equal(0, reporte.Fallidos);
         Assert.Empty(dbContext.Informes.ToList());
 
+        var migracionPendiente = Assert.Single(dbContext.MigracionesPendientes.ToList());
+        Assert.Null(migracionPendiente.IdRegistro);
+        Assert.Equal(dependencia.Id, migracionPendiente.DependenciaDestinoId);
+        Assert.Equal(UsuarioMigradorId, migracionPendiente.UsuarioMigradorId);
+        Assert.Equal("Relato sin ID Registro reconocido", migracionPendiente.Relato);
+
         var detalle = reporte.Detalle.Single();
         Assert.Equal(ResultadoMigracionArchivo.ConAdvertencia, detalle.Resultado);
         Assert.Contains("ID Registro", detalle.Motivo, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_IdRegistroNoReconocido_SubeElPdfOriginalAMinIO()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoSinIdRegistro());
+        var fileStorage = new FakeFileStorage();
+        var handler = CrearHandler(dbContext, parser, fileStorage: fileStorage);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "sin-id.pdf"));
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.Single(fileStorage.ArchivosSubidos);
+
+        var migracionPendiente = Assert.Single(dbContext.MigracionesPendientes.ToList());
+        Assert.Equal(fileStorage.ArchivosSubidos.Single(), migracionPendiente.PdfPath);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_IdRegistroNoReconocido_ElArchivoRechazadoPorElAntivirusNoGeneraMigracionPendiente()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoSinIdRegistro());
+        var antivirusScanner = new FakeAntivirusScanner { ResultadoLimpio = false };
+        var handler = CrearHandler(dbContext, parser, antivirusScanner: antivirusScanner);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "sin-id.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Empty(dbContext.MigracionesPendientes.ToList());
+        Assert.Empty(dbContext.Informes.ToList());
+
+        var detalle = reporte.Detalle.Single();
+        Assert.Equal(ResultadoMigracionArchivo.Fallido, detalle.Resultado);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_VariosPdfsSinIdRegistroEnElMismoLote_CreaUnaMigracionPendienteConIdRegistroNuloPorCadaUno()
+    {
+        // A diferencia del chequeo de "ID Registro duplicado en el lote"
+        // (que exige tener un IdRegistro concreto), acá no hay ninguna
+        // clave para comparar — cada PDF sin ID Registro reconocido genera
+        // su propia MigracionPendiente, sin chocar entre sí gracias al
+        // índice único parcial (WHERE "IdRegistro" IS NOT NULL).
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo()
+            .ConResultado(CrearExtraidoSinIdRegistro())
+            .ConResultado(CrearExtraidoSinIdRegistro());
+        var handler = CrearHandler(dbContext, parser);
+
+        var command = CrearCommand(
+            dependencia.Id,
+            new PdfMigrarDto(ContenidoPdfFalso, "sin-id-1.pdf"),
+            new PdfMigrarDto(ContenidoPdfFalso, "sin-id-2.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(2, reporte.ConAdvertencia);
+        var migracionesPendientes = dbContext.MigracionesPendientes.ToList();
+        Assert.Equal(2, migracionesPendientes.Count);
+        Assert.All(migracionesPendientes, m => Assert.Null(m.IdRegistro));
     }
 
     [Fact]
@@ -364,18 +446,18 @@ public class MigrarInformesCommandHandlerTests
     }
 
     [Fact]
-    public async Task MigrarInformes_IdRegistroNoReconocido_NoPersisteMigracionPendiente()
+    public async Task MigrarInformes_IdRegistroReconocidoYFechaReconocida_NoPersisteMigracionPendiente()
     {
-        // Distingue explícitamente los dos "Con advertencia" de HU-04: solo
-        // cuando el ID Registro sí se reconoció pero falta la Fecha de
-        // Análisis se crea una MigracionPendiente — si tampoco se reconoce
-        // el ID Registro, el PDF sigue sin persistirse (no hay clave para
-        // evitar duplicados/relacionarlo después), igual que antes.
+        // Distingue explícitamente los "Con advertencia" de un caso
+        // Exitoso: a partir de HU-04 (extensión) los dos "Con advertencia"
+        // (falta ID Registro, falta Fecha de Análisis) crean una
+        // MigracionPendiente — solo un PDF completo y reconocido, o uno
+        // Fallido (no legible), no genera ninguna.
         var (dbContext, dependencia) = await PrepararAsync();
-        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoSinIdRegistro());
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoExitoso("510/2022"));
         var handler = CrearHandler(dbContext, parser);
 
-        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "sin-id.pdf"));
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "510-2022.pdf"));
 
         await handler.Handle(command, CancellationToken.None);
 

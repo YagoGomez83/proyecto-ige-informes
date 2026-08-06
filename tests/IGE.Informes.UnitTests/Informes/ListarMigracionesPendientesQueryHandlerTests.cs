@@ -47,6 +47,22 @@ public class ListarMigracionesPendientesQueryHandlerTests
     }
 
     [Fact]
+    public async Task ListarMigracionesPendientes_ConMigracionSinIdRegistroReconocido_LaListaConIdRegistroNulo()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        dbContext.MigracionesPendientes.Add(new MigracionPendiente(
+            null, "migraciones-pendientes/sin-id.pdf", dependencia.Id, Guid.NewGuid(), relato: "Relato sin ID"));
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger());
+
+        var resultado = await handler.Handle(new ListarMigracionesPendientesQuery(), CancellationToken.None);
+
+        var migracion = Assert.Single(resultado);
+        Assert.Null(migracion.IdRegistro);
+    }
+
+    [Fact]
     public async Task ListarMigracionesPendientes_SinMigracionesPendientes_DevuelveListaVacia()
     {
         var dbContext = new TestAppDbContext();

@@ -12,8 +12,8 @@
 <h1 class="headline-md mb-3">Migraciones pendientes</h1>
 
 <p class="body-sm mb-3">
-    PDFs históricos con ID Registro reconocido pero sin Fecha de Análisis — completá la fecha
-    para crear el Informe, sin volver a subir el archivo.
+    PDFs históricos a los que les falta el ID Registro y/o la Fecha de Análisis — completá lo
+    que falte para crear el Informe, sin volver a subir el archivo.
 </p>
 
 @if (_errorMessage is not null)
@@ -45,7 +45,18 @@ else
                 @foreach (var migracion in _migraciones)
                 {
                     <tr>
-                        <td class="body-sm mono-data">@migracion.IdRegistro</td>
+                        <td class="body-sm mono-data">
+                            @if (migracion.IdRegistro is not null)
+                            {
+                                @migracion.IdRegistro
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control mono-data" placeholder="Ej: 290/2026"
+                                       value="@ObtenerIdRegistroIngresado(migracion.Id)"
+                                       @onchange="@(e => ActualizarIdRegistroIngresado(migracion.Id, e.Value?.ToString()))" />
+                            }
+                        </td>
                         <td class="body-sm">@(migracion.CausaCaratula ?? "—")</td>
                         <td class="body-sm">
                             <input type="date" class="form-control"
@@ -54,8 +65,8 @@ else
                         </td>
                         <td class="body-sm">
                             <button type="button" class="btn-primary"
-                                    @onclick="@(() => CompletarAsync(migracion.Id))"
-                                    disabled="@(_procesando || !TieneFechaIngresada(migracion.Id))">
+                                    @onclick="@(() => CompletarAsync(migracion))"
+                                    disabled="@(_procesando || !PuedeCompletar(migracion))">
                                 Completar
                             </button>
                         </td>
@@ -69,6 +80,7 @@ else
 @code {
     private IReadOnlyCollection<MigracionPendienteDto>? _migraciones;
     private readonly Dictionary<Guid, string> _fechasIngresadas = [];
+    private readonly Dictionary<Guid, string> _idsRegistroIngresados = [];
     private bool _procesando;
     private string? _errorMessage;
 
@@ -84,7 +96,7 @@ else
 
     private string ObtenerFechaIngresada(Guid id) => _fechasIngresadas.GetValueOrDefault(id, string.Empty);
 
-    private bool TieneFechaIngresada(Guid id) => !string.IsNullOrWhiteSpace(ObtenerFechaIngresada(id));
+    private string ObtenerIdRegistroIngresado(Guid id) => _idsRegistroIngresados.GetValueOrDefault(id, string.Empty);
 
     private void ActualizarFechaIngresada(Guid id, string? valor)
     {
@@ -98,11 +110,37 @@ else
         }
     }
 
-    private async Task CompletarAsync(Guid migracionPendienteId)
+    private void ActualizarIdRegistroIngresado(Guid id, string? valor)
     {
-        if (!DateOnly.TryParse(ObtenerFechaIngresada(migracionPendienteId), out var fechaAnalisis))
+        if (string.IsNullOrWhiteSpace(valor))
+        {
+            _idsRegistroIngresados.Remove(id);
+        }
+        else
+        {
+            _idsRegistroIngresados[id] = valor.Trim();
+        }
+    }
+
+    private bool PuedeCompletar(MigracionPendienteDto migracion)
+    {
+        var tieneFecha = !string.IsNullOrWhiteSpace(ObtenerFechaIngresada(migracion.Id));
+        var tieneIdRegistro = migracion.IdRegistro is not null || !string.IsNullOrWhiteSpace(ObtenerIdRegistroIngresado(migracion.Id));
+        return tieneFecha && tieneIdRegistro;
+    }
+
+    private async Task CompletarAsync(MigracionPendienteDto migracion)
+    {
+        if (!DateOnly.TryParse(ObtenerFechaIngresada(migracion.Id), out var fechaAnalisis))
         {
             _errorMessage = "Ingresá una Fecha de Análisis válida.";
+            return;
+        }
+
+        var idRegistroIngresado = ObtenerIdRegistroIngresado(migracion.Id);
+        if (migracion.IdRegistro is null && string.IsNullOrWhiteSpace(idRegistroIngresado))
+        {
+            _errorMessage = "Ingresá el ID Registro.";
             return;
         }
 
@@ -111,12 +149,13 @@ else
 
         try
         {
-            var informeId = await Sender.Send(new CrearInformeDesdeMigracionPendienteCommand(migracionPendienteId, fechaAnalisis));
+            var informeId = await Sender.Send(new CrearInformeDesdeMigracionPendienteCommand(
+                migracion.Id, fechaAnalisis, string.IsNullOrWhiteSpace(idRegistroIngresado) ? null : idRegistroIngresado));
             NavigationManager.NavigateTo($"informes/{informeId}");
         }
         catch (Exception)
         {
-            _errorMessage = "No se pudo completar la migración. Verificá la fecha e intentá de nuevo.";
+            _errorMessage = "No se pudo completar la migración. Verificá los datos e intentá de nuevo.";
         }
         finally
         {

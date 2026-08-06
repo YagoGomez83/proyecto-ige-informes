@@ -13,10 +13,17 @@ public sealed class MigracionPendienteConfiguration : IEntityTypeConfiguration<M
         builder.HasKey(m => m.Id);
 
         builder.Property(m => m.IdRegistro)
-            .HasMaxLength(20)
-            .IsRequired();
+            .HasMaxLength(20);
 
-        builder.HasIndex(m => m.IdRegistro).IsUnique();
+        // Índice único PARCIAL: null significa "ID Registro no reconocido
+        // todavía" (HU-04, escenario "PDF con ID Registro no reconocido
+        // también queda pendiente") — Postgres no colisiona valores NULL
+        // en un índice único por defecto, pero se declara explícito acá
+        // para no depender de ese comportamiento implícito sin documentar
+        // (ver docs/03-modelo-dominio.md, "Decisiones ya resueltas").
+        builder.HasIndex(m => m.IdRegistro)
+            .IsUnique()
+            .HasFilter("\"IdRegistro\" IS NOT NULL");
 
         builder.Property(m => m.PdfPath)
             .HasMaxLength(1000)

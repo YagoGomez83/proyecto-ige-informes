@@ -325,3 +325,18 @@ erDiagram
   con invariantes propias (`CorregirFechaAnalisis` ya asume que el
   `Informe` existe) — evita ensuciar el dominio de `Informe` con un paso
   transitorio de un proceso operativo de carga masiva.
+- **`MigracionPendiente.IdRegistro` es nullable** (extensión del punto
+  anterior): también se crea una `MigracionPendiente` cuando el parser NO
+  reconoce el ID Registro (antes ese caso se descartaba sin persistir
+  nada, único caso de la migración masiva que seguía perdiendo el PDF).
+  Como el índice único de `MigracionPendiente.IdRegistro` solo tiene
+  sentido para evitar duplicar el mismo ID Registro entre dos
+  migraciones pendientes, se mapea como índice único **parcial**
+  (`WHERE "IdRegistro" IS NOT NULL`) — Postgres no colisiona valores
+  `NULL` en un índice único por defecto, pero se declara explícito en la
+  configuración de EF Core para que no dependa de ese comportamiento
+  implícito sin documentar. La pantalla `/informes/migrar/pendientes`
+  pide completar el ID Registro (si falta) y la Fecha de Análisis (si
+  falta) en el mismo formulario — antes de crear el `Informe`, valida
+  que el ID Registro ingresado no choque con uno ya existente (mismo
+  chequeo que ya hacía el Handler para el caso de fecha faltante).

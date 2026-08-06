@@ -113,6 +113,29 @@ Característica: Migración masiva
     Entonces se crea el Informe real con los datos ya extraídos más la
       fecha ingresada
     Y la Migración Pendiente deja de listarse
+
+  Escenario: PDF con ID Registro no reconocido también queda pendiente, no se pierde
+    Dado que un PDF del lote no tiene ID Registro reconocido
+    Cuando se procesa ese PDF durante la migración
+    Entonces el sistema guarda el PDF y los demás datos ya extraídos como
+      una Migración Pendiente sin ID Registro, en vez de descartar el archivo
+    Y el reporte del lote lo marca "Con advertencia" con un enlace para
+      completarlo
+
+  Escenario: Completar el ID Registro de una Migración Pendiente
+    Dado que existe una Migración Pendiente sin ID Registro reconocido
+    Cuando el Administrador ingresa el ID Registro y, si también falta,
+      la Fecha de Análisis desde /informes/migrar/pendientes
+    Entonces se crea el Informe real con los datos ya extraídos más lo
+      ingresado
+    Y la Migración Pendiente deja de listarse
+
+  Escenario: El ID Registro ingresado ya existe
+    Dado que existe una Migración Pendiente sin ID Registro reconocido
+    Cuando el Administrador ingresa un ID Registro que ya pertenece a
+      otro Informe
+    Entonces el sistema rechaza la operación sin crear el Informe
+    Y la Migración Pendiente sigue listada para corregir el dato
 ```
 
 ### Notas técnicas
@@ -120,7 +143,9 @@ Característica: Migración masiva
   hasta que un analista los revise, salvo que el equipo decida un flag de
   "migración validada en bloque" para acelerar el proceso (a definir).
 - **Migración Pendiente** (ver `01-glosario-dominio.md`,
-  `03-modelo-dominio.md`) es la entidad que sostiene el segundo y tercer
-  escenario — solo se crea cuando el ID Registro sí se reconoció (si
-  tampoco se reconoce el ID Registro, el PDF sigue sin persistirse: no hay
-  forma de evitar duplicados/relacionarlo después sin esa clave).
+  `03-modelo-dominio.md`) es la entidad que sostiene estos cuatro
+  escenarios — se crea tanto si falta la Fecha de Análisis como si falta
+  el ID Registro (o ambos), a diferencia del diseño inicial (HU-04, primer
+  corte) donde solo cubría la falta de fecha. El único caso que sigue sin
+  persistir nada es un PDF ilegible/corrupto (`Fallido`, no
+  `ConAdvertencia`) — ahí no hay datos que guardar.
