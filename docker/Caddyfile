@@ -9,20 +9,16 @@
 		on_demand
 	}
 
+	# Content-Security-Policy NO se define acá: la app .NET la arma
+	# (CspMiddleware.cs) porque necesita el hash SHA-256 del ImportMap de
+	# Blazor, calculado a partir de los assets con fingerprint del build
+	# actual — ver docs/06-seguridad-amenazas.md. El resto de los security
+	# headers, que sí son estáticos, se quedan en Caddy.
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "same-origin"
-		# img-src/frame-src acotados al origen público de MinIO (no un
-		# wildcard ni relajación de default-src): habilitan tanto las
-		# imágenes de Vehículo/Persona (<img src> en Detalle.razor) como el
-		# visor de PDF embebido en Informes/Detalle.razor, que cargan desde
-		# una URL prefirmada de MinIO (otro origen/puerto que el resto de la
-		# app, servida acá). Incluyen localhost:9000 (dev local) y la IP de
-		# la VM de producción (192.168.70.50:9000, ver MINIO_ENDPOINT_PUBLICO
-		# en docker-compose.yml) — ajustar si el host de MinIO cambia.
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://localhost:9000 https://localhost:9000 http://192.168.70.50:9000; connect-src 'self' wss:; frame-src 'self' http://localhost:9000 https://localhost:9000 http://192.168.70.50:9000; frame-ancestors 'none'"
 	}
 
 	reverse_proxy web:8080

@@ -134,7 +134,7 @@ Característica: 2FA obligatorio para roles Supervisor y Admin
 | A02 Cryptographic Failures | Sí | Argon2id para passwords, TLS en tránsito, MinIO con cifrado en reposo |
 | A03 Injection | Sí | EF Core con queries parametrizadas (nunca SQL concatenado); validación de entrada con FluentValidation |
 | A04 Insecure Design | Sí | Threat model documentado (este archivo), revisado en cada nueva feature sensible |
-| A05 Security Misconfiguration | Sí | Contenedores con usuario no-root, imágenes base mínimas, headers de seguridad (CSP, HSTS) en el reverse proxy |
+| A05 Security Misconfiguration | Sí | Contenedores con usuario no-root, imágenes base mínimas, headers de seguridad: HSTS/X-Frame-Options/etc. en el reverse proxy, Content-Security-Policy armada por la app (`CspMiddleware.cs`, necesita el hash SRI del ImportMap de Blazor) |
 | A07 Identification and Authentication Failures | Sí | Ver sección 1 |
 | A08 Software and Data Integrity Failures | Sí | `.github/workflows/ci.yml` corre `dotnet list package --vulnerable --include-transitive` (JSON parseado con `jq`) y falla el build si aparece algún paquete NuGet con vulnerabilidad conocida, más un escaneo de la imagen Docker final con Trivy (severidad HIGH/CRITICAL, `ignore-unfixed`) — falla el build ante cualquier hallazgo |
 | A09 Security Logging and Monitoring Failures | Sí | `AuditLog` + logs estructurados (Serilog) centralizados; alertas ante múltiples intentos de login fallidos |

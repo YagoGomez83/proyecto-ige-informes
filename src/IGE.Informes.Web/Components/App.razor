@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="@Assets["css/design-tokens.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["IGE.Informes.Web.styles.css"]" />
-    <ImportMap />
+    <ImportMap integrity="@_importMapIntegrity" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet @rendermode="PageRenderMode" />
 </head>
@@ -25,10 +25,21 @@
 
 </html>
 
+@inject Microsoft.AspNetCore.Routing.EndpointDataSource EndpointDataSource
+
 @code {
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
+    private string? _importMapIntegrity;
+
     private IComponentRenderMode? PageRenderMode =>
         HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+
+    protected override void OnInitialized()
+    {
+        // Mismo hash que CspMiddleware agrega al header CSP — si difiriera,
+        // el navegador bloquearía este <script> igual (ver CspMiddleware.cs).
+        _importMapIntegrity = CspMiddleware.CalcularHashImportMap(EndpointDataSource);
+    }
 }

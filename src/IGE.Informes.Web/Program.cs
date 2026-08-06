@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using IGE.Informes.Application;
 using IGE.Informes.Infrastructure;
 using IGE.Informes.Infrastructure.Identity;
+using IGE.Informes.Web;
 using IGE.Informes.Web.Components;
 using IGE.Informes.Web.Components.Account;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -109,6 +110,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseAntiforgery();
+
+// Arma el header Content-Security-Policy acá (no en Caddy) porque necesita
+// el hash SHA-256 del ImportMap de Blazor (ver CspMiddleware.cs). Caddy
+// sigue emitiendo el resto de los security headers estáticos (HSTS,
+// X-Frame-Options, etc.), ver docker/Caddyfile.
+app.UseMiddleware<CspMiddleware>();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
