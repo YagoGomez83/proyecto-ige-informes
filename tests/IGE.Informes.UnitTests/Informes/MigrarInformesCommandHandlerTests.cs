@@ -271,6 +271,47 @@ public class MigrarInformesCommandHandlerTests
     }
 
     [Fact]
+    public async Task MigrarInformes_IdRegistroYaExisteComoMigracionPendiente_CuentaComoAdvertenciaEnVezDeRomperElLote()
+    {
+        // Bug real encontrado en producción: re-migrar una carpeta que
+        // incluye un PDF ya guardado como MigracionPendiente (de una
+        // corrida anterior) chocaba contra el índice único de IdRegistro
+        // en la base — el chequeo de duplicados solo miraba la tabla
+        // Informes, no MigracionesPendientes. El DbUpdateException sin
+        // capturar abortaba TODO el lote (ningún archivo de esa tanda se
+        // guardaba, ni siquiera los que sí eran nuevos), no solo el
+        // archivo repetido.
+        var (dbContext, dependencia) = await PrepararAsync();
+        var migracionPendienteExistente = new MigracionPendiente(
+            "79/2022", "migraciones-pendientes/79-2022.pdf", dependencia.Id, Guid.NewGuid());
+        dbContext.MigracionesPendientes.Add(migracionPendienteExistente);
+        await dbContext.SaveChangesAsync();
+
+        var parser = new FakeInformePdfParserPorArchivo()
+            .ConResultado(CrearExtraidoExitoso("500/2022"))
+            .ConResultado(CrearExtraidoExitoso("79/2022"));
+        var handler = CrearHandler(dbContext, parser);
+
+        var command = CrearCommand(
+            dependencia.Id,
+            new PdfMigrarDto(ContenidoPdfFalso, "500-2022.pdf"),
+            new PdfMigrarDto(ContenidoPdfFalso, "79-2022.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(1, reporte.Exitosos);
+        Assert.Equal(1, reporte.ConAdvertencia);
+        Assert.Equal(0, reporte.Fallidos);
+
+        var detalleRepetido = reporte.Detalle.Single(d => d.NombreArchivo == "79-2022.pdf");
+        Assert.Equal(ResultadoMigracionArchivo.ConAdvertencia, detalleRepetido.Resultado);
+        Assert.Contains("duplicado", detalleRepetido.Motivo, StringComparison.OrdinalIgnoreCase);
+
+        // La MigracionPendiente original sigue única, sin duplicar.
+        Assert.Single(dbContext.MigracionesPendientes.Where(m => m.IdRegistro == "79/2022").ToList());
+    }
+
+    [Fact]
     public async Task MigrarInformes_DosPdfsDelLoteConMismoIdRegistro_SoloElPrimeroSePersisteElSegundoEsAdvertenciaPorDuplicado()
     {
         var (dbContext, dependencia) = await PrepararAsync();

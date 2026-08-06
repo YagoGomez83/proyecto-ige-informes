@@ -44,8 +44,19 @@ public sealed class MigrarInformesCommandHandler(
         // (hallazgo del security-reviewer).
         await auditLogger.RegistrarAccesoAsync("MigracionLote", nameof(Informe), null, cancellationToken);
 
+        // Incluye tanto Informe.IdRegistro como MigracionPendiente.IdRegistro
+        // (de MigracionesPendientes con IdRegistro ya reconocido) — si un
+        // PDF ya migrado en una corrida anterior queda pendiente por falta
+        // de fecha, y se vuelve a incluir el mismo archivo en un lote
+        // posterior, este chequeo evita chocar contra el índice único de
+        // MigracionesPendientes.IdRegistro (bug real detectado en
+        // producción: sin este chequeo, el DbUpdateException sin capturar
+        // abortaba el lote entero, no solo el archivo repetido).
         var idsRegistrados = await dbContext.Informes
             .Select(i => i.IdRegistro)
+            .Union(dbContext.MigracionesPendientes
+                .Where(m => m.IdRegistro != null)
+                .Select(m => m.IdRegistro!))
             .ToListAsync(cancellationToken);
         var idsRegistradosEnLote = new HashSet<string>();
 
