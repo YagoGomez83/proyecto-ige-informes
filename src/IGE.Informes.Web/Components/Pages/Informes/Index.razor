@@ -37,7 +37,7 @@ else
             <tbody>
                 @foreach (var informe in _informes)
                 {
-                    <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(informe.Id))">
+                    <tr class="row-clickable" @onclick="@(() => IrAlInforme(informe.Id))">
                         <td class="body-sm mono-data">@informe.IdRegistro</td>
                         <td class="body-sm">@informe.FechaAnalisis.ToString("dd/MM/yyyy")</td>
                         <td class="body-sm">

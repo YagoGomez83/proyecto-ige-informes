@@ -124,7 +124,7 @@
                     <tbody>
                         @foreach (var informe in _resultadosInformes)
                         {
-                            <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(informe.Id))">
+                            <tr class="row-clickable" @onclick="@(() => IrAlInforme(informe.Id))">
                                 <td class="body-sm mono-data">@informe.IdRegistro</td>
                                 <td class="body-sm">@informe.FechaAnalisis.ToString("dd/MM/yyyy")</td>
                                 <td class="body-sm">
@@ -189,7 +189,7 @@ else if (_pestaniaActiva == Pestania.Casos)
                             var estadoChip = CasoAnalisisChips.Para(caso.Estado);
                             var resultadoChip = CasoAnalisisChips.Para(caso.Resultado);
 
-                            <tr style="cursor: pointer;" @onclick="@(() => IrAlCaso(caso.Id))">
+                            <tr class="row-clickable" @onclick="@(() => IrAlCaso(caso.Id))">
                                 <td class="body-sm">@caso.Fecha.ToString("dd/MM/yyyy")</td>
                                 <td><StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" /></td>
                                 <td><StatusChip Texto="@resultadoChip.Texto" Semantica="resultadoChip.Semantica" /></td>
@@ -243,7 +243,7 @@ else if (_pestaniaActiva == Pestania.Vehiculos)
                         {
                             var estadoChip = VehiculoChips.Para(vehiculo.Estado);
 
-                            <tr style="cursor: pointer;" @onclick="@(() => IrAlVehiculo(vehiculo.Id))">
+                            <tr class="row-clickable" @onclick="@(() => IrAlVehiculo(vehiculo.Id))">
                                 <td class="mono-data">@(vehiculo.Dominio ?? "—")</td>
                                 <td class="body-sm">@vehiculo.Marca @vehiculo.Modelo</td>
                                 <td><StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" /></td>
@@ -295,7 +295,7 @@ else if (_pestaniaActiva == Pestania.Personas)
                     <tbody>
                         @foreach (var persona in _resultadosPersonas)
                         {
-                            <tr style="cursor: pointer;" @onclick="@(() => IrALaPersona(persona.Id))">
+                            <tr class="row-clickable" @onclick="@(() => IrALaPersona(persona.Id))">
                                 <td class="body-sm">@(persona.Nombre ?? "Sin identificar")</td>
                                 <td class="mono-data">@(persona.Dni ?? "—")</td>
                                 <td class="body-sm">@persona.Rol</td>

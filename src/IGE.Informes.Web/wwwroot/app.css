@@ -134,3 +134,34 @@ h1:focus {
     margin-top: var(--space-md);
     max-width: 26rem;
 }
+
+/* Utilitarias que reemplazan style="" inline puntual repetido en varias
+   páginas — evita depender de 'unsafe-inline' en style-src (ver
+   docs/06-seguridad-amenazas.md, CSP). */
+.row-clickable {
+    cursor: pointer;
+}
+
+.card-form-sm {
+    max-width: 480px;
+}
+
+.card-form-md {
+    max-width: 640px;
+}
+
+.card-form-lg {
+    max-width: 720px;
+}
+
+.card-link-plain {
+    text-decoration: none;
+}
+
+.modal-backdrop-front {
+    z-index: 1040;
+}
+
+.modal-front {
+    z-index: 1050;
+}

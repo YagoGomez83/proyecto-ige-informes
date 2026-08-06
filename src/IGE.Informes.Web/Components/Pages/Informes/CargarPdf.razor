@@ -20,7 +20,7 @@
 
 @if (_resultado is null)
 {
-    <div class="card" style="max-width: 640px;">
+    <div class="card card-form-md">
         <h2 class="headline-sm mb-2">1. Seleccionar archivo</h2>
         <p class="body-sm mb-3">
             El sistema extrae automáticamente ID Registro, fecha, causa, destino y evidencias.
@@ -35,7 +35,7 @@
 }
 else
 {
-    <div class="card mb-3" style="max-width: 720px;">
+    <div class="card mb-3 card-form-lg">
         <h2 class="headline-sm mb-2">2. Revisar datos extraídos</h2>
 
         @if (_resultado.RequiereRevisionManual)

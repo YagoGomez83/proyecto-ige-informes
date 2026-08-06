@@ -202,7 +202,7 @@ else
                 <tbody>
                     @foreach (var item in _historial)
                     {
-                        <tr style="cursor: pointer;" @onclick="@(() => IrAlInforme(item.InformeId))">
+                        <tr class="row-clickable" @onclick="@(() => IrAlInforme(item.InformeId))">
                             <td class="body-sm mono-data">@item.IdRegistro</td>
                             <td class="body-sm">@item.FechaAnalisis.ToString("dd/MM/yyyy")</td>
                             <td class="body-sm">

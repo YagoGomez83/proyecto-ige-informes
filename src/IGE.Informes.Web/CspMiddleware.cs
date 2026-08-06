@@ -44,7 +44,7 @@ public sealed class CspMiddleware(RequestDelegate next, IOptions<MinioOptions> m
         + $"img-src 'self' data: {minioOrigenes}; "
         + "object-src 'none'; "
         + $"{_scriptSrc}; "
-        + "style-src 'self' 'unsafe-inline'; "
+        + "style-src 'self'; "
         + "connect-src 'self' wss:; "
         + $"frame-src 'self' {minioOrigenes}; "
         + "frame-ancestors 'none'; "
