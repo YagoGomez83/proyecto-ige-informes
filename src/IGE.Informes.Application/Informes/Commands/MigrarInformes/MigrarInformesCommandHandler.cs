@@ -12,8 +12,12 @@ public sealed class MigrarInformesCommandHandler(
     ICurrentUserService currentUserService,
     IInformePdfParser parser,
     IAuditLogger auditLogger,
+    IFileStorage fileStorage,
+    IAntivirusScanner antivirusScanner,
     TimeSpan? timeoutPorArchivo = null) : IRequestHandler<MigrarInformesCommand, MigracionLoteResultDto>
 {
+    private const string TipoMimePdf = "application/pdf";
+
     // Parámetro configurable (default: PdfParserTimeoutHelper.TimeoutPorDefecto,
     // 30s) solo para poder testear el timeout sin esperar 30s reales por
     // test — DependencyInjection.cs no lo pasa, así que en producción
@@ -89,6 +93,35 @@ public sealed class MigrarInformesCommandHandler(
                 // dejaba Informes "Exitosos" con la fecha de la migración en vez de
                 // la fecha real del análisis, sin ninguna advertencia visible en el
                 // reporte (hallazgo detectado revisando una migración real).
+                //
+                // A diferencia del "ID Registro no reconocido" de arriba, acá sí
+                // hay una clave (idRegistro) para poder completar el dato después
+                // sin volver a subir el archivo — se guarda el PDF en MinIO y se
+                // persiste una MigracionPendiente con los datos ya extraídos
+                // (HU-04, escenario "PDF con Fecha de Análisis no reconocida
+                // queda pendiente, no se pierde").
+                var estaLimpio = await antivirusScanner.EstaLimpioAsync(pdf.Contenido, cancellationToken);
+                if (!estaLimpio)
+                {
+                    detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.Fallido, "El archivo fue rechazado por el escaneo antivirus — no se subió ni se guardó ningún dato."));
+                    continue;
+                }
+
+                using var streamPdf = new MemoryStream(pdf.Contenido);
+                var pdfPath = await fileStorage.SubirAsync(pdf.NombreArchivo, streamPdf, TipoMimePdf, cancellationToken);
+
+                var migracionPendiente = new MigracionPendiente(
+                    idRegistro,
+                    pdfPath,
+                    request.DependenciaDestinoId,
+                    usuarioId,
+                    extraido.CausaCaratula,
+                    extraido.PiezaSumarial,
+                    extraido.Relato);
+
+                dbContext.MigracionesPendientes.Add(migracionPendiente);
+                idsRegistradosEnLote.Add(idRegistro);
+
                 detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.ConAdvertencia, "No se reconoció la Fecha de Análisis.", extraido.Destino));
                 continue;
             }

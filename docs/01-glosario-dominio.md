@@ -31,6 +31,7 @@
 | **Supervisor de Equipo Analítica** | Usuario que revisa/aprueba el trabajo del equipo y consume tableros de analítica de gestión. |
 | **Mapeo geográfico / Recorrido** | Imagen de mapa adjunta a un Informe que ilustra el trayecto reconstruido. |
 | **TRAMIX** | Sistema de Expediente Digital de la Agencia de Ciencia y Tecnología San Luis. Fuera de alcance del sistema (solo se referencia). |
+| **Migración Pendiente** | PDF histórico subido en una migración masiva (HU-04) cuyo parser no pudo reconocer la Fecha de Análisis — no llega a crear un Informe. Se guarda el PDF original en MinIO junto con los demás datos ya extraídos (ID Registro, Causa, Relato, etc.) para que el Administrador complete la fecha manualmente después, desde `/informes/migrar/pendientes`, sin tener que volver a subir el archivo. Al completarla, se crea el Informe real (`Informe.CrearMigrado`) y la Migración Pendiente se elimina. Entidad transitoria — no es un estado del Informe (que siempre exige Fecha de Análisis), es un paso previo a que el Informe exista. |
 
 ## Notas de modelado importantes
 

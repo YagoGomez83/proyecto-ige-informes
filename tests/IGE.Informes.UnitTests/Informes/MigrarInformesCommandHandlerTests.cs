@@ -10,10 +10,18 @@ namespace IGE.Informes.UnitTests.Informes;
 /// <summary>
 /// HU-04 · Migración histórica de informes desde Drive
 /// (docs/epic-01-gestion-informes.md) — Característica "Migración masiva",
-/// escenario "Migración por lote". El Command/Handler todavía no existen:
-/// estos tests están escritos antes de la implementación (TDD), por lo que
-/// deben fallar en rojo hasta que se cree
-/// IGE.Informes.Application.Informes.Commands.MigrarInformes.*.
+/// escenarios "Migración por lote" y "PDF con Fecha de Análisis no
+/// reconocida queda pendiente, no se pierde". El segundo escenario cambia
+/// el comportamiento del Handler: a partir de ahora,
+/// <see cref="MigrarInformesCommandHandler"/> recibe además
+/// <see cref="IFileStorage"/> y <see cref="IAntivirusScanner"/> (mismo
+/// puerto que ya usa ConfirmarCargaInformeCommandHandler) para poder subir
+/// el PDF a MinIO y persistir una <see cref="MigracionPendiente"/> en vez
+/// de descartar el archivo cuando la Fecha de Análisis no se reconoce.
+/// Estos tests están escritos antes de la implementación (TDD): deben
+/// fallar en rojo hasta que se agregue esa dependencia nueva al
+/// constructor del Handler y se cree
+/// IGE.Informes.Domain.Entities.MigracionPendiente.
 /// </summary>
 public class MigrarInformesCommandHandlerTests
 {
@@ -30,6 +38,21 @@ public class MigrarInformesCommandHandlerTests
 
         return (dbContext, dependencia);
     }
+
+    private static MigrarInformesCommandHandler CrearHandler(
+        TestAppDbContext dbContext,
+        IInformePdfParser parser,
+        IAuditLogger? auditLogger = null,
+        IFileStorage? fileStorage = null,
+        IAntivirusScanner? antivirusScanner = null,
+        TimeSpan? timeoutPorArchivo = null) => new(
+            dbContext,
+            new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin),
+            parser,
+            auditLogger ?? new FakeAuditLogger(),
+            fileStorage ?? new FakeFileStorage(),
+            antivirusScanner ?? new FakeAntivirusScanner(),
+            timeoutPorArchivo);
 
     private static InformeExtraidoDto CrearExtraidoExitoso(string idRegistro, string? causaCaratula = null) => new(
         idRegistro,
@@ -64,7 +87,7 @@ public class MigrarInformesCommandHandlerTests
         var parser = new FakeInformePdfParserPorArchivo()
             .ConResultado(CrearExtraidoExitoso("100/2020"))
             .ConResultado(CrearExtraidoExitoso("101/2020"));
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(
             dependencia.Id,
@@ -96,7 +119,7 @@ public class MigrarInformesCommandHandlerTests
         var parser = new FakeInformePdfParserPorArchivo()
             .ConExcepcion(new InvalidOperationException("PDF corrupto"))
             .ConResultado(CrearExtraidoExitoso("102/2020"));
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(
             dependencia.Id,
@@ -120,7 +143,7 @@ public class MigrarInformesCommandHandlerTests
     {
         var (dbContext, dependencia) = await PrepararAsync();
         var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoSinIdRegistro());
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "sin-id.pdf"));
 
@@ -145,7 +168,7 @@ public class MigrarInformesCommandHandlerTests
         await dbContext.SaveChangesAsync();
 
         var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoExitoso("200/2019"));
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "200-2019.pdf"));
 
@@ -172,7 +195,7 @@ public class MigrarInformesCommandHandlerTests
         var parser = new FakeInformePdfParserPorArchivo()
             .ConResultado(CrearExtraidoExitoso("300/2021"))
             .ConResultado(CrearExtraidoExitoso("300/2021"));
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(
             dependencia.Id,
@@ -206,7 +229,7 @@ public class MigrarInformesCommandHandlerTests
             .ConResultado(CrearExtraidoSinIdRegistro())           // advertencia: sin id
             .ConResultado(CrearExtraidoExitoso("400/2018"));      // advertencia: ya existe en base
 
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(
             dependencia.Id,
@@ -232,7 +255,7 @@ public class MigrarInformesCommandHandlerTests
         var parser = new FakeInformePdfParserPorArchivo()
             .ConResultado(CrearExtraidoExitoso("600/2023"))
             .ConResultado(CrearExtraidoSinIdRegistro() with { Destino = "Comisaría 5ta" });
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(
             dependencia.Id,
@@ -253,7 +276,7 @@ public class MigrarInformesCommandHandlerTests
     {
         var (dbContext, dependencia) = await PrepararAsync();
         var parser = new FakeInformePdfParserPorArchivo().ConExcepcion(new InvalidOperationException("PDF corrupto"));
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "corrupto.pdf"));
 
@@ -262,13 +285,20 @@ public class MigrarInformesCommandHandlerTests
         Assert.Null(reporte.Detalle.Single().DestinoExtraido);
     }
 
+    // A partir de HU-04, escenario "PDF con Fecha de Análisis no reconocida
+    // queda pendiente, no se pierde": cuando el ID Registro sí se reconoce
+    // pero la Fecha de Análisis no, el PDF ya no se descarta — se sube a
+    // MinIO y se persiste una MigracionPendiente con los demás datos ya
+    // extraídos, en vez de solo dejar un mensaje "Con advertencia" sin
+    // persistir nada (comportamiento viejo, ya no vigente).
+
     [Fact]
-    public async Task MigrarInformes_FechaAnalisisNoReconocida_CuentaComoAdvertenciaYNoInventaLaFechaDeHoy()
+    public async Task MigrarInformes_FechaAnalisisNoReconocida_CuentaComoAdvertenciaYPersisteUnaMigracionPendiente()
     {
         var (dbContext, dependencia) = await PrepararAsync();
         var extraidoSinFecha = CrearExtraidoExitoso("700/2022") with { FechaAnalisis = null };
         var parser = new FakeInformePdfParserPorArchivo().ConResultado(extraidoSinFecha);
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "700-2022.pdf"));
 
@@ -277,11 +307,109 @@ public class MigrarInformesCommandHandlerTests
         Assert.Equal(1, reporte.ConAdvertencia);
         Assert.Equal(0, reporte.Exitosos);
         Assert.Equal(0, reporte.Fallidos);
+
+        // No se descarta: no crea el Informe todavía (falta la fecha), pero
+        // tampoco se pierde el PDF ni los datos ya extraídos.
         Assert.Empty(dbContext.Informes.ToList());
+
+        var migracionesPendientes = dbContext.MigracionesPendientes.ToList();
+        var migracionPendiente = Assert.Single(migracionesPendientes);
+        Assert.Equal("700/2022", migracionPendiente.IdRegistro);
+        Assert.Equal(dependencia.Id, migracionPendiente.DependenciaDestinoId);
+        Assert.Equal(UsuarioMigradorId, migracionPendiente.UsuarioMigradorId);
+        Assert.Equal("Se procede a realizar el análisis histórico...", migracionPendiente.Relato);
 
         var detalle = reporte.Detalle.Single();
         Assert.Equal(ResultadoMigracionArchivo.ConAdvertencia, detalle.Resultado);
         Assert.Contains("Fecha", detalle.Motivo, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_FechaAnalisisNoReconocida_SubeElPdfOriginalAMinIO()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var extraidoSinFecha = CrearExtraidoExitoso("701/2022") with { FechaAnalisis = null };
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(extraidoSinFecha);
+        var fileStorage = new FakeFileStorage();
+        var handler = CrearHandler(dbContext, parser, fileStorage: fileStorage);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "701-2022.pdf"));
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.Single(fileStorage.ArchivosSubidos);
+
+        var migracionPendiente = Assert.Single(dbContext.MigracionesPendientes.ToList());
+        Assert.Equal(fileStorage.ArchivosSubidos.Single(), migracionPendiente.PdfPath);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_FechaAnalisisNoReconocida_ElArchivoRechazadoPorElAntivirusNoGeneraMigracionPendiente()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var extraidoSinFecha = CrearExtraidoExitoso("702/2022") with { FechaAnalisis = null };
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(extraidoSinFecha);
+        var antivirusScanner = new FakeAntivirusScanner { ResultadoLimpio = false };
+        var handler = CrearHandler(dbContext, parser, antivirusScanner: antivirusScanner);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "702-2022.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Empty(dbContext.MigracionesPendientes.ToList());
+        Assert.Empty(dbContext.Informes.ToList());
+
+        var detalle = reporte.Detalle.Single();
+        Assert.Equal(ResultadoMigracionArchivo.Fallido, detalle.Resultado);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_IdRegistroNoReconocido_NoPersisteMigracionPendiente()
+    {
+        // Distingue explícitamente los dos "Con advertencia" de HU-04: solo
+        // cuando el ID Registro sí se reconoció pero falta la Fecha de
+        // Análisis se crea una MigracionPendiente — si tampoco se reconoce
+        // el ID Registro, el PDF sigue sin persistirse (no hay clave para
+        // evitar duplicados/relacionarlo después), igual que antes.
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoSinIdRegistro());
+        var handler = CrearHandler(dbContext, parser);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "sin-id.pdf"));
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.Empty(dbContext.MigracionesPendientes.ToList());
+    }
+
+    [Fact]
+    public async Task MigrarInformes_LoteMixtoConAdvertenciaPorFecha_ElReporteMarcaElArchivoConAdvertenciaYQuedaUnaSolaMigracionPendienteParaCompletar()
+    {
+        // El Gherkin exige que el reporte "marque 'Con advertencia' con un
+        // enlace para completarlo" — la pantalla /informes/migrar/pendientes
+        // (HU-04) arma ese enlace listando las MigracionPendiente
+        // existentes, no necesita un campo extra en el reporte del lote:
+        // alcanza con que quede exactamente una MigracionPendiente
+        // localizable por su ID Registro.
+        var (dbContext, dependencia) = await PrepararAsync();
+        var extraidoSinFecha = CrearExtraidoExitoso("703/2022") with { FechaAnalisis = null };
+        var parser = new FakeInformePdfParserPorArchivo()
+            .ConResultado(CrearExtraidoExitoso("704/2022"))
+            .ConResultado(extraidoSinFecha);
+        var handler = CrearHandler(dbContext, parser);
+
+        var command = CrearCommand(
+            dependencia.Id,
+            new PdfMigrarDto(ContenidoPdfFalso, "704-2022.pdf"),
+            new PdfMigrarDto(ContenidoPdfFalso, "703-2022.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        var detalleConAdvertencia = reporte.Detalle.Single(d => d.NombreArchivo == "703-2022.pdf");
+        Assert.Equal(ResultadoMigracionArchivo.ConAdvertencia, detalleConAdvertencia.Resultado);
+
+        var migracionPendiente = Assert.Single(dbContext.MigracionesPendientes.ToList());
+        Assert.Equal("703/2022", migracionPendiente.IdRegistro);
     }
 
     [Fact]
@@ -291,9 +419,7 @@ public class MigrarInformesCommandHandlerTests
         var parser = new FakeInformePdfParserPorArchivo()
             .ConDemora(TimeSpan.FromSeconds(5), CrearExtraidoExitoso("999/2022"))
             .ConResultado(CrearExtraidoExitoso("998/2022"));
-        var handler = new MigrarInformesCommandHandler(
-            dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger(),
-            timeoutPorArchivo: TimeSpan.FromSeconds(1));
+        var handler = CrearHandler(dbContext, parser, timeoutPorArchivo: TimeSpan.FromSeconds(1));
 
         var command = CrearCommand(
             dependencia.Id,
@@ -320,7 +446,7 @@ public class MigrarInformesCommandHandlerTests
     {
         var dbContext = new TestAppDbContext();
         var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoExitoso("500/2022"));
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, new FakeAuditLogger());
+        var handler = CrearHandler(dbContext, parser);
 
         var command = CrearCommand(Guid.NewGuid(), new PdfMigrarDto(ContenidoPdfFalso, "500-2022.pdf"));
 
@@ -346,7 +472,7 @@ public class MigrarInformesCommandHandlerTests
         var (dbContext, dependencia) = await PrepararAsync();
         var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoSinIdRegistro());
         var auditLogger = new FakeAuditLogger();
-        var handler = new MigrarInformesCommandHandler(dbContext, new FakeCurrentUserService(UsuarioMigradorId, Roles.Admin), parser, auditLogger);
+        var handler = CrearHandler(dbContext, parser, auditLogger: auditLogger);
 
         var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "sin-id.pdf"));
 

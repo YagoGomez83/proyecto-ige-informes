@@ -311,3 +311,17 @@ erDiagram
   faltante. En el dominio, `Informe.CrearMigrado(...)` es el único punto
   de alta que permite esto — el constructor normal sigue exigiendo un
   `CasoAnalisis` real.
+- **`MigracionPendiente` (entidad nueva, no un estado de `Informe`)**:
+  cuando el parser reconoce el ID Registro pero no la Fecha de Análisis
+  durante una migración masiva (HU-04), el PDF no se descarta — se guarda
+  en MinIO y se persiste una `MigracionPendiente` con los demás datos ya
+  extraídos (ID Registro, Causa, Relato, Vehículos/Personas/Evidencias
+  reconocidos, Dependencia destino elegida en el lote). El Administrador
+  la completa desde una pantalla dedicada (`/informes/migrar/pendientes`)
+  ingresando la fecha; al confirmar, se crea el `Informe` real vía
+  `Informe.CrearMigrado(...)` (mismo camino que la migración exitosa) y la
+  `MigracionPendiente` se borra. No se modeló como un estado nuevo de
+  `EstadoInforme` porque `Informe.FechaAnalisis` es un campo no-nullable
+  con invariantes propias (`CorregirFechaAnalisis` ya asume que el
+  `Informe` existe) — evita ensuciar el dominio de `Informe` con un paso
+  transitorio de un proceso operativo de carga masiva.

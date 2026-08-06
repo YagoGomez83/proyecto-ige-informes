@@ -1,0 +1,126 @@
+@page "/informes/migrar/pendientes"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using IGE.Informes.Application.Common.Security
+@using IGE.Informes.Application.Informes.Commands.CrearInformeDesdeMigracionPendiente
+@using IGE.Informes.Application.Informes.Queries.ListarMigracionesPendientes
+@using MediatR
+@inject ISender Sender
+@inject NavigationManager NavigationManager
+
+<PageTitle>Migraciones pendientes · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Migraciones pendientes</h1>
+
+<p class="body-sm mb-3">
+    PDFs históricos con ID Registro reconocido pero sin Fecha de Análisis — completá la fecha
+    para crear el Informe, sin volver a subir el archivo.
+</p>
+
+@if (_errorMessage is not null)
+{
+    <div class="status-chip status-chip--alert mb-3">@_errorMessage</div>
+}
+
+@if (_migraciones is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_migraciones.Count == 0)
+{
+    <p class="body-md">No hay migraciones pendientes por completar.</p>
+}
+else
+{
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="label-md">ID Registro</th>
+                    <th class="label-md">Causa</th>
+                    <th class="label-md">Fecha de análisis</th>
+                    <th class="label-md"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var migracion in _migraciones)
+                {
+                    <tr>
+                        <td class="body-sm mono-data">@migracion.IdRegistro</td>
+                        <td class="body-sm">@(migracion.CausaCaratula ?? "—")</td>
+                        <td class="body-sm">
+                            <input type="date" class="form-control"
+                                   value="@ObtenerFechaIngresada(migracion.Id)"
+                                   @onchange="@(e => ActualizarFechaIngresada(migracion.Id, e.Value?.ToString()))" />
+                        </td>
+                        <td class="body-sm">
+                            <button type="button" class="btn-primary"
+                                    @onclick="@(() => CompletarAsync(migracion.Id))"
+                                    disabled="@(_procesando || !TieneFechaIngresada(migracion.Id))">
+                                Completar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<MigracionPendienteDto>? _migraciones;
+    private readonly Dictionary<Guid, string> _fechasIngresadas = [];
+    private bool _procesando;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _migraciones = await Sender.Send(new ListarMigracionesPendientesQuery());
+    }
+
+    private string ObtenerFechaIngresada(Guid id) => _fechasIngresadas.GetValueOrDefault(id, string.Empty);
+
+    private bool TieneFechaIngresada(Guid id) => !string.IsNullOrWhiteSpace(ObtenerFechaIngresada(id));
+
+    private void ActualizarFechaIngresada(Guid id, string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+        {
+            _fechasIngresadas.Remove(id);
+        }
+        else
+        {
+            _fechasIngresadas[id] = valor;
+        }
+    }
+
+    private async Task CompletarAsync(Guid migracionPendienteId)
+    {
+        if (!DateOnly.TryParse(ObtenerFechaIngresada(migracionPendienteId), out var fechaAnalisis))
+        {
+            _errorMessage = "Ingresá una Fecha de Análisis válida.";
+            return;
+        }
+
+        _errorMessage = null;
+        _procesando = true;
+
+        try
+        {
+            var informeId = await Sender.Send(new CrearInformeDesdeMigracionPendienteCommand(migracionPendienteId, fechaAnalisis));
+            NavigationManager.NavigateTo($"informes/{informeId}");
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo completar la migración. Verificá la fecha e intentá de nuevo.";
+        }
+        finally
+        {
+            _procesando = false;
+        }
+    }
+}

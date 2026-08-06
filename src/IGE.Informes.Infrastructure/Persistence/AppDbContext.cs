@@ -29,6 +29,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Informe> Informes => Set<Informe>();
 
+    public DbSet<MigracionPendiente> MigracionesPendientes => Set<MigracionPendiente>();
+
     public DbSet<CategoriaAlerta> CategoriasAlerta => Set<CategoriaAlerta>();
 
     public DbSet<Vehiculo> Vehiculos => Set<Vehiculo>();

@@ -96,9 +96,31 @@ Característica: Migración masiva
     Y genera un reporte final con: total procesados, exitosos, con advertencias
       (campos no reconocidos) y fallidos (PDF no legible)
     Para que el equipo revise manualmente los casos con advertencias o fallos
+
+  Escenario: PDF con Fecha de Análisis no reconocida queda pendiente, no se pierde
+    Dado que un PDF del lote tiene ID Registro reconocido pero Fecha de
+      Análisis no reconocida
+    Cuando se procesa ese PDF durante la migración
+    Entonces el sistema guarda el PDF y los demás datos ya extraídos como
+      una Migración Pendiente, en vez de descartar el archivo
+    Y el reporte del lote lo marca "Con advertencia" con un enlace para
+      completarlo
+
+  Escenario: Completar la Fecha de Análisis de una Migración Pendiente
+    Dado que existe una Migración Pendiente por Fecha de Análisis no reconocida
+    Cuando el Administrador ingresa la fecha correcta desde
+      /informes/migrar/pendientes
+    Entonces se crea el Informe real con los datos ya extraídos más la
+      fecha ingresada
+    Y la Migración Pendiente deja de listarse
 ```
 
 ### Notas técnicas
 - Los informes migrados entran en estado **Borrador** (no Publicado)
   hasta que un analista los revise, salvo que el equipo decida un flag de
   "migración validada en bloque" para acelerar el proceso (a definir).
+- **Migración Pendiente** (ver `01-glosario-dominio.md`,
+  `03-modelo-dominio.md`) es la entidad que sostiene el segundo y tercer
+  escenario — solo se crea cuando el ID Registro sí se reconoció (si
+  tampoco se reconoce el ID Registro, el PDF sigue sin persistirse: no hay
+  forma de evitar duplicados/relacionarlo después sin esa clave).

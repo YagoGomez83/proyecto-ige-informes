@@ -25,6 +25,8 @@ public interface IAppDbContext
 
     DbSet<Informe> Informes { get; }
 
+    DbSet<MigracionPendiente> MigracionesPendientes { get; }
+
     DbSet<CategoriaAlerta> CategoriasAlerta { get; }
 
     DbSet<Vehiculo> Vehiculos { get; }

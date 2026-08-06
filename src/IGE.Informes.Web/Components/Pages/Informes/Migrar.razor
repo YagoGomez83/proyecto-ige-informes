@@ -113,6 +113,15 @@ else
             </tbody>
         </table>
 
+        @if (_reporte.ConAdvertencia > 0)
+        {
+            <p class="body-sm mt-3 mb-3">
+                Los archivos con ID Registro reconocido pero sin Fecha de Análisis quedaron
+                guardados como pendientes — completalos sin volver a subirlos desde
+                <a href="informes/migrar/pendientes">Migraciones pendientes</a>.
+            </p>
+        }
+
         <button type="button" class="btn-secondary" @onclick="ReiniciarAsync">Migrar otro lote</button>
     </div>
 }
