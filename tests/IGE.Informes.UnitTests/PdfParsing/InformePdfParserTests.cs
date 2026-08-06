@@ -46,6 +46,22 @@ public class InformePdfParserTests
     }
 
     [Fact]
+    public void Reconoce_fecha_de_analisis_sin_el_segundo_DE()
+    {
+        // Formato real visto en PDFs históricos: "9 DE SEPTIEMBRE 2022" en
+        // vez de "9 DE SEPTIEMBRE DE 2022" — sin esto, la migración masiva
+        // descartaba el archivo entero por no reconocer la fecha.
+        using var pdf = GeneradorPdfDePrueba.GenerarPdf([
+            "FECHA DE ANÁLISIS: 9 DE SEPTIEMBRE 2022",
+            "ID REGISTRO: 100/2022",
+        ]);
+
+        var resultado = InformePdfParser.Parsear(pdf);
+
+        Assert.Equal(new DateOnly(2022, 9, 9), resultado.FechaAnalisis);
+    }
+
+    [Fact]
     public void IdRegistro_no_reconocido_marca_para_revision_manual()
     {
         using var pdf = GeneradorPdfDePrueba.GenerarPdf([
