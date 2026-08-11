@@ -12,6 +12,20 @@ public sealed class MinioOptions
     public int UrlDescargaExpiracionSegundos { get; init; } = 300;
 
     /// <summary>
+    /// Esquema (http/https) con el que se firman las URLs prefirmadas para
+    /// <see cref="EndpointPublico"/> — independiente de <see cref="UseSsl"/>,
+    /// que rige la conexión interna del backend a MinIO (siempre HTTP en la
+    /// red de Docker). El navegador del cliente sí necesita HTTPS real acá:
+    /// la CSP de la app tiene "upgrade-insecure-requests" (CspMiddleware.cs)
+    /// y reescribe cualquier URL http:// de esta página a https:// antes de
+    /// pedirla, así que sin TLS real en el puerto público el handshake
+    /// falla (ver project_bug_pdfpath_migracion_2026-08-11 en memoria). Si
+    /// no se configura, sigue el valor de <see cref="UseSsl"/> (entornos
+    /// donde ambos coinciden, ej. sin Docker).
+    /// </summary>
+    public bool? UseSslPublico { get; init; }
+
+    /// <summary>
     /// Host:puerto público (accesible desde el navegador del cliente) para
     /// generar URLs prefirmadas de descarga/vista previa. Distinto de
     /// <see cref="Endpoint"/>, que es el hostname interno de red que usa el

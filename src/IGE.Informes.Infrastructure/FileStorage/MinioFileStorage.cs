@@ -33,7 +33,7 @@ public sealed class MinioFileStorage : IFileStorage
         _clientParaUrlsPublicas = new MinioClient()
             .WithEndpoint(_options.EndpointPublico ?? _options.Endpoint)
             .WithCredentials(_options.AccessKey, _options.SecretKey)
-            .WithSSL(_options.UseSsl)
+            .WithSSL(_options.UseSslPublico ?? _options.UseSsl)
             .Build();
     }
 

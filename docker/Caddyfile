@@ -23,3 +23,31 @@
 
 	reverse_proxy web:8080
 }
+
+# TLS para el tráfico directo del navegador a MinIO (URLs prefirmadas del
+# visor de PDF/imágenes, ver Minio__EndpointPublico) — MinIO en sí solo
+# habla HTTP en la red interna de Docker (minio:9000), pero la CSP de la
+# app tiene "upgrade-insecure-requests" (CspMiddleware.cs), así que el
+# navegador reescribe cualquier URL http:// de esta página a https://
+# antes de pedirla. Sin este listener, esa reescritura apunta a un puerto
+# que no responde TLS y el handshake falla (bug real: PDFs migrados
+# mostraban "ha enviado una respuesta no válida" al intentar visualizarse,
+# ver project_bug_pdfpath_migracion_2026-08-11 en memoria).
+:9000 {
+	tls internal {
+		on_demand
+	}
+
+	# Mismos headers estáticos que :443 salvo X-Frame-Options: el visor de
+	# PDF de la app carga este origen dentro de un <iframe> a propósito
+	# (Detalle.razor), así que "DENY" acá rompería esa vista previa sin
+	# aportar protección real (X-Frame-Options protege que ESTE origen no
+	# se embeba en un frame ajeno, no al revés).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+	}
+
+	reverse_proxy minio:9000
+}
