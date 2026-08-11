@@ -82,6 +82,7 @@ public sealed class MigracionPendiente : IAuditable
             ?? throw new InvalidOperationException("Esta Migración Pendiente no tiene ID Registro — hay que informarlo para crear el Informe.");
 
         var informe = Informe.CrearMigrado(idRegistroFinal, fechaAnalisis, DependenciaDestinoId, UsuarioMigradorId, causaId);
+        informe.AsignarPdf(PdfPath);
 
         if (!string.IsNullOrWhiteSpace(Relato))
         {

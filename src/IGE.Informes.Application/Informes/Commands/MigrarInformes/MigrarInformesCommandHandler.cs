@@ -174,7 +174,18 @@ public sealed class MigrarInformesCommandHandler(
             // Admin la completa después vía HU-02 si hace falta. Mismo
             // criterio "los 3 campos o ninguno" que ya usa
             // ConfirmarCargaInformeCommandHandler.
+            var estaLimpioExitoso = await antivirusScanner.EstaLimpioAsync(pdf.Contenido, cancellationToken);
+            if (!estaLimpioExitoso)
+            {
+                detalle.Add(new MigracionArchivoResultDto(pdf.NombreArchivo, ResultadoMigracionArchivo.Fallido, "El archivo fue rechazado por el escaneo antivirus — no se subió ni se guardó ningún dato."));
+                continue;
+            }
+
+            using var streamPdfExitoso = new MemoryStream(pdf.Contenido);
+            var pdfPathExitoso = await fileStorage.SubirAsync(pdf.NombreArchivo, streamPdfExitoso, TipoMimePdf, cancellationToken);
+
             var informe = Informe.CrearMigrado(idRegistro, extraido.FechaAnalisis.Value, request.DependenciaDestinoId, usuarioId);
+            informe.AsignarPdf(pdfPathExitoso);
 
             if (!string.IsNullOrWhiteSpace(extraido.Relato))
             {

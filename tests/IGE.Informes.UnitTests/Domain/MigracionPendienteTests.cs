@@ -148,6 +148,7 @@ public class MigracionPendienteTests
         Assert.Equal(OrigenInforme.Migrado, informe.Origen);
         Assert.Null(informe.CasoAnalisisId);
         Assert.Equal(EstadoInforme.Borrador, informe.Estado);
+        Assert.Equal(migracionPendiente.PdfPath, informe.PdfPath);
     }
 
     [Fact]

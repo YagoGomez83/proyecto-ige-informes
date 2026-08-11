@@ -116,6 +116,41 @@ public class MigrarInformesCommandHandlerTests
     }
 
     [Fact]
+    public async Task MigrarInformes_LoteConPdfsExitosos_SubeElPdfOriginalAMinIOYLoAsignaAlInforme()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoExitoso("100/2020"));
+        var fileStorage = new FakeFileStorage();
+        var handler = CrearHandler(dbContext, parser, fileStorage: fileStorage);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "100-2020.pdf"));
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.Single(fileStorage.ArchivosSubidos);
+
+        var informe = Assert.Single(dbContext.Informes.ToList());
+        Assert.Equal(fileStorage.ArchivosSubidos.Single(), informe.PdfPath);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_PdfExitosoRechazadoPorElAntivirus_CuentaComoFallidoYNoPersisteInforme()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoExitoso("100/2020"));
+        var antivirusScanner = new FakeAntivirusScanner { ResultadoLimpio = false };
+        var handler = CrearHandler(dbContext, parser, antivirusScanner: antivirusScanner);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "100-2020.pdf"));
+
+        var reporte = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Empty(dbContext.Informes.ToList());
+        var detalle = reporte.Detalle.Single();
+        Assert.Equal(ResultadoMigracionArchivo.Fallido, detalle.Resultado);
+    }
+
+    [Fact]
     public async Task MigrarInformes_PdfNoLegible_CuentaComoFallidoYNoAbortaElRestoDelLote()
     {
         var (dbContext, dependencia) = await PrepararAsync();
