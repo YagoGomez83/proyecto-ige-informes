@@ -9,13 +9,13 @@ public sealed class Causa : IAuditable
     public Guid Id { get; private set; }
     public string Caratula { get; private set; } = string.Empty;
     public string NroPiezaSumarial { get; private set; } = string.Empty;
-    public string CircunscripcionJudicial { get; private set; } = string.Empty;
+    public string? CircunscripcionJudicial { get; private set; }
 
     private Causa()
     {
     }
 
-    public Causa(string caratula, string nroPiezaSumarial, string circunscripcionJudicial)
+    public Causa(string caratula, string nroPiezaSumarial, string? circunscripcionJudicial)
     {
         if (string.IsNullOrWhiteSpace(caratula))
         {
@@ -27,14 +27,9 @@ public sealed class Causa : IAuditable
             throw new ArgumentException("El N° de pieza sumarial es obligatorio.", nameof(nroPiezaSumarial));
         }
 
-        if (string.IsNullOrWhiteSpace(circunscripcionJudicial))
-        {
-            throw new ArgumentException("La circunscripción judicial es obligatoria.", nameof(circunscripcionJudicial));
-        }
-
         Id = Guid.NewGuid();
         Caratula = caratula;
         NroPiezaSumarial = nroPiezaSumarial;
-        CircunscripcionJudicial = circunscripcionJudicial;
+        CircunscripcionJudicial = string.IsNullOrWhiteSpace(circunscripcionJudicial) ? null : circunscripcionJudicial;
     }
 }

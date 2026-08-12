@@ -21,7 +21,6 @@ public sealed class CausaConfiguration : IEntityTypeConfiguration<Causa>
             .IsRequired();
 
         builder.Property(c => c.CircunscripcionJudicial)
-            .HasMaxLength(200)
-            .IsRequired();
+            .HasMaxLength(200);
     }
 }

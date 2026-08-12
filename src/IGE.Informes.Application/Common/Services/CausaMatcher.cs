@@ -32,15 +32,16 @@ public static class CausaMatcher
     /// Busca una Causa existente con el mismo N° de Pieza Sumarial exacto;
     /// si no hay match, crea una nueva y la agrega al DbContext. En ambos
     /// casos devuelve el Id a usar para vincular el Informe. Solo se llama
-    /// cuando los 3 campos están completos — Causa exige carátula, pieza
-    /// sumarial y circunscripción judicial no vacíos (constructor de
-    /// Domain).
+    /// cuando Carátula y Pieza Sumarial están completos — son los únicos
+    /// campos obligatorios de Causa; Circunscripción judicial es opcional
+    /// (varios expedientes reales no la especifican, ver
+    /// docs/03-modelo-dominio.md "Decisiones ya resueltas").
     /// </summary>
     public static async Task<Guid> ObtenerOCrearIdAsync(
         IAppDbContext dbContext,
         string caratula,
         string nroPiezaSumarial,
-        string circunscripcionJudicial,
+        string? circunscripcionJudicial,
         CancellationToken cancellationToken)
     {
         var causaExistente = await BuscarPorPiezaSumarialAsync(dbContext, nroPiezaSumarial, cancellationToken);

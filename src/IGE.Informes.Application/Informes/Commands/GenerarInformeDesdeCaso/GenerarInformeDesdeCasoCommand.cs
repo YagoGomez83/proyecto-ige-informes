@@ -9,4 +9,4 @@ public sealed record GenerarInformeDesdeCasoCommand(
     Guid DependenciaDestinoId,
     string CausaCaratula,
     string CausaNroPiezaSumarial,
-    string CausaCircunscripcionJudicial) : IRequest<Guid>;
+    string? CausaCircunscripcionJudicial) : IRequest<Guid>;

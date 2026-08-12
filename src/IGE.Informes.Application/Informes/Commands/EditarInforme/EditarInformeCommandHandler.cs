@@ -50,8 +50,7 @@ public sealed class EditarInformeCommandHandler(IAppDbContext dbContext, ICurren
         }
 
         if (!string.IsNullOrWhiteSpace(request.CausaCaratula)
-            && !string.IsNullOrWhiteSpace(request.CausaNroPiezaSumarial)
-            && !string.IsNullOrWhiteSpace(request.CausaCircunscripcionJudicial))
+            && !string.IsNullOrWhiteSpace(request.CausaNroPiezaSumarial))
         {
             // Sin match exacto, se crea una Causa nueva; el usuario puede
             // elegir una sugerencia por similaridad de carátula antes de

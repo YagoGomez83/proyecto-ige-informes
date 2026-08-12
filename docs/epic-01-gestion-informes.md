@@ -29,6 +29,14 @@ Característica: Carga de informe
     Cuando el extractor no puede reconocer uno o más campos
     Entonces el sistema me muestra el/los campo(s) vacíos resaltados
     Y no me deja publicar el informe hasta completarlos manualmente
+
+  Escenario: Confirmar la carga sin Circunscripción judicial
+    Dado que estoy confirmando la carga de un PDF con Carátula y N° de
+      Pieza Sumarial completos
+    Y la Circunscripción judicial no está especificada
+    Cuando confirmo la carga
+    Entonces el informe se guarda con su Causa (Carátula y Pieza
+      Sumarial) sin Circunscripción judicial
 ```
 
 ### Notas técnicas
@@ -98,6 +106,20 @@ Característica: Edición de metadatos
     Entonces el sistema me muestra las Causas existentes con carátula
       parecida como sugerencia
     Y puedo elegir una de esas sugerencias en vez de crear una Causa nueva
+
+  Escenario: Completar la Causa sin Circunscripción judicial al editar
+    Dado que tengo abierto un informe en estado Borrador
+    Y completo Carátula y N° de Pieza Sumarial de la Causa
+    Cuando dejo la Circunscripción judicial sin especificar
+    Entonces la Causa se crea o vincula igual, sin Circunscripción judicial
+
+  Escenario: Vincular Vehículos y Personas sin salir de la edición
+    Dado que tengo abierto un informe en estado Borrador para editar
+    Cuando busco un Vehículo por dominio o una Persona por DNI desde la
+      pantalla de edición
+    Y confirmo la vinculación
+    Entonces el Vehículo o la Persona queda vinculado al informe
+    Y no tengo que guardar los cambios y volver al Detalle para vincularlo
 ```
 
 ---

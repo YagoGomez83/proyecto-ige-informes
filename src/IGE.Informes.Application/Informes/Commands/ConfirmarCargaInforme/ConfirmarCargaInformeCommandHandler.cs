@@ -70,8 +70,7 @@ public sealed class ConfirmarCargaInformeCommandHandler(
 
         Causa? causa = null;
         if (!string.IsNullOrWhiteSpace(request.CausaCaratula)
-            && !string.IsNullOrWhiteSpace(request.CausaNroPiezaSumarial)
-            && !string.IsNullOrWhiteSpace(request.CausaCircunscripcionJudicial))
+            && !string.IsNullOrWhiteSpace(request.CausaNroPiezaSumarial))
         {
             causa = new Causa(request.CausaCaratula, request.CausaNroPiezaSumarial, request.CausaCircunscripcionJudicial);
             dbContext.Causas.Add(causa);

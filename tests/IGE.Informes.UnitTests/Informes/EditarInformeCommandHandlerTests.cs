@@ -437,4 +437,36 @@ public class EditarInformeCommandHandlerTests
 
         Assert.Equal(cantidadCausasAntes + 1, dbContext.Causas.Count());
     }
+
+    // HU-02 · escenario "Completar la Causa sin Circunscripción judicial al
+    // editar": con Carátula y N° de Pieza Sumarial completos alcanza para
+    // crear/vincular la Causa — la condición del Handler para tocar la
+    // Causa pasa de exigir los 3 campos a exigir solo esos 2 (ver
+    // docs/03-modelo-dominio.md, "Decisiones ya resueltas").
+    [Fact]
+    public async Task EditarInforme_CompletaCausaSinCircunscripcionJudicial_CreaOVinculaLaCausaIgual()
+    {
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: "AV. INFRACCION LEY 23.737",
+            CausaNroPiezaSumarial: "7070099/26",
+            CausaCircunscripcionJudicial: null);
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informeActualizado = await dbContext.Informes.FindAsync(informe.Id);
+        Assert.NotNull(informeActualizado);
+        Assert.NotNull(informeActualizado.CausaId);
+
+        var causaActualizada = await dbContext.Causas.FindAsync(informeActualizado.CausaId);
+        Assert.NotNull(causaActualizada);
+        Assert.Equal("AV. INFRACCION LEY 23.737", causaActualizada.Caratula);
+        Assert.Equal("7070099/26", causaActualizada.NroPiezaSumarial);
+        Assert.Null(causaActualizada.CircunscripcionJudicial);
+    }
 }

@@ -45,7 +45,7 @@ erDiagram
         guid id
         string caratula
         string nro_pieza_sumarial "el expediente propio de la Dependencia solicitante"
-        string circunscripcion_judicial
+        string circunscripcion_judicial "nullable, Primera|Segunda|Tercera"
     }
 
     TIPO_CAUSA {
@@ -434,3 +434,27 @@ erDiagram
   tipo "AV. ROBO") corresponde a `TipoCausa`, no a la deuda de
   `TipoIncidente` (que necesita códigos numéricos tipo "164 - ROBO",
   dato que este CSV no tiene).
+- **`Causa.CircunscripcionJudicial` pasa a ser opcional** (cambio de
+  invariante, hallazgo del usuario probando la edición): hasta acá era
+  obligatoria (constructor de `Causa` la exigía junto con Carátula y
+  Pieza Sumarial), pero varios expedientes reales no la especifican —
+  con el campo obligatorio, `EditarInformeCommandHandler` ni siquiera
+  creaba/vinculaba la `Causa` si faltaba, perdiendo Carátula y Pieza
+  Sumarial también aunque esos dos sí estuvieran completos. Ahora
+  `Causa.CircunscripcionJudicial` es `string?`, y el constructor solo
+  exige Carátula y Pieza Sumarial no vacíos — el "los 3 campos o
+  ninguno" pasa a ser "los 2 obligatorios, el tercero opcional".
+  Aplicado en los **3 flujos** que crean/editan `Causa` (decisión
+  explícita del usuario, consistencia entre todos): edición de un
+  Informe existente (`EditarInformeCommandHandler`, HU-02), carga
+  individual de un PDF (`ConfirmarCargaInformeCommandHandler`, HU-01) y
+  generación manual de un Informe desde un Caso de Análisis
+  (`GenerarInformeDesdeCasoCommandHandler`, HU-03, sin PDF de por
+  medio). En la UI (`Editar.razor`), el campo se convirtió de
+  `<input>` de texto libre a un `<select>` con 3 valores fijos
+  (`Primera`, `Segunda`, `Tercera`) más la opción vacía — mismo
+  criterio que `TipoCausa`: si el valor ya guardado en una `Causa`
+  existente no matchea ninguna de las 3 opciones (dato histórico como
+  "Primera Circunscripción Judicial", con texto libre previo a este
+  cambio), el `<select>` inyecta una opción extra con el valor actual
+  para no perderlo en silencio al cargar la página.

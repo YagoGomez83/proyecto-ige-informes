@@ -195,6 +195,35 @@ public class ConfirmarCargaInformeCommandHandlerTests
         Assert.Empty(dbContext.Informes);
     }
 
+    // HU-01 · escenario "Confirmar la carga sin Circunscripción judicial":
+    // varios expedientes reales no la traen — con Carátula y N° de Pieza
+    // Sumarial completos alcanza para crear/vincular la Causa, la
+    // Circunscripción queda null/vacía sin bloquear la carga (ver
+    // docs/03-modelo-dominio.md, "Decisiones ya resueltas").
+    [Fact]
+    public async Task ConfirmarCarga_SinCircunscripcionJudicial_GuardaLaCausaConCaratulaYPiezaSumarial()
+    {
+        var (dbContext, caso, dependencia) = await PrepararAsync();
+        var handler = new ConfirmarCargaInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId), new FakeFileStorage(), new FakeAntivirusScanner());
+
+        var command = CrearCommand(caso.Id, dependencia.Id) with
+        {
+            CausaCircunscripcionJudicial = null,
+        };
+
+        var informeId = await handler.Handle(command, CancellationToken.None);
+
+        var informe = await dbContext.Informes.FindAsync(informeId);
+        Assert.NotNull(informe);
+        Assert.NotNull(informe.CausaId);
+
+        var causa = await dbContext.Causas.FindAsync(informe.CausaId);
+        Assert.NotNull(causa);
+        Assert.Equal("AV. INFRACCION LEY 23.737", causa.Caratula);
+        Assert.Equal("7070029/26", causa.NroPiezaSumarial);
+        Assert.Null(causa.CircunscripcionJudicial);
+    }
+
     [Fact]
     public async Task ClamAvNoDisponible_RechazaLaCargaFailClosed()
     {

@@ -79,6 +79,26 @@ public class GenerarInformeDesdeCasoCommandHandlerTests
     }
 
     [Fact]
+    public async Task Genera_el_Informe_con_Causa_sin_Circunscripcion_judicial()
+    {
+        var (dbContext, caso, dependencia) = await PrepararAsync();
+        var handler = new GenerarInformeDesdeCasoCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var informeId = await handler.Handle(
+            new GenerarInformeDesdeCasoCommand(caso.Id, dependencia.Id, "N.N. s/Robo", "7070029/26", null),
+            CancellationToken.None);
+
+        var informe = await dbContext.Informes.FindAsync(informeId);
+        Assert.NotNull(informe);
+        Assert.NotNull(informe.CausaId);
+
+        var causa = await dbContext.Causas.FindAsync(informe.CausaId);
+        Assert.NotNull(causa);
+        Assert.Equal("N.N. s/Robo", causa.Caratula);
+        Assert.Null(causa.CircunscripcionJudicial);
+    }
+
+    [Fact]
     public async Task Rechaza_un_Caso_inexistente()
     {
         var dbContext = new TestAppDbContext();
