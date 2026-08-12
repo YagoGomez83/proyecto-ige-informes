@@ -1,13 +1,16 @@
 @page "/dependencias/{DependenciaId:guid}"
 @attribute [Authorize]
 @using IGE.Informes.Application.Barrios.Queries.ListarBarrios
+@using IGE.Informes.Application.Common.Exceptions
 @using IGE.Informes.Application.Dependencias.Commands.AsignarBarrioADependencia
 @using IGE.Informes.Application.Dependencias.Commands.AsignarUnidadRegionalADependencia
+@using IGE.Informes.Application.Dependencias.Commands.EliminarDependencia
 @using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
 @using IGE.Informes.Application.Dependencias.Queries.ObtenerDependenciaPorId
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
+@inject NavigationManager NavigationManager
 
 <PageTitle>Detalle de Dependencia · IGE 4.0</PageTitle>
 
@@ -23,7 +26,14 @@ else
 {
     <div class="d-flex justify-content-between align-items-start mb-3">
         <h1 class="headline-md mb-1">@_dependencia.Nombre</h1>
-        <a class="btn-secondary" href="dependencias">Volver al listado</a>
+        <div class="d-flex gap-2">
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <button type="button" class="btn-destructive" @onclick="() => _mostrarConfirmacionEliminar = true">Eliminar</button>
+                </Authorized>
+            </AuthorizeView>
+            <a class="btn-secondary" href="dependencias">Volver al listado</a>
+        </div>
     </div>
 
     @if (_mensajeExito is not null)
@@ -111,6 +121,14 @@ else
     {
         <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
     }
+
+    <ConfirmacionModal Visible="_mostrarConfirmacionEliminar"
+                        Titulo="Eliminar Dependencia"
+                        Mensaje="@($"¿Confirmás eliminar la Dependencia \"{_dependencia.Nombre}\"? Esta acción no se puede deshacer.")"
+                        TextoConfirmar="Eliminar"
+                        Procesando="_eliminando"
+                        OnConfirmar="EliminarAsync"
+                        OnCancelar="() => _mostrarConfirmacionEliminar = false" />
 }
 
 @code {
@@ -126,6 +144,8 @@ else
     private string? _errorMessage;
     private string? _mensajeExito;
     private bool _procesando;
+    private bool _mostrarConfirmacionEliminar;
+    private bool _eliminando;
 
     protected override async Task OnInitializedAsync()
     {
@@ -206,6 +226,32 @@ else
         finally
         {
             _procesando = false;
+        }
+    }
+
+    private async Task EliminarAsync()
+    {
+        _errorMessage = null;
+        _eliminando = true;
+
+        try
+        {
+            await Sender.Send(new EliminarDependenciaCommand(DependenciaId));
+            NavigationManager.NavigateTo("dependencias");
+        }
+        catch (ReglaDeNegocioVioladaException ex)
+        {
+            _mostrarConfirmacionEliminar = false;
+            _errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            _mostrarConfirmacionEliminar = false;
+            _errorMessage = "No se pudo eliminar la Dependencia.";
+        }
+        finally
+        {
+            _eliminando = false;
         }
     }
 }

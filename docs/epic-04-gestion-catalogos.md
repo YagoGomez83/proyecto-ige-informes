@@ -32,6 +32,66 @@ Característica: Gestión de Dependencias
     Entonces la Dependencia queda creada igual, sin jurisdicción geográfica
 ```
 
+### Eliminar una Dependencia sin uso (extensión de HU-11)
+
+> Contexto (2026-08-12): al probar el atajo "+ Nueva Dependencia" desde
+> Editar Informe se crearon por error dos Dependencias parecidas
+> ("Departamento Investigaciones" y "División Investigaciones"). No existía
+> ningún mecanismo para sacar la duplicada sin uso salvo tocar la base de
+> datos a mano — esta extensión cierra ese gap con un alta controlada
+> (mismo criterio de auditoría y autorización que el resto de HU-11).
+
+```gherkin
+  Escenario: Eliminar una Dependencia sin uso
+    Dado que existe una Dependencia sin ningún Informe, Cámara, Barrio
+    asignado, ni otra Dependencia que la tenga como Unidad Regional
+    Cuando un Administrador la elimina desde su ficha
+    Entonces la Dependencia deja de existir en el catálogo
+
+  Escenario: No se puede eliminar una Dependencia referenciada por un Informe
+    Dado que una Dependencia es la Dependencia Destino de al menos un Informe
+    Cuando un Administrador intenta eliminarla
+    Entonces el sistema rechaza la eliminación e indica que está en uso
+
+  Escenario: No se puede eliminar una Dependencia referenciada por una Cámara
+    Dado que una Dependencia tiene al menos una Cámara asignada
+    Cuando un Administrador intenta eliminarla
+    Entonces el sistema rechaza la eliminación e indica que está en uso
+
+  Escenario: No se puede eliminar una Dependencia referenciada por un Caso de Análisis
+    Dado que una Dependencia es la Dependencia de al menos un Caso de Análisis
+    Cuando un Administrador intenta eliminarla
+    Entonces el sistema rechaza la eliminación e indica que está en uso
+
+  Escenario: No se puede eliminar una Dependencia referenciada por una Migración Pendiente
+    Dado que una Dependencia es la Dependencia Destino de al menos una
+    Migración Pendiente sin completar todavía
+    Cuando un Administrador intenta eliminarla
+    Entonces el sistema rechaza la eliminación e indica que está en uso
+
+  Escenario: No se puede eliminar una Dependencia que es Unidad Regional de otra
+    Dado que una Dependencia de tipo "UnidadRegional" tiene al menos una
+    Comisaría con ese UnidadRegionalId asignado
+    Cuando un Administrador intenta eliminarla
+    Entonces el sistema rechaza la eliminación e indica que está en uso
+```
+
+### Notas de modelado
+
+- El Handler valida en `Application` (no hay `ON DELETE RESTRICT` a nivel
+  de base para `CasoAnalisis.DependenciaId` ni
+  `MigracionPendiente.DependenciaDestinoId` — solo `Camara.DependenciaId`
+  tiene FK real configurada en `CamaraConfiguration`; ver hallazgo de
+  `security-reviewer` del 2026-08-12). Se optó por chequeo explícito en el
+  Handler para las cuatro entidades que referencian `Dependencia`
+  (`Informe`, `Camara`, `CasoAnalisis`, `MigracionPendiente`) más la
+  propia `Dependencia` vía `UnidadRegionalId`, en vez de agregar FKs a
+  nivel de base — mantiene el chequeo centralizado en un solo lugar y
+  evita tocar migraciones de columnas ya en producción.
+- No hay transacción explícita entre las validaciones (`AnyAsync`) y el
+  borrado (`Remove` + `SaveChangesAsync`) — ver riesgo aceptado en
+  `docs/06-seguridad-amenazas.md`, sección de Tampering.
+
 ---
 
 ## HU-12 · Alta manual de Cámaras con Dependencia opcional
