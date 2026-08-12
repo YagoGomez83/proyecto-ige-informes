@@ -53,6 +53,13 @@ Característica: Edición de metadatos
     Entonces los cambios se guardan y quedan registrados en el log de auditoría
       con mi usuario y fecha/hora
 
+  Escenario: Ver el PDF original mientras edito un informe
+    Dado que tengo abierto un informe en estado Borrador para editar
+    Cuando cargo la pantalla de edición
+    Entonces se muestra el PDF del informe junto al formulario
+    Para que pueda verificar cada dato contra el documento original antes
+      de corregirlo
+
   Escenario: Corregir el ID Registro de un informe en Borrador
     Dado que tengo abierto un informe en estado Borrador con ID Registro "100/2022"
     Cuando corrijo el ID Registro a "101/2022"
