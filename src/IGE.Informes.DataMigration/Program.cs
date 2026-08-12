@@ -29,6 +29,17 @@ if (args.Length > 0 && string.Equals(args[0], "tipos-incidente", StringCompariso
     return await ProgramTiposIncidente.Ejecutar(args[1], args.Contains("--confirmar"));
 }
 
+if (args.Length > 0 && string.Equals(args[0], "tipos-causa", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length < 2)
+    {
+        Console.WriteLine("Uso: dotnet run -- tipos-causa <connection-string> [--confirmar]");
+        return 1;
+    }
+
+    return await ProgramTiposCausa.Ejecutar(args[1], args.Contains("--confirmar"));
+}
+
 if (args.Length > 0 && string.Equals(args[0], "limpiar-relatos", StringComparison.OrdinalIgnoreCase))
 {
     if (args.Length < 2)
@@ -45,6 +56,7 @@ if (args.Length == 0 || !File.Exists(args[0]))
     Console.WriteLine("Uso: dotnet run -- <ruta-al-excel.xlsx> <connection-string> [--confirmar]   (migración de Vehículos)");
     Console.WriteLine("     dotnet run -- camaras <ruta-al-excel.xlsx> <connection-string> [--confirmar]   (migración de Cámaras)");
     Console.WriteLine("     dotnet run -- tipos-incidente <connection-string> [--confirmar]   (migración de Tipos de Incidente)");
+    Console.WriteLine("     dotnet run -- tipos-causa <connection-string> [--confirmar]   (migración de Tipos de Causa)");
     Console.WriteLine("     dotnet run -- limpiar-relatos <connection-string> [--confirmar]   (limpieza de Relatos con ruido de paginación)");
     Console.WriteLine("Sin --confirmar, corre en modo dry-run: solo muestra el reporte, no persiste nada.");
     return 1;

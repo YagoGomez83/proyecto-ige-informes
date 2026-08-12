@@ -27,6 +27,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Causa> Causas => Set<Causa>();
 
+    public DbSet<TipoCausa> TiposCausa => Set<TipoCausa>();
+
     public DbSet<Informe> Informes => Set<Informe>();
 
     public DbSet<MigracionPendiente> MigracionesPendientes => Set<MigracionPendiente>();

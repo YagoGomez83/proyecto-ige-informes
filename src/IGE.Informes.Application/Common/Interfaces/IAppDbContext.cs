@@ -23,6 +23,8 @@ public interface IAppDbContext
 
     DbSet<Causa> Causas { get; }
 
+    DbSet<Domain.Entities.TipoCausa> TiposCausa { get; }
+
     DbSet<Informe> Informes { get; }
 
     DbSet<MigracionPendiente> MigracionesPendientes { get; }

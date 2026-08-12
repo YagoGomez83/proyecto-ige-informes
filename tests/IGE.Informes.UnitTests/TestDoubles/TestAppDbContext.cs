@@ -33,6 +33,8 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
 
     public DbSet<Causa> Causas => Set<Causa>();
 
+    public DbSet<TipoCausa> TiposCausa => Set<TipoCausa>();
+
     public DbSet<Informe> Informes => Set<Informe>();
 
     public DbSet<CategoriaAlerta> CategoriasAlerta => Set<CategoriaAlerta>();

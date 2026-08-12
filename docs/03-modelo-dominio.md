@@ -12,6 +12,7 @@ erDiagram
     LOCALIDAD ||--o{ CAMARA : "ubicacion fisica (opcional)"
     CENTRO_CONTROL_CAMARAS ||--o{ CAMARA : "monitorea"
     CAUSA ||--o{ INFORME : "motiva"
+    TIPO_CAUSA ||--o{ CAUSA : "cataloga la caratula (opcional)"
     TIPO_INCIDENTE ||--o{ CASO_ANALISIS : "clasifica"
     CASO_ANALISIS ||--o{ INFORME : "puede originar 0..N"
     CASO_ANALISIS ||--o{ CASO_ANALISTA : "tiene asignado"
@@ -45,6 +46,11 @@ erDiagram
         string caratula
         string nro_pieza_sumarial "el expediente propio de la Dependencia solicitante"
         string circunscripcion_judicial
+    }
+
+    TIPO_CAUSA {
+        guid id
+        string nombre "ej AV. ROBO, AV. HURTO CALIFICADO, TAREA INVESTIGATIVA"
     }
 
     TIPO_INCIDENTE {
@@ -402,3 +408,29 @@ erDiagram
   (crece indefinidamente, sin botón de "marcar revisado"). Aceptable
   mientras el volumen de migraciones masivas sea manejable a ojo; si se
   vuelve incómodo, agregar esa marca es la siguiente iteración natural.
+- **`TipoCausa` (entidad nueva, catálogo preseteado de carátulas)**: hasta
+  acá, la Carátula de una `Causa` se tipeaba siempre como texto libre en
+  `EditarInformeCommandHandler` — el usuario reportó que esto generaba
+  inconsistencias de transcripción (mismo problema que ya motivó el
+  matching por N° de Pieza Sumarial en vez de por carátula, ver más
+  arriba). `TipoCausa` (`Nombre` único, sin más campos) es un catálogo
+  simple administrado por el Admin (mismo patrón CRUD que `Dependencia`)
+  — la pantalla de edición ahora ofrece un `<select>` con el catálogo en
+  vez de un `<input>` de texto libre para la Carátula. **No es una FK
+  desde `Causa`**: `Causa.Caratula` sigue siendo `string` — `TipoCausa`
+  solo alimenta el `<select>` de la UI (el valor elegido se copia como
+  texto al crear/matchear la `Causa`, igual que antes). Se decidió así
+  para no romper el modelo de `Causa` existente (que no tiene ningún
+  campo `TipoCausaId`) ni el matching ya implementado por Pieza
+  Sumarial, que sigue intacto. Si el Tipo de Causa real no está en el
+  catálogo, se agrega primero desde un atajo inline en la edición del
+  Informe — mismo criterio ya usado para `Dependencia`.
+  Migrado el catálogo histórico real desde
+  `docs/docuemntación-legacy/causes.csv` (82 filas activas, excluidas 3
+  soft-deleted por `deleted_at`) — **esto no es el mismo archivo que
+  contiene el catálogo de `TipoIncidente` pendiente de migrar** (ver
+  `docs/08-plan-implementacion.md`, "Deuda registrada"); a pesar del
+  nombre del archivo ("causes"), el contenido real (carátulas genéricas
+  tipo "AV. ROBO") corresponde a `TipoCausa`, no a la deuda de
+  `TipoIncidente` (que necesita códigos numéricos tipo "164 - ROBO",
+  dato que este CSV no tiene).

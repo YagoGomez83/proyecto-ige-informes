@@ -271,6 +271,67 @@ Característica: Catálogo de Tipos de Incidente
 
 ---
 
+## HU-19 · Catálogo de Tipos de Causa
+
+**Como** Administrador
+**Quiero** mantener un catálogo preseteado de carátulas de Causa (Tipo de
+Causa)
+**Para** que el Analista elija la carátula de un `<select>` al editar un
+Informe, en vez de tipearla como texto libre cada vez
+
+> Contexto: el usuario reportó que tipear la Carátula a mano en cada
+> edición de Informe generaba inconsistencias de transcripción — mismo
+> problema que ya había motivado matchear `Causa` por N° de Pieza
+> Sumarial en vez de por carátula (ver HU-02, docs/03-modelo-dominio.md
+> "Decisiones ya resueltas"). `TipoCausa` no reemplaza a `Causa`: el N°
+> de pieza sumarial y la circunscripción judicial siguen siendo
+> específicos de cada expediente y se completan a mano; solo la
+> Carátula pasa a elegirse de un catálogo preseteado.
+
+```gherkin
+Característica: Catálogo de Tipos de Causa
+
+  Escenario: Alta de un Tipo de Causa
+    Dado que completo el nombre "AV. ROBO CALIFICADO"
+    Cuando confirmo el alta
+    Entonces queda disponible en el selector de Carátula al editar cualquier Informe
+
+  Escenario: Nombre duplicado
+    Dado que ya existe un Tipo de Causa con el nombre "AV. ROBO"
+    Cuando intento dar de alta otro Tipo de Causa con el mismo nombre
+    Entonces el sistema rechaza el alta y me indica que el nombre ya existe
+
+  Escenario: Agregar un Tipo de Causa faltante sin salir de la edición del Informe
+    Dado que soy Administrador y estoy editando un Informe
+    Y el Tipo de Causa real no está en el catálogo
+    Cuando lo creo desde el atajo de la pantalla de edición
+    Entonces queda disponible en el selector y seleccionado automáticamente
+    Para que no tenga que interrumpir la edición del Informe en curso
+```
+
+### Notas de modelado
+
+- Entidad nueva `TipoCausa` (`Nombre` único, sin más campos) —
+  `src/IGE.Informes.Domain/Entities/TipoCausa.cs`.
+- `TipoCausa` **no es una FK desde `Causa`** — `Causa.Caratula` sigue
+  siendo `string`, el `<select>` solo alimenta el valor de texto al
+  crear/editar la Causa del Informe (mismo campo de siempre). No rompe
+  el matching por N° de Pieza Sumarial ya implementado.
+- Mismo criterio de auditoría que Barrio/Localidad/CCC/TipoIncidente:
+  catálogo de baja sensibilidad sin PII, sin auditoría explícita de
+  alta/lectura (el alta sí queda cubierta por el `AuditLogInterceptor`
+  genérico, como toda entidad `IAuditable`).
+- `[Autorizar(Roles.Admin)]` en el Command de alta. Página de listado en
+  `/configuracion` junto al resto de los catálogos; atajo de alta
+  también embebido en `/informes/{id}/editar` (mismo patrón ya usado
+  para `Dependencia`).
+- Migración inicial del catálogo histórico real: 82 carátulas activas
+  desde `docs/docuemntación-legacy/causes.csv` (ver
+  docs/03-modelo-dominio.md — ese archivo **no** es la deuda pendiente
+  de `TipoIncidente`, es un catálogo distinto a pesar del nombre).
+
+---
+
 ## HU-17 · Gestión de Usuarios
 
 **Como** Administrador

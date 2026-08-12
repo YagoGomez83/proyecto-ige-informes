@@ -6,6 +6,8 @@
 @using IGE.Informes.Application.Informes.Commands.EditarInforme
 @using IGE.Informes.Application.Informes.Queries.ObtenerInformePorId
 @using IGE.Informes.Application.Informes.Queries.SugerirCausas
+@using IGE.Informes.Application.TipoCausa.Commands.CrearTipoCausa
+@using IGE.Informes.Application.TipoCausa.Queries.ListarTipoCausa
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
@@ -114,7 +116,53 @@ else
 
                 <div class="mb-3">
                     <label class="label-md" for="causaCaratula">Carátula de la Causa</label>
-                    <input id="causaCaratula" class="form-control" @bind="_causaCaratula" />
+                    <select id="causaCaratula" class="form-control" @bind="_causaCaratula" @bind:after="BuscarSugerenciasDeCausaAsync">
+                        <option value=""></option>
+                        @if (_causaCaratula is not null && _tiposCausa is not null && !_tiposCausa.Any(t => t.Nombre == _causaCaratula))
+                        {
+                            <option value="@_causaCaratula">@_causaCaratula (valor actual, no está en el catálogo)</option>
+                        }
+                        @if (_tiposCausa is not null)
+                        {
+                            @foreach (var tipoCausa in _tiposCausa)
+                            {
+                                <option value="@tipoCausa.Nombre">@tipoCausa.Nombre</option>
+                            }
+                        }
+                    </select>
+
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            @if (!_mostrandoNuevoTipoCausa)
+                            {
+                                <button type="button" class="btn-secondary mt-2" @onclick="() => _mostrandoNuevoTipoCausa = true">
+                                    + Nuevo Tipo de Causa
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="card mt-2 p-3">
+                                    @if (_errorNuevoTipoCausa is not null)
+                                    {
+                                        <div class="status-chip status-chip--alert mb-2">@_errorNuevoTipoCausa</div>
+                                    }
+
+                                    <div class="mb-2">
+                                        <label class="label-md" for="nuevoTipoCausaNombre">Nombre</label>
+                                        <input id="nuevoTipoCausaNombre" class="form-control" placeholder="Ej: AV. ROBO CALIFICADO"
+                                               @bind="_nuevoTipoCausaNombre" />
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn-primary" @onclick="CrearTipoCausaAsync" disabled="@_creandoTipoCausa">
+                                            Guardar Tipo de Causa
+                                        </button>
+                                        <button type="button" class="btn-secondary" @onclick="CancelarNuevoTipoCausa">Cancelar</button>
+                                    </div>
+                                </div>
+                            }
+                        </Authorized>
+                    </AuthorizeView>
                 </div>
 
                 <div class="mb-3">
@@ -193,10 +241,17 @@ else
     private bool _creandoDependencia;
     private string? _errorNuevaDependencia;
 
+    private IReadOnlyCollection<TipoCausaDto>? _tiposCausa;
+    private bool _mostrandoNuevoTipoCausa;
+    private string _nuevoTipoCausaNombre = string.Empty;
+    private bool _creandoTipoCausa;
+    private string? _errorNuevoTipoCausa;
+
     protected override async Task OnInitializedAsync()
     {
         _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
         _dependencias = await Sender.Send(new ListarDependenciasQuery());
+        _tiposCausa = await Sender.Send(new ListarTipoCausaQuery());
 
         if (_informe is not null)
         {
@@ -283,6 +338,51 @@ else
         finally
         {
             _creandoDependencia = false;
+        }
+    }
+
+    private void CancelarNuevoTipoCausa()
+    {
+        _mostrandoNuevoTipoCausa = false;
+        _nuevoTipoCausaNombre = string.Empty;
+        _errorNuevoTipoCausa = null;
+    }
+
+    private async Task CrearTipoCausaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevoTipoCausaNombre))
+        {
+            _errorNuevoTipoCausa = "El nombre es obligatorio.";
+            return;
+        }
+
+        _errorNuevoTipoCausa = null;
+        _creandoTipoCausa = true;
+
+        try
+        {
+            await Sender.Send(new CrearTipoCausaCommand(_nuevoTipoCausaNombre));
+
+            // Recargar el catálogo completo, mismo criterio que
+            // CrearDependenciaAsync — el <select> queda consistente con lo
+            // que devolvería la Query en una carga nueva de la página.
+            _tiposCausa = await Sender.Send(new ListarTipoCausaQuery());
+            _causaCaratula = _nuevoTipoCausaNombre;
+
+            CancelarNuevoTipoCausa();
+            await BuscarSugerenciasDeCausaAsync();
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorNuevoTipoCausa = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorNuevoTipoCausa = "No se pudo crear el Tipo de Causa. Verificá que el nombre no esté repetido.";
+        }
+        finally
+        {
+            _creandoTipoCausa = false;
         }
     }
 

@@ -1,0 +1,56 @@
+@page "/tipos-causa"
+@attribute [Authorize]
+@using IGE.Informes.Application.TipoCausa.Queries.ListarTipoCausa
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Tipos de Causa · IGE 4.0</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="headline-md">Tipos de Causa</h1>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <a class="btn-primary" href="tipos-causa/nuevo">Nuevo Tipo de Causa</a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@if (_tiposCausa is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_tiposCausa.Count == 0)
+{
+    <div class="card">
+        <p class="body-md mb-0">Todavía no hay tipos de causa cargados.</p>
+    </div>
+}
+else
+{
+    <div class="card p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="label-md">Nombre</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tipoCausa in _tiposCausa)
+                {
+                    <tr>
+                        <td class="body-md">@tipoCausa.Nombre</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<TipoCausaDto>? _tiposCausa;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tiposCausa = await Sender.Send(new ListarTipoCausaQuery());
+    }
+}
