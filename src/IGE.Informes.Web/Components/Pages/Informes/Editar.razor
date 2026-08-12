@@ -8,9 +8,12 @@
 @using IGE.Informes.Application.Informes.Commands.VincularVehiculoInforme
 @using IGE.Informes.Application.Informes.Queries.ObtenerInformePorId
 @using IGE.Informes.Application.Informes.Queries.SugerirCausas
+@using IGE.Informes.Application.CategoriasAlerta.Queries.ListarCategoriasAlerta
+@using IGE.Informes.Application.Personas.Commands.RegistrarPersona
 @using IGE.Informes.Application.Personas.Queries.BuscarPersonas
 @using IGE.Informes.Application.TipoCausa.Commands.CrearTipoCausa
 @using IGE.Informes.Application.TipoCausa.Queries.ListarTipoCausa
+@using IGE.Informes.Application.Vehiculos.Commands.RegistrarVehiculo
 @using IGE.Informes.Application.Vehiculos.Queries.BuscarVehiculos
 @using IGE.Informes.Application.Vehiculos.Queries.ListarVehiculos
 @using IGE.Informes.Domain.Entities
@@ -279,6 +282,92 @@ else
                         </ul>
                     }
                 }
+
+                @if (!_mostrandoNuevoVehiculo)
+                {
+                    <button type="button" class="btn-secondary mt-2" @onclick="() => _mostrandoNuevoVehiculo = true">
+                        + Nuevo Vehículo
+                    </button>
+                }
+                else
+                {
+                    <div class="card mt-2 p-3">
+                        @if (_errorNuevoVehiculo is not null)
+                        {
+                            <div class="status-chip status-chip--alert mb-2">@_errorNuevoVehiculo</div>
+                        }
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevoVehiculoMarca">Marca</label>
+                            <input id="nuevoVehiculoMarca" class="form-control" @bind="_nuevoVehiculoMarca" />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevoVehiculoModelo">Modelo</label>
+                            <input id="nuevoVehiculoModelo" class="form-control" @bind="_nuevoVehiculoModelo" />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevoVehiculoColor">Color</label>
+                            <input id="nuevoVehiculoColor" class="form-control" @bind="_nuevoVehiculoColor" />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevoVehiculoDominio">Dominio (opcional)</label>
+                            <input id="nuevoVehiculoDominio" class="form-control mono-data" @bind="_nuevoVehiculoDominio" />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevoVehiculoDominioCerteza">Certeza del dominio</label>
+                            <select id="nuevoVehiculoDominioCerteza" class="form-control" @bind="_nuevoVehiculoDominioCerteza">
+                                <option value="@CertezaDominio.Confirmado">Confirmado</option>
+                                <option value="@CertezaDominio.Parcial">Parcial</option>
+                                <option value="@CertezaDominio.Incierto">Incierto</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevoVehiculoAccion">Acción a realizar</label>
+                            <select id="nuevoVehiculoAccion" class="form-control" @bind="_nuevoVehiculoAccionARealizar">
+                                <option value="@AccionARealizar.Detener">Detener</option>
+                                <option value="@AccionARealizar.Identificar">Identificar</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevoVehiculoAvisarA">Avisar a</label>
+                            <input id="nuevoVehiculoAvisarA" class="form-control" @bind="_nuevoVehiculoAvisarA" />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md">Categorías de alerta</label>
+                            @if (_categoriasAlerta is not null)
+                            {
+                                @foreach (var categoria in _categoriasAlerta)
+                                {
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="@($"nuevoVehiculoCategoria-{categoria.Id}")"
+                                               checked="@_nuevoVehiculoCategoriasAlertaIds.Contains(categoria.Id)"
+                                               @onchange="@(e => AlternarCategoriaAlertaNuevoVehiculo(categoria.Id, (bool)e.Value!))" />
+                                        <label class="form-check-label body-sm" for="@($"nuevoVehiculoCategoria-{categoria.Id}")">@categoria.Nombre</label>
+                                    </div>
+                                }
+                            }
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevoVehiculoCaracteristicas">Características (opcional)</label>
+                            <textarea id="nuevoVehiculoCaracteristicas" class="form-control" rows="2" @bind="_nuevoVehiculoCaracteristicas"></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn-primary" @onclick="CrearYVincularVehiculoAsync" disabled="@_creandoVehiculo">
+                                Guardar y vincular
+                            </button>
+                            <button type="button" class="btn-secondary" @onclick="CancelarNuevoVehiculo">Cancelar</button>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
 
@@ -329,6 +418,55 @@ else
                         </ul>
                     }
                 }
+
+                @if (!_mostrandoNuevaPersona)
+                {
+                    <button type="button" class="btn-secondary mt-2" @onclick="() => _mostrandoNuevaPersona = true">
+                        + Nueva Persona
+                    </button>
+                }
+                else
+                {
+                    <div class="card mt-2 p-3">
+                        @if (_errorNuevaPersona is not null)
+                        {
+                            <div class="status-chip status-chip--alert mb-2">@_errorNuevaPersona</div>
+                        }
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevaPersonaRol">Rol</label>
+                            <select id="nuevaPersonaRol" class="form-control" @bind="_nuevaPersonaRol">
+                                <option value="@RolPersona.Denunciante">Denunciante</option>
+                                <option value="@RolPersona.Damnificado">Damnificado</option>
+                                <option value="@RolPersona.Sospechoso">Sospechoso</option>
+                                <option value="@RolPersona.ConductorIdentificado">Conductor identificado</option>
+                                <option value="@RolPersona.Testigo">Testigo</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevaPersonaNombre">Nombre (dejar vacío si no está identificada)</label>
+                            <input id="nuevaPersonaNombre" class="form-control" @bind="_nuevaPersonaNombre" />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevaPersonaDni">DNI (opcional)</label>
+                            <input id="nuevaPersonaDni" class="form-control mono-data" @bind="_nuevaPersonaDni" />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="label-md" for="nuevaPersonaCaracteristicas">Características (obligatorio si no está identificada)</label>
+                            <textarea id="nuevaPersonaCaracteristicas" class="form-control" rows="2" @bind="_nuevaPersonaCaracteristicas"></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn-primary" @onclick="CrearYVincularPersonaAsync" disabled="@_creandoPersona">
+                                Guardar y vincular
+                            </button>
+                            <button type="button" class="btn-secondary" @onclick="CancelarNuevaPersona">Cancelar</button>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -371,11 +509,35 @@ else
     private IReadOnlyCollection<PersonaBusquedaResultDto>? _resultadosPersonas;
     private bool _vinculando;
 
+    private IReadOnlyCollection<CategoriaAlertaDto>? _categoriasAlerta;
+
+    private bool _mostrandoNuevoVehiculo;
+    private string _nuevoVehiculoMarca = string.Empty;
+    private string _nuevoVehiculoModelo = string.Empty;
+    private string _nuevoVehiculoColor = string.Empty;
+    private string? _nuevoVehiculoDominio;
+    private CertezaDominio _nuevoVehiculoDominioCerteza = CertezaDominio.Incierto;
+    private AccionARealizar _nuevoVehiculoAccionARealizar = AccionARealizar.Detener;
+    private string _nuevoVehiculoAvisarA = string.Empty;
+    private string? _nuevoVehiculoCaracteristicas;
+    private readonly List<Guid> _nuevoVehiculoCategoriasAlertaIds = [];
+    private bool _creandoVehiculo;
+    private string? _errorNuevoVehiculo;
+
+    private bool _mostrandoNuevaPersona;
+    private RolPersona _nuevaPersonaRol = RolPersona.Testigo;
+    private string? _nuevaPersonaNombre;
+    private string? _nuevaPersonaDni;
+    private string? _nuevaPersonaCaracteristicas;
+    private bool _creandoPersona;
+    private string? _errorNuevaPersona;
+
     protected override async Task OnInitializedAsync()
     {
         _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
         _dependencias = await Sender.Send(new ListarDependenciasQuery());
         _tiposCausa = await Sender.Send(new ListarTipoCausaQuery());
+        _categoriasAlerta = await Sender.Send(new ListarCategoriasAlertaQuery());
 
         if (_informe is not null)
         {
@@ -575,6 +737,161 @@ else
         finally
         {
             _vinculando = false;
+        }
+    }
+
+    private void AlternarCategoriaAlertaNuevoVehiculo(Guid categoriaId, bool marcada)
+    {
+        if (marcada)
+        {
+            _nuevoVehiculoCategoriasAlertaIds.Add(categoriaId);
+        }
+        else
+        {
+            _nuevoVehiculoCategoriasAlertaIds.Remove(categoriaId);
+        }
+    }
+
+    private void CancelarNuevoVehiculo()
+    {
+        _mostrandoNuevoVehiculo = false;
+        _nuevoVehiculoMarca = string.Empty;
+        _nuevoVehiculoModelo = string.Empty;
+        _nuevoVehiculoColor = string.Empty;
+        _nuevoVehiculoDominio = null;
+        _nuevoVehiculoDominioCerteza = CertezaDominio.Incierto;
+        _nuevoVehiculoAccionARealizar = AccionARealizar.Detener;
+        _nuevoVehiculoAvisarA = string.Empty;
+        _nuevoVehiculoCaracteristicas = null;
+        _nuevoVehiculoCategoriasAlertaIds.Clear();
+        _errorNuevoVehiculo = null;
+    }
+
+    private async Task CrearYVincularVehiculoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevoVehiculoMarca)
+            || string.IsNullOrWhiteSpace(_nuevoVehiculoModelo)
+            || string.IsNullOrWhiteSpace(_nuevoVehiculoColor)
+            || string.IsNullOrWhiteSpace(_nuevoVehiculoAvisarA))
+        {
+            _errorNuevoVehiculo = "Completá Marca, Modelo, Color y a quién avisar.";
+            return;
+        }
+
+        _errorNuevoVehiculo = null;
+        _creandoVehiculo = true;
+
+        Guid vehiculoId;
+        try
+        {
+            vehiculoId = await Sender.Send(new RegistrarVehiculoCommand(
+                _nuevoVehiculoMarca,
+                _nuevoVehiculoModelo,
+                _nuevoVehiculoColor,
+                _nuevoVehiculoDominioCerteza,
+                _nuevoVehiculoAccionARealizar,
+                _nuevoVehiculoAvisarA,
+                string.IsNullOrWhiteSpace(_nuevoVehiculoDominio) ? null : _nuevoVehiculoDominio,
+                string.IsNullOrWhiteSpace(_nuevoVehiculoCaracteristicas) ? null : _nuevoVehiculoCaracteristicas,
+                _nuevoVehiculoCategoriasAlertaIds));
+        }
+        catch (EntidadDuplicadaException ex)
+        {
+            _errorNuevoVehiculo = ex.Message;
+            _creandoVehiculo = false;
+            return;
+        }
+        catch (Exception)
+        {
+            _errorNuevoVehiculo = "No se pudo crear el Vehículo. Verificá los datos e intentá de nuevo.";
+            _creandoVehiculo = false;
+            return;
+        }
+
+        // El Vehículo ya quedó creado y persistido en el paso anterior — si
+        // falla acá, no repetir "no se pudo crear": el usuario tiene que
+        // saber que ya existe (para no reintentar y duplicarlo) y que solo
+        // falta vincularlo, buscándolo por Dominio en esta misma pantalla.
+        try
+        {
+            await Sender.Send(new VincularVehiculoInformeCommand(InformeId, vehiculoId));
+            _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
+
+            CancelarNuevoVehiculo();
+        }
+        catch (Exception)
+        {
+            _errorNuevoVehiculo = "El Vehículo se creó correctamente, pero no se pudo vincular a este Informe " +
+                "(puede que el Informe haya cambiado de estado mientras tanto). Buscalo por Dominio arriba para vincularlo.";
+        }
+        finally
+        {
+            _creandoVehiculo = false;
+        }
+    }
+
+    private void CancelarNuevaPersona()
+    {
+        _mostrandoNuevaPersona = false;
+        _nuevaPersonaRol = RolPersona.Testigo;
+        _nuevaPersonaNombre = null;
+        _nuevaPersonaDni = null;
+        _nuevaPersonaCaracteristicas = null;
+        _errorNuevaPersona = null;
+    }
+
+    private async Task CrearYVincularPersonaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevaPersonaNombre) && string.IsNullOrWhiteSpace(_nuevaPersonaCaracteristicas))
+        {
+            _errorNuevaPersona = "Completá el Nombre, o las Características si la Persona no está identificada.";
+            return;
+        }
+
+        _errorNuevaPersona = null;
+        _creandoPersona = true;
+
+        Guid personaId;
+        try
+        {
+            personaId = await Sender.Send(new RegistrarPersonaCommand(
+                _nuevaPersonaRol,
+                string.IsNullOrWhiteSpace(_nuevaPersonaNombre) ? null : _nuevaPersonaNombre,
+                string.IsNullOrWhiteSpace(_nuevaPersonaDni) ? null : _nuevaPersonaDni,
+                string.IsNullOrWhiteSpace(_nuevaPersonaCaracteristicas) ? null : _nuevaPersonaCaracteristicas));
+        }
+        catch (EntidadDuplicadaException ex)
+        {
+            _errorNuevaPersona = ex.Message;
+            _creandoPersona = false;
+            return;
+        }
+        catch (Exception)
+        {
+            _errorNuevaPersona = "No se pudo crear la Persona. Verificá los datos e intentá de nuevo.";
+            _creandoPersona = false;
+            return;
+        }
+
+        // La Persona ya quedó creada y persistida en el paso anterior — si
+        // falla acá, no repetir "no se pudo crear": el usuario tiene que
+        // saber que ya existe (para no reintentar y duplicarla) y que solo
+        // falta vincularla, buscándola por DNI en esta misma pantalla.
+        try
+        {
+            await Sender.Send(new VincularPersonaInformeCommand(InformeId, personaId));
+            _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
+
+            CancelarNuevaPersona();
+        }
+        catch (Exception)
+        {
+            _errorNuevaPersona = "La Persona se creó correctamente, pero no se pudo vincular a este Informe " +
+                "(puede que el Informe haya cambiado de estado mientras tanto). Buscala por DNI arriba para vincularla.";
+        }
+        finally
+        {
+            _creandoPersona = false;
         }
     }
 

@@ -59,4 +59,44 @@ public class RegistrarVehiculoCommandHandlerTests
         var vehiculo = await dbContext.Vehiculos.FindAsync(vehiculoId);
         Assert.Empty(vehiculo!.CategoriasAlertaIds);
     }
+
+    [Fact]
+    public async Task RegistrarVehiculo_ConDominioYaExistente_DebeRechazarAlta()
+    {
+        var dbContext = new TestAppDbContext();
+        dbContext.Vehiculos.Add(new Vehiculo(
+            "Volkswagen", "Gol", "Gris", CertezaDominio.Confirmado, AccionARealizar.Detener, "Comisaría 2°",
+            "IAK796", null));
+        await dbContext.SaveChangesAsync();
+
+        var handler = new RegistrarVehiculoCommandHandler(dbContext);
+
+        await Assert.ThrowsAsync<EntidadDuplicadaException>(() => handler.Handle(
+            new RegistrarVehiculoCommand(
+                "Ford", "Fiesta", "Rojo", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 3°",
+                "IAK796", null, []),
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RegistrarVehiculo_VariosSinDominioIdentificado_DebePermitirElAlta()
+    {
+        var dbContext = new TestAppDbContext();
+        dbContext.Vehiculos.Add(new Vehiculo(
+            "Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°",
+            null, "Vehículo sin dominio identificado"));
+        await dbContext.SaveChangesAsync();
+
+        var handler = new RegistrarVehiculoCommandHandler(dbContext);
+
+        var vehiculoId = await handler.Handle(
+            new RegistrarVehiculoCommand(
+                "Ford", "Fiesta", "Rojo", CertezaDominio.Incierto, AccionARealizar.Identificar, "Comisaría 3°",
+                null, "Otro vehículo sin dominio identificado", []),
+            CancellationToken.None);
+
+        var vehiculo = await dbContext.Vehiculos.FindAsync(vehiculoId);
+        Assert.NotNull(vehiculo);
+        Assert.Null(vehiculo.Dominio);
+    }
 }

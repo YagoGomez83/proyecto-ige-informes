@@ -10,6 +10,15 @@ public sealed class RegistrarVehiculoCommandHandler(IAppDbContext dbContext) : I
 {
     public async Task<Guid> Handle(RegistrarVehiculoCommand request, CancellationToken cancellationToken)
     {
+        if (!string.IsNullOrWhiteSpace(request.Dominio))
+        {
+            var yaExiste = await dbContext.Vehiculos.AnyAsync(v => v.Dominio == request.Dominio, cancellationToken);
+            if (yaExiste)
+            {
+                throw new EntidadDuplicadaException(nameof(Vehiculo), nameof(Vehiculo.Dominio), request.Dominio);
+            }
+        }
+
         foreach (var categoriaAlertaId in request.CategoriasAlertaIds)
         {
             var existe = await dbContext.CategoriasAlerta.AnyAsync(c => c.Id == categoriaAlertaId, cancellationToken);

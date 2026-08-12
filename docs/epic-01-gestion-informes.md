@@ -204,7 +204,79 @@ Característica: Edición de metadatos
     Y confirmo la vinculación
     Entonces el Vehículo o la Persona queda vinculado al informe
     Y no tengo que guardar los cambios y volver al Detalle para vincularlo
+
+  Escenario: Crear un Vehículo nuevo sin salir de la edición
+    Dado que tengo abierto un informe en estado Borrador para editar
+    Y el Vehículo real no existe todavía en el catálogo
+    Cuando lo creo desde el atajo "+ Nuevo Vehículo" de la pantalla de edición
+    Entonces el Vehículo queda creado y vinculado automáticamente al informe
+    Y no tengo que interrumpir la edición del informe en curso
+
+  Escenario: Rechazar un Vehículo nuevo con el mismo Dominio que uno existente
+    Dado que ya existe un Vehículo con Dominio "IAK796"
+    Cuando intento crear otro Vehículo con el mismo Dominio "IAK796" desde
+      el atajo de la pantalla de edición
+    Entonces el sistema rechaza el alta y me indica que el Dominio ya existe
+
+  Escenario: Crear varios Vehículos sin Dominio identificado
+    Dado que ya existe un Vehículo sin Dominio (sin identificar)
+    Cuando creo otro Vehículo también sin Dominio desde el atajo
+    Entonces el sistema permite el alta, porque no hay Dominio concreto
+      que pueda estar duplicado
+
+  Escenario: Crear una Persona nueva sin salir de la edición
+    Dado que tengo abierto un informe en estado Borrador para editar
+    Y la Persona real no existe todavía en el catálogo
+    Cuando la creo desde el atajo "+ Nueva Persona" de la pantalla de edición
+    Entonces la Persona queda creada y vinculada automáticamente al informe
+    Y no tengo que interrumpir la edición del informe en curso
+
+  Escenario: Rechazar una Persona nueva con el mismo DNI que una existente
+    Dado que ya existe una Persona con DNI "30111222"
+    Cuando intento crear otra Persona con el mismo DNI "30111222" desde
+      el atajo de la pantalla de edición
+    Entonces el sistema rechaza el alta y me indica que el DNI ya existe
+
+  Escenario: Crear varias Personas sin identificar
+    Dado que ya existe una Persona sin DNI (sin identificar, solo con
+      características descriptivas)
+    Cuando creo otra Persona también sin DNI desde el atajo
+    Entonces el sistema permite el alta, porque no hay DNI concreto que
+      pueda estar duplicado
 ```
+
+### Notas de modelado
+
+- No se agrega ninguna entidad nueva. `RegistrarVehiculoCommandHandler` y
+  `RegistrarPersonaCommandHandler` ganan un chequeo `AnyAsync` por
+  `Dominio`/`Dni` **solo cuando el valor viene completo** — ambos campos
+  siguen siendo opcionales en `Vehiculo`/`Persona` (un Vehículo/Persona
+  sin identificar puede coexistir con otros también sin identificar, sin
+  disparar el rechazo). Rechazo vía `EntidadDuplicadaException`, mismo
+  patrón ya usado para `Dependencia.Nombre`/`TipoCausa.Nombre`.
+- El atajo "+ Nuevo Vehículo"/"+ Nueva Persona" en `Editar.razor` reusa
+  exactamente los mismos campos que las páginas de alta ya existentes
+  (`/vehiculos/nuevo`, `/personas/nueva`) — mismo patrón inline ya usado
+  para "+ Nueva Dependencia" (HU-02) y "+ Nuevo Tipo de Causa" (HU-19):
+  panel desplegable, sin salir de la edición. Al guardar, crea el
+  Vehículo/Persona y lo vincula al Informe en una sola operación (dos
+  Commands en secuencia desde el componente: `RegistrarVehiculoCommand`/
+  `RegistrarPersonaCommand` seguido de
+  `VincularVehiculoInformeCommand`/`VincularPersonaInformeCommand`, que ya
+  es idempotente si por algún motivo se reintenta).
+- No se agrega validación de duplicado en ningún otro punto de alta de
+  Vehículo/Persona fuera de este atajo (ej. la página `/vehiculos/nuevo`
+  ya existente) — se aplica en el Handler, no en la UI, así que cubre
+  automáticamente todos los caminos que llaman al mismo Command.
+- El atajo hace dos Commands en secuencia (crear, después vincular) — si
+  el primero (crear) falla, el mensaje de error es el esperable ("no se
+  pudo crear"). Si el primero tiene éxito pero el segundo (vincular)
+  falla (ej. el Informe pasó a `Publicado` en el medio), el Vehículo/
+  Persona **ya quedó creado y persistido** — el mensaje de error lo
+  aclara explícitamente en vez de decir "no se pudo crear" (que sería
+  falso y podría llevar a reintentar, creando un duplicado real), e
+  indica buscarlo por Dominio/DNI para vincularlo manualmente. Hallazgo
+  del security-reviewer.
 
 ---
 
