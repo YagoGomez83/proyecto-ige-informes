@@ -37,7 +37,7 @@ public class ListarMigracionesPendientesQueryHandlerTests
             "701/2022", "migraciones-pendientes/701-2022.pdf", dependencia.Id, Guid.NewGuid(), null, null, "Relato B"));
         await dbContext.SaveChangesAsync();
 
-        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger());
+        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger(), new FakeFileStorage());
 
         var resultado = await handler.Handle(new ListarMigracionesPendientesQuery(), CancellationToken.None);
 
@@ -54,7 +54,7 @@ public class ListarMigracionesPendientesQueryHandlerTests
             null, "migraciones-pendientes/sin-id.pdf", dependencia.Id, Guid.NewGuid(), relato: "Relato sin ID"));
         await dbContext.SaveChangesAsync();
 
-        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger());
+        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger(), new FakeFileStorage());
 
         var resultado = await handler.Handle(new ListarMigracionesPendientesQuery(), CancellationToken.None);
 
@@ -66,7 +66,7 @@ public class ListarMigracionesPendientesQueryHandlerTests
     public async Task ListarMigracionesPendientes_SinMigracionesPendientes_DevuelveListaVacia()
     {
         var dbContext = new TestAppDbContext();
-        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger());
+        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger(), new FakeFileStorage());
 
         var resultado = await handler.Handle(new ListarMigracionesPendientesQuery(), CancellationToken.None);
 
@@ -89,11 +89,31 @@ public class ListarMigracionesPendientesQueryHandlerTests
         dbContext.MigracionesPendientes.Remove(migracionPendiente);
         await dbContext.SaveChangesAsync();
 
-        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger());
+        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger(), new FakeFileStorage());
 
         var resultado = await handler.Handle(new ListarMigracionesPendientesQuery(), CancellationToken.None);
 
         Assert.Empty(resultado);
+    }
+
+    [Fact]
+    public async Task ListarMigracionesPendientes_GeneraUnaUrlPrefirmadaDeDescargaPorCadaMigracion()
+    {
+        // HU-04, escenario "Ver el PDF original al completar una Migración
+        // Pendiente" — la pantalla necesita una URL para el visor embebido,
+        // mismo criterio que ObtenerInformePorIdQueryHandler.
+        var (dbContext, dependencia) = await PrepararAsync();
+        dbContext.MigracionesPendientes.Add(new MigracionPendiente(
+            "700/2022", "migraciones-pendientes/700-2022.pdf", dependencia.Id, Guid.NewGuid()));
+        await dbContext.SaveChangesAsync();
+
+        var fileStorage = new FakeFileStorage();
+        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, new FakeAuditLogger(), fileStorage);
+
+        var resultado = await handler.Handle(new ListarMigracionesPendientesQuery(), CancellationToken.None);
+
+        var migracion = Assert.Single(resultado);
+        Assert.Equal("https://fake-storage.local/migraciones-pendientes/700-2022.pdf", migracion.PdfUrl);
     }
 
     [Fact]
@@ -118,7 +138,7 @@ public class ListarMigracionesPendientesQueryHandlerTests
         await dbContext.SaveChangesAsync();
 
         var auditLogger = new FakeAuditLogger();
-        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, auditLogger);
+        var handler = new ListarMigracionesPendientesQueryHandler(dbContext, auditLogger, new FakeFileStorage());
 
         await handler.Handle(new ListarMigracionesPendientesQuery(), CancellationToken.None);
 

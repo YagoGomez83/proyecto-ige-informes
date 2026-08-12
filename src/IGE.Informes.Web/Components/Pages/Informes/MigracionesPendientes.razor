@@ -39,6 +39,7 @@ else
                     <th class="label-md">Causa</th>
                     <th class="label-md">Fecha de análisis</th>
                     <th class="label-md"></th>
+                    <th class="label-md"></th>
                 </tr>
             </thead>
             <tbody>
@@ -64,6 +65,12 @@ else
                                    @onchange="@(e => ActualizarFechaIngresada(migracion.Id, e.Value?.ToString()))" />
                         </td>
                         <td class="body-sm">
+                            <button type="button" class="btn-secondary"
+                                    @onclick="@(() => AlternarVisorPdf(migracion.Id))">
+                                @(_migracionIdConVisorAbierto == migracion.Id ? "Ocultar PDF" : "Ver PDF")
+                            </button>
+                        </td>
+                        <td class="body-sm">
                             <button type="button" class="btn-primary"
                                     @onclick="@(() => CompletarAsync(migracion))"
                                     disabled="@(_procesando || !PuedeCompletar(migracion))">
@@ -71,6 +78,14 @@ else
                             </button>
                         </td>
                     </tr>
+                    @if (_migracionIdConVisorAbierto == migracion.Id)
+                    {
+                        <tr>
+                            <td colspan="5">
+                                <iframe src="@migracion.PdfUrl" class="migracion-pendiente-pdf-visor" title="Vista previa del PDF de la migración pendiente"></iframe>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
@@ -83,6 +98,12 @@ else
     private readonly Dictionary<Guid, string> _idsRegistroIngresados = [];
     private bool _procesando;
     private string? _errorMessage;
+    private Guid? _migracionIdConVisorAbierto;
+
+    private void AlternarVisorPdf(Guid id)
+    {
+        _migracionIdConVisorAbierto = _migracionIdConVisorAbierto == id ? null : id;
+    }
 
     protected override async Task OnInitializedAsync()
     {

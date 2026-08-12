@@ -143,6 +143,15 @@ Característica: Migración masiva
       fecha ingresada
     Y la Migración Pendiente deja de listarse
 
+  Escenario: Ver el PDF original al completar una Migración Pendiente
+    Dado que existe una Migración Pendiente por Fecha de Análisis y/o ID
+      Registro no reconocidos
+    Cuando el Administrador hace click en "Ver PDF" desde
+      /informes/migrar/pendientes
+    Entonces se muestra el PDF original guardado en la migración
+    Para que pueda leer la fecha o el ID Registro directamente del
+      documento en vez de completarlos a ciegas
+
   Escenario: PDF con ID Registro no reconocido también queda pendiente, no se pierde
     Dado que un PDF del lote no tiene ID Registro reconocido
     Cuando se procesa ese PDF durante la migración
