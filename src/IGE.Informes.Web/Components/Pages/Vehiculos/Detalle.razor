@@ -132,7 +132,7 @@ else
     <div class="card mb-3">
         <h2 class="headline-sm mb-2">Imágenes</h2>
 
-        <InputFile OnChange="AgregarImagenesAsync" accept="image/jpeg,image/png,image/webp" multiple disabled="@_subiendoImagen" />
+        <InputFile class="form-control" OnChange="AgregarImagenesAsync" accept="image/jpeg,image/png,image/webp" multiple disabled="@_subiendoImagen" />
         @if (_subiendoImagen)
         {
             <p class="body-sm mt-2">Subiendo...</p>
