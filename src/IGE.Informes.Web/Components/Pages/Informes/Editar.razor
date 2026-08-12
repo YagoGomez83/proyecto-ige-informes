@@ -1,6 +1,7 @@
 @page "/informes/{InformeId:guid}/editar"
 @attribute [Authorize]
 @using IGE.Informes.Application.Common.Exceptions
+@using IGE.Informes.Application.Dependencias.Commands.CrearDependencia
 @using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
 @using IGE.Informes.Application.Informes.Commands.EditarInforme
 @using IGE.Informes.Application.Informes.Queries.ObtenerInformePorId
@@ -65,6 +66,50 @@ else
                             }
                         }
                     </select>
+
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            @if (!_mostrandoNuevaDependencia)
+                            {
+                                <button type="button" class="btn-secondary mt-2" @onclick="() => _mostrandoNuevaDependencia = true">
+                                    + Nueva Dependencia
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="card mt-2 p-3">
+                                    @if (_errorNuevaDependencia is not null)
+                                    {
+                                        <div class="status-chip status-chip--alert mb-2">@_errorNuevaDependencia</div>
+                                    }
+
+                                    <div class="mb-2">
+                                        <label class="label-md" for="nuevaDependenciaNombre">Nombre</label>
+                                        <input id="nuevaDependenciaNombre" class="form-control" placeholder="Ej: Departamento Investigaciones"
+                                               @bind="_nuevaDependenciaNombre" />
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label class="label-md" for="nuevaDependenciaTipo">Tipo</label>
+                                        <select id="nuevaDependenciaTipo" class="form-control" @bind="_nuevaDependenciaTipo">
+                                            <option value="@TipoDependencia.Comisaria">Comisaría</option>
+                                            <option value="@TipoDependencia.Fiscalia">Fiscalía</option>
+                                            <option value="@TipoDependencia.Juzgado">Juzgado</option>
+                                            <option value="@TipoDependencia.Division">División</option>
+                                            <option value="@TipoDependencia.UnidadRegional">Unidad Regional</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn-primary" @onclick="CrearDependenciaAsync" disabled="@_creandoDependencia">
+                                            Guardar Dependencia
+                                        </button>
+                                        <button type="button" class="btn-secondary" @onclick="CancelarNuevaDependencia">Cancelar</button>
+                                    </div>
+                                </div>
+                            }
+                        </Authorized>
+                    </AuthorizeView>
                 </div>
 
                 <div class="mb-3">
@@ -142,6 +187,12 @@ else
     private string? _circunscripcion;
     private IReadOnlyCollection<CausaSugeridaDto>? _causasSugeridas;
 
+    private bool _mostrandoNuevaDependencia;
+    private string _nuevaDependenciaNombre = string.Empty;
+    private TipoDependencia _nuevaDependenciaTipo = TipoDependencia.Comisaria;
+    private bool _creandoDependencia;
+    private string? _errorNuevaDependencia;
+
     protected override async Task OnInitializedAsync()
     {
         _informe = await Sender.Send(new ObtenerInformePorIdQuery(InformeId));
@@ -186,6 +237,53 @@ else
         _piezaSumarial = sugerencia.NroPiezaSumarial;
         _circunscripcion = sugerencia.CircunscripcionJudicial;
         _causasSugeridas = null;
+    }
+
+    private void CancelarNuevaDependencia()
+    {
+        _mostrandoNuevaDependencia = false;
+        _nuevaDependenciaNombre = string.Empty;
+        _nuevaDependenciaTipo = TipoDependencia.Comisaria;
+        _errorNuevaDependencia = null;
+    }
+
+    private async Task CrearDependenciaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevaDependenciaNombre))
+        {
+            _errorNuevaDependencia = "El nombre es obligatorio.";
+            return;
+        }
+
+        _errorNuevaDependencia = null;
+        _creandoDependencia = true;
+
+        try
+        {
+            var dependenciaId = await Sender.Send(new CrearDependenciaCommand(_nuevaDependenciaNombre, _nuevaDependenciaTipo));
+
+            // Recargar el catálogo completo (en vez de agregar la entrada a
+            // mano a _dependencias) para que el <select> quede consistente
+            // con lo que devolvería la Query en una carga nueva de la
+            // página — mismo criterio que ListarDependenciasQuery ya usa
+            // en OnInitializedAsync.
+            _dependencias = await Sender.Send(new ListarDependenciasQuery());
+            _dependenciaDestinoId = dependenciaId.ToString();
+
+            CancelarNuevaDependencia();
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorNuevaDependencia = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorNuevaDependencia = "No se pudo crear la Dependencia. Verificá que el nombre no esté repetido.";
+        }
+        finally
+        {
+            _creandoDependencia = false;
+        }
     }
 
     private async Task GuardarAsync()

@@ -60,6 +60,16 @@ Característica: Edición de metadatos
     Para que pueda verificar cada dato contra el documento original antes
       de corregirlo
 
+  Escenario: Crear una Dependencia nueva sin salir de la edición
+    Dado que soy Administrador y tengo abierto un informe en estado
+      Borrador para editar
+    Y la Dependencia destino real del informe no existe en el catálogo
+    Cuando creo la Dependencia nueva desde "+ Nueva Dependencia" en la
+      pantalla de edición
+    Entonces la Dependencia queda disponible en el selector
+    Y queda seleccionada automáticamente, sin perder el resto de los
+      cambios que ya había hecho en el informe
+
   Escenario: Corregir el ID Registro de un informe en Borrador
     Dado que tengo abierto un informe en estado Borrador con ID Registro "100/2022"
     Cuando corrijo el ID Registro a "101/2022"
