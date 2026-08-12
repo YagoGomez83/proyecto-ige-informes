@@ -99,4 +99,22 @@ public class RegistrarVehiculoCommandHandlerTests
         Assert.NotNull(vehiculo);
         Assert.Null(vehiculo.Dominio);
     }
+
+    [Fact]
+    public async Task RegistrarVehiculo_ConAccionARealizarSinAccion_DebePermitirElAlta()
+    {
+        var dbContext = new TestAppDbContext();
+        var handler = new RegistrarVehiculoCommandHandler(dbContext);
+
+        var vehiculoId = await handler.Handle(
+            new RegistrarVehiculoCommand(
+                "Renault", "Clio", "Blanco", CertezaDominio.Confirmado, AccionARealizar.SinAccion, "Comisaría 4°",
+                "ABC123", "Vehículo de referencia, ya identificado en Caso anterior", []),
+            CancellationToken.None);
+
+        var vehiculo = await dbContext.Vehiculos.FindAsync(vehiculoId);
+        Assert.NotNull(vehiculo);
+        Assert.Equal(AccionARealizar.SinAccion, vehiculo.AccionARealizar);
+        Assert.Equal(EstadoVehiculo.Vigente, vehiculo.Estado);
+    }
 }

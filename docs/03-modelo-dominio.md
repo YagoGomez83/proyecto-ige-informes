@@ -503,3 +503,37 @@ erDiagram
     ningún placeholder textual nuevo tipo "S/C", el dato real en la base
     queda `NULL`. El listado de Informes (`/informes`) sigue mostrando
     la Carátula igual si existe, con o sin número de expediente.
+- **`AccionARealizar.SinAccion` (nuevo valor) + fix del KPI de alerta
+  vigente del Dashboard** (pedido del usuario, con un bug preexistente
+  encontrado en el camino): se necesitaba una tercera opción de "Acción a
+  realizar" para un Vehículo cargado solo como referencia — ya
+  identificado/vinculado a un Caso, Informe o Análisis pasado, sin ningún
+  pedido activo, pero que se mantiene en el catálogo por si en el futuro
+  vuelve a aparecer y hace falta ver con qué estuvo relacionado antes.
+
+  Al investigar el impacto en el Dashboard (KPI "Vehículos con alerta
+  vigente"), se encontró que ese contador ya tenía un bug preexistente
+  sin relación directa con este pedido: `ObtenerResumenDashboardQueryHandler`
+  solo filtraba por `Estado == EstadoVehiculo.Vigente`, ignorando por
+  completo `Vehiculo.FechaBaja` — es decir, un Vehículo dado de baja
+  ("fin de vigilancia activa", mecanismo ya existente desde antes) seguía
+  contando como alerta vigente en el Dashboard, aunque el usuario ya
+  hubiera indicado explícitamente que dejó de estar en seguimiento.
+  Corregido en la misma sesión: el KPI ahora excluye todo Vehículo con
+  `FechaBaja` no nula, sin importar su `AccionARealizar`.
+
+  Decisiones de modelado (confirmadas con el usuario):
+  - `AccionARealizar.SinAccion` es un tercer valor del enum, sin ninguna
+    entidad ni columna nueva.
+  - No afecta el mapeo de color del chip (`VehiculoChips`, ver skill
+    `ige-design-system` sección 3) — ese mapeo sigue dependiendo
+    únicamente de `Estado`, no de `AccionARealizar`. Un Vehículo con
+    `SinAccion` pero sin `FechaBaja` sigue mostrándose como "Vigente"
+    (chip rojo) en la ficha y en listados — el mecanismo para que deje
+    de llamar la atención visualmente sigue siendo Dar de Baja, ahora
+    corregido para que también saque del KPI del Dashboard.
+  - `SinAccion` y `FechaBaja` son ortogonales: se puede cargar un
+    Vehículo con `SinAccion` y sin dar de baja (aparece en listados
+    normales, sin alertar activamente para acción, pero sigue en el
+    contador del Dashboard hasta que se dé de baja explícitamente), o
+    darlo de baja igual si además no se quiere que aparezca ahí.

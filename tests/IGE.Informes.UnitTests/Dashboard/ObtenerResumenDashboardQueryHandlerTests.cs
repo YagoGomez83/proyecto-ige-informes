@@ -80,6 +80,50 @@ public class ObtenerResumenDashboardQueryHandlerTests
     }
 
     [Fact]
+    public async Task ObtenerResumenDashboard_VehiculoVigenteSinFechaBaja_DebeContarComoAlertaVigente()
+    {
+        var dbContext = new TestAppDbContext();
+        dbContext.Vehiculos.Add(CrearVehiculo(identificado: false));
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ObtenerResumenDashboardQueryHandler(dbContext, new FakeAuditLogger());
+
+        var resultado = await handler.Handle(new ObtenerResumenDashboardQuery(), CancellationToken.None);
+
+        Assert.Equal(1, resultado.VehiculosConAlertaVigente);
+    }
+
+    [Fact]
+    public async Task ObtenerResumenDashboard_VehiculoVigenteConFechaBaja_NoDebeContarComoAlertaVigente()
+    {
+        var dbContext = new TestAppDbContext();
+        var vehiculoDadoDeBaja = CrearVehiculo(identificado: false);
+        vehiculoDadoDeBaja.DarDeBaja(new DateOnly(2026, 8, 1));
+        dbContext.Vehiculos.Add(vehiculoDadoDeBaja);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ObtenerResumenDashboardQueryHandler(dbContext, new FakeAuditLogger());
+
+        var resultado = await handler.Handle(new ObtenerResumenDashboardQuery(), CancellationToken.None);
+
+        Assert.Equal(0, resultado.VehiculosConAlertaVigente);
+    }
+
+    [Fact]
+    public async Task ObtenerResumenDashboard_VehiculoIdentificado_NoDebeContarComoAlertaVigente()
+    {
+        var dbContext = new TestAppDbContext();
+        dbContext.Vehiculos.Add(CrearVehiculo(identificado: true));
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ObtenerResumenDashboardQueryHandler(dbContext, new FakeAuditLogger());
+
+        var resultado = await handler.Handle(new ObtenerResumenDashboardQuery(), CancellationToken.None);
+
+        Assert.Equal(0, resultado.VehiculosConAlertaVigente);
+    }
+
+    [Fact]
     public async Task ObtenerResumenDashboard_CuentaInformesEnBorradorYPublicadosPorSeparado()
     {
         var dbContext = new TestAppDbContext();

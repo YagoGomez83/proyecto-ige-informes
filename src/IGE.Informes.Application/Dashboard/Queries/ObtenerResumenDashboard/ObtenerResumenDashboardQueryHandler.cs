@@ -13,8 +13,12 @@ public sealed class ObtenerResumenDashboardQueryHandler(IAppDbContext dbContext,
         var casosAbiertos = await dbContext.CasosAnalisis.AsNoTracking()
             .CountAsync(c => c.Estado == EstadoCaso.Pendiente || c.Estado == EstadoCaso.EnRevision, cancellationToken);
 
+        // FechaBaja no nula significa "fin de vigilancia activa" (ver
+        // Vehiculo.DarDeBaja) — excluirlo acá evita contar como alerta un
+        // Vehículo que el usuario ya marcó explícitamente como fuera de
+        // seguimiento, aunque su Estado siga en Vigente.
         var vehiculosConAlertaVigente = await dbContext.Vehiculos.AsNoTracking()
-            .CountAsync(v => v.Estado == EstadoVehiculo.Vigente, cancellationToken);
+            .CountAsync(v => v.Estado == EstadoVehiculo.Vigente && v.FechaBaja == null, cancellationToken);
 
         var informesEnBorrador = await dbContext.Informes.AsNoTracking()
             .CountAsync(i => i.Estado == EstadoInforme.Borrador, cancellationToken);

@@ -45,7 +45,15 @@ else
                         <td class="body-md">@vehiculo.Marca @vehiculo.Modelo</td>
                         <td class="mono-data">@(vehiculo.Dominio ?? "—")</td>
                         <td><StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" /></td>
-                        <td class="body-md">@(vehiculo.AccionARealizar == AccionARealizar.Detener ? "Detener" : "Identificar")</td>
+                        <td class="body-md">
+                            @(vehiculo.AccionARealizar switch
+                            {
+                                AccionARealizar.Detener => "Detener",
+                                AccionARealizar.Identificar => "Identificar",
+                                AccionARealizar.SinAccion => "Sin acción",
+                                _ => vehiculo.AccionARealizar.ToString(),
+                            })
+                        </td>
                         <td class="text-end">
                             <a class="btn-secondary" href="@($"vehiculos/{vehiculo.Id}")">Ver</a>
                         </td>

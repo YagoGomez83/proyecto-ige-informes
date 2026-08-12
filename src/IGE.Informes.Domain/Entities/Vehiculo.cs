@@ -10,6 +10,14 @@ public enum AccionARealizar
 {
     Detener,
     Identificar,
+
+    /// <summary>
+    /// Vehículo cargado solo como referencia (ya identificado/vinculado a
+    /// un Caso, Informe o Análisis pasado, sin pedido activo) — no implica
+    /// ninguna intervención si se lo vuelve a detectar. Ver
+    /// docs/03-modelo-dominio.md, "AccionARealizar.SinAccion".
+    /// </summary>
+    SinAccion,
 }
 
 public enum CertezaDominio
