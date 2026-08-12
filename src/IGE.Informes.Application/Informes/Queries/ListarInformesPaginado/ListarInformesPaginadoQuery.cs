@@ -1,6 +1,5 @@
 using IGE.Informes.Application.Common.Dtos;
 using IGE.Informes.Application.Common.Security;
-using IGE.Informes.Application.Informes.Queries.ListarInformesPorCaso;
 using MediatR;
 
 namespace IGE.Informes.Application.Informes.Queries.ListarInformesPaginado;
@@ -11,5 +10,8 @@ namespace IGE.Informes.Application.Informes.Queries.ListarInformesPaginado;
 /// puntual solo se veía indirectamente (detalle de Caso o /busqueda).
 /// </summary>
 [Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
-public sealed record ListarInformesPaginadoQuery(int Pagina = 1, int TamanioPagina = 50)
-    : IRequest<PagedResult<InformeResumenDto>>;
+public sealed record ListarInformesPaginadoQuery(
+    int Pagina = 1,
+    int TamanioPagina = 50,
+    OrdenDireccion OrdenDireccion = OrdenDireccion.Desc,
+    bool SoloSinCausa = false) : IRequest<PagedResult<InformeListadoDto>>;

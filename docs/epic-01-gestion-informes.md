@@ -44,6 +44,72 @@ Característica: Carga de informe
   muestra estado "Procesando" y notifica cuando está listo para revisión.
 - Reutiliza el mismo parser que la migración histórica (ver HU-04).
 
+### Listado de Informes: orden, Causa/Dependencia visibles y filtro "sin Causa" (extensión de HU-01)
+
+> Contexto (2026-08-12): tras la migración masiva, la mayoría de los
+> Informes quedaron sin `Causa` vinculada (el auto-match por N° de Pieza
+> Sumarial requiere que ya exista una `Causa` con ese número exacto — ver
+> HU-02/HU-04). El usuario necesita revisar y completar esas Causas a
+> mano, informe por informe, y el listado `/informes` no ayudaba: no
+> mostraba Causa ni Dependencia, y el orden por Fecha de Análisis era fijo
+> (sin poder invertirlo).
+
+```gherkin
+Característica: Listado de Informes con orden y filtro
+
+  Escenario: Orden por Fecha de Análisis descendente (por defecto)
+    Dado que existen Informes con distintas fechas de análisis
+    Cuando accedo al listado de Informes sin especificar orden
+    Entonces los veo ordenados de la fecha más reciente a la más antigua
+
+  Escenario: Invertir el orden a ascendente
+    Dado que estoy viendo el listado de Informes
+    Cuando hago clic en el encabezado "Fecha de análisis" para invertir el orden
+    Entonces los veo ordenados de la fecha más antigua a la más reciente
+
+  Escenario: Ver Causa y Dependencia en el listado
+    Dado que un Informe tiene una Causa vinculada y una Dependencia destino
+    Cuando veo el listado de Informes
+    Entonces la fila de ese Informe muestra la Carátula de su Causa y el
+    nombre de su Dependencia destino
+
+  Escenario: Informe sin Causa vinculada todavía
+    Dado que un Informe migrado no tiene Causa vinculada
+    Cuando veo el listado de Informes
+    Entonces la fila de ese Informe indica visualmente que falta la Causa
+    (ej. "Sin Causa"), en vez de dejar la columna vacía sin explicación
+
+  Escenario: Filtrar solo los Informes sin Causa
+    Dado que existen Informes con y sin Causa vinculada
+    Cuando activo el filtro "Mostrar solo sin Causa"
+    Entonces el listado muestra únicamente los Informes sin Causa vinculada
+
+  Escenario: Desactivar el filtro
+    Dado que el filtro "Mostrar solo sin Causa" está activo
+    Cuando lo desactivo
+    Entonces vuelvo a ver todos los Informes, con o sin Causa
+```
+
+### Notas de modelado
+
+- No se agrega ninguna entidad nueva. Se agrega `InformeListadoDto`
+  (`Application/Informes/Queries/ListarInformesPaginado/`), específico de
+  este listado — **no reutiliza** `InformeResumenDto`
+  (`Queries/ListarInformesPorCaso/`), que sigue usándose sin cambios en
+  `Casos/Detalle.razor` y no necesita Causa/Dependencia por nombre.
+- `ListarInformesPaginadoQuery` gana dos parámetros opcionales:
+  `OrdenDireccion` (`Asc`/`Desc`, default `Desc` — mismo comportamiento
+  que hoy) y `SoloSinCausa` (`bool`, default `false`).
+- El Handler resuelve `CausaCaratula` y `DependenciaNombre` con un join a
+  `Causa`/`Dependencia` — `CausaCaratula` es nullable (Informe sin Causa
+  vinculada); `DependenciaNombre` no lo es (`DependenciaDestinoId` es
+  obligatorio en `Informe`).
+- Mismo criterio de autorización y auditoría que ya tenía el Handler
+  (`[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]`,
+  `RegistrarAccesoAsync("Listado", ...)`) — los 3 roles ya ven el
+  universo completo de Informes, el filtro no introduce ningún control de
+  acceso nuevo, es solo un `WHERE` sobre datos que el usuario ya podía ver.
+
 ---
 
 ## HU-02 · Editar / corregir metadatos de un informe

@@ -2,7 +2,6 @@
 @attribute [Authorize]
 @using IGE.Informes.Application.Common.Dtos
 @using IGE.Informes.Application.Informes.Queries.ListarInformesPaginado
-@using IGE.Informes.Application.Informes.Queries.ListarInformesPorCaso
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
@@ -12,6 +11,11 @@
 
 <h1 class="headline-md mb-3">Informes</h1>
 
+<div class="form-check mb-3">
+    <input type="checkbox" class="form-check-input" id="soloSinCausa" @bind="_soloSinCausa" @bind:after="AplicarFiltroAsync" />
+    <label class="form-check-label body-sm" for="soloSinCausa">Mostrar solo sin Causa</label>
+</div>
+
 @if (_informes is null)
 {
     <p class="body-md">Cargando...</p>
@@ -19,7 +23,9 @@
 else if (_informes.Count == 0)
 {
     <div class="card">
-        <p class="body-md mb-0">Todavía no hay informes cargados.</p>
+        <p class="body-md mb-0">
+            @(_soloSinCausa ? "No hay informes sin Causa vinculada." : "Todavía no hay informes cargados.")
+        </p>
     </div>
 }
 else
@@ -29,7 +35,14 @@ else
             <thead>
                 <tr>
                     <th class="label-md">ID Registro</th>
-                    <th class="label-md">Fecha de análisis</th>
+                    <th class="label-md">
+                        <button type="button" class="btn-sort" @onclick="InvertirOrdenAsync">
+                            Fecha de análisis
+                            <span class="mono-data">@(_ordenDireccion == OrdenDireccion.Desc ? "▼" : "▲")</span>
+                        </button>
+                    </th>
+                    <th class="label-md">Dependencia</th>
+                    <th class="label-md">Causa</th>
                     <th class="label-md">Estado</th>
                     <th class="label-md"></th>
                 </tr>
@@ -40,6 +53,17 @@ else
                     <tr class="row-clickable" @onclick="@(() => IrAlInforme(informe.Id))">
                         <td class="body-sm mono-data">@informe.IdRegistro</td>
                         <td class="body-sm">@informe.FechaAnalisis.ToString("dd/MM/yyyy")</td>
+                        <td class="body-sm">@informe.DependenciaNombre</td>
+                        <td class="body-sm">
+                            @if (informe.CausaCaratula is null)
+                            {
+                                <StatusChip Texto="Sin Causa" Semantica="ChipSemantica.Warning" />
+                            }
+                            else
+                            {
+                                @informe.CausaCaratula
+                            }
+                        </td>
                         <td class="body-sm">
                             @if (informe.Estado == EstadoInforme.Publicado)
                             {
@@ -63,9 +87,11 @@ else
 }
 
 @code {
-    private PagedResult<InformeResumenDto>? _resultado;
-    private IReadOnlyCollection<InformeResumenDto>? _informes;
+    private PagedResult<InformeListadoDto>? _resultado;
+    private IReadOnlyCollection<InformeListadoDto>? _informes;
     private int _pagina = 1;
+    private OrdenDireccion _ordenDireccion = OrdenDireccion.Desc;
+    private bool _soloSinCausa;
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,13 +100,28 @@ else
 
     private async Task CargarAsync()
     {
-        _resultado = await Sender.Send(new ListarInformesPaginadoQuery(_pagina));
+        _resultado = await Sender.Send(new ListarInformesPaginadoQuery(_pagina, OrdenDireccion: _ordenDireccion, SoloSinCausa: _soloSinCausa));
         _informes = _resultado.Items;
     }
 
     private async Task CambiarPaginaAsync(int nuevaPagina)
     {
         _pagina = nuevaPagina;
+        _informes = null;
+        await CargarAsync();
+    }
+
+    private async Task InvertirOrdenAsync()
+    {
+        _ordenDireccion = _ordenDireccion == OrdenDireccion.Desc ? OrdenDireccion.Asc : OrdenDireccion.Desc;
+        _pagina = 1;
+        _informes = null;
+        await CargarAsync();
+    }
+
+    private async Task AplicarFiltroAsync()
+    {
+        _pagina = 1;
         _informes = null;
         await CargarAsync();
     }

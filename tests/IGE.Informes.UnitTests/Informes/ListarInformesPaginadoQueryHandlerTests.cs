@@ -10,8 +10,12 @@ public class ListarInformesPaginadoQueryHandlerTests
     public async Task Devuelve_los_informes_ordenados_por_fecha_descendente_y_registra_el_acceso()
     {
         var dbContext = new TestAppDbContext();
-        dbContext.Informes.Add(new Informe("1/2026", new DateOnly(2026, 7, 20), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
-        dbContext.Informes.Add(new Informe("2/2026", new DateOnly(2026, 7, 21), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        var dependencia = new Dependencia("Departamento Investigaciones", TipoDependencia.Division);
+        dbContext.Dependencias.Add(dependencia);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.Informes.Add(new Informe("1/2026", new DateOnly(2026, 7, 20), Guid.NewGuid(), dependencia.Id, Guid.NewGuid()));
+        dbContext.Informes.Add(new Informe("2/2026", new DateOnly(2026, 7, 21), Guid.NewGuid(), dependencia.Id, Guid.NewGuid()));
         await dbContext.SaveChangesAsync();
 
         var auditLogger = new FakeAuditLogger();
@@ -30,9 +34,13 @@ public class ListarInformesPaginadoQueryHandlerTests
     public async Task Pagina_los_resultados_segun_tamanio_de_pagina()
     {
         var dbContext = new TestAppDbContext();
+        var dependencia = new Dependencia("Departamento Investigaciones", TipoDependencia.Division);
+        dbContext.Dependencias.Add(dependencia);
+        await dbContext.SaveChangesAsync();
+
         for (var i = 1; i <= 5; i++)
         {
-            dbContext.Informes.Add(new Informe($"{i}/2026", new DateOnly(2026, 7, i), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+            dbContext.Informes.Add(new Informe($"{i}/2026", new DateOnly(2026, 7, i), Guid.NewGuid(), dependencia.Id, Guid.NewGuid()));
         }
         await dbContext.SaveChangesAsync();
 
