@@ -1,5 +1,6 @@
 using IGE.Informes.Application.Common.Exceptions;
 using IGE.Informes.Application.Common.Interfaces;
+using IGE.Informes.Application.Common.Services;
 using IGE.Informes.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,18 @@ public sealed class CrearInformeDesdeMigracionPendienteCommandHandler(
             throw new EntidadDuplicadaException(nameof(Informe), nameof(Informe.IdRegistro), idRegistroFinal);
         }
 
-        var informe = migracionPendiente.CrearInformeMigrado(request.FechaAnalisis, idRegistroFinal);
+        // Mismo criterio de auto-match que MigrarInformesCommandHandler: si
+        // la Carátula/Pieza Sumarial que el parser extrajo (guardadas en la
+        // MigracionPendiente) coinciden exacto con una Causa ya existente,
+        // se vincula sin esperar a que el Admin la complete a mano después.
+        Guid? causaId = null;
+        if (!string.IsNullOrWhiteSpace(migracionPendiente.CausaCaratula) && !string.IsNullOrWhiteSpace(migracionPendiente.PiezaSumarial))
+        {
+            var causaExistente = await CausaMatcher.BuscarPorPiezaSumarialAsync(dbContext, migracionPendiente.PiezaSumarial, cancellationToken);
+            causaId = causaExistente?.Id;
+        }
+
+        var informe = migracionPendiente.CrearInformeMigrado(request.FechaAnalisis, idRegistroFinal, causaId);
 
         dbContext.Informes.Add(informe);
         dbContext.MigracionesPendientes.Remove(migracionPendiente);
@@ -73,6 +85,19 @@ public sealed class CrearInformeDesdeMigracionPendienteCommandHandler(
         }
 
         await auditLogger.RegistrarAccesoAsync("CompletarMigracionPendiente", nameof(Informe), informe.Id, cancellationToken);
+
+        // Marca distinguible de "CompletarMigracionPendiente": ningún
+        // humano vio ni confirmó esta vinculación en el momento (a
+        // diferencia de la edición manual, donde el usuario ve la
+        // sugerencia antes de aceptarla) — permite armar un reporte de
+        // "Causas auto-asignadas en migración" para revisión posterior sin
+        // tener que abrir cada Informe uno por uno (hallazgo del
+        // security-reviewer: colisión accidental de N° de Pieza Sumarial
+        // vincularía en silencio al expediente equivocado).
+        if (causaId is not null)
+        {
+            await auditLogger.RegistrarAccesoAsync("CausaAutoAsignadaMigracion", nameof(Informe), informe.Id, cancellationToken);
+        }
 
         return informe.Id;
     }

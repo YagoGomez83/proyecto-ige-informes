@@ -90,6 +90,49 @@ public class CrearInformeDesdeMigracionPendienteCommandHandlerTests
     }
 
     [Fact]
+    public async Task CompletarMigracionPendiente_CausaExtraidaCoincideConCausaExistente_VinculaAutomaticamenteSinCrearUnaNueva()
+    {
+        var (dbContext, _, migracionPendiente) = await PrepararAsync(causaCaratula: "AV. INFRACCION LEY 23.737", piezaSumarial: "7070029/26");
+        var causaExistente = new Causa("AV. INFRACCION LEY 23.737", "7070029/26", "Primera Circunscripción");
+        dbContext.Causas.Add(causaExistente);
+        await dbContext.SaveChangesAsync();
+        var cantidadCausasAntes = dbContext.Causas.Count();
+
+        var auditLogger = new FakeAuditLogger();
+        var handler = CrearHandler(dbContext, auditLogger);
+        var command = new CrearInformeDesdeMigracionPendienteCommand(migracionPendiente.Id, new DateOnly(2022, 6, 15), null);
+
+        var informeId = await handler.Handle(command, CancellationToken.None);
+
+        var informe = await dbContext.Informes.FindAsync(informeId);
+        Assert.NotNull(informe);
+        Assert.Equal(causaExistente.Id, informe.CausaId);
+        Assert.Equal(cantidadCausasAntes, dbContext.Causas.Count());
+
+        // Ningún humano vio/confirmó esta vinculación en el momento — se
+        // audita aparte para poder revisarla después (hallazgo del
+        // security-reviewer).
+        Assert.Contains(auditLogger.Registros, r => r.Accion == "CausaAutoAsignadaMigracion" && r.EntidadId == informeId);
+    }
+
+    [Fact]
+    public async Task CompletarMigracionPendiente_CausaExtraidaSinCoincidenciaExacta_InformeQuedaSinCausaAsociada()
+    {
+        var (dbContext, _, migracionPendiente) = await PrepararAsync(causaCaratula: "AV. INFRACCION LEY 23.737", piezaSumarial: "7070029/26");
+        var auditLogger = new FakeAuditLogger();
+        var handler = CrearHandler(dbContext, auditLogger);
+        var command = new CrearInformeDesdeMigracionPendienteCommand(migracionPendiente.Id, new DateOnly(2022, 6, 15), null);
+
+        var informeId = await handler.Handle(command, CancellationToken.None);
+
+        var informe = await dbContext.Informes.FindAsync(informeId);
+        Assert.NotNull(informe);
+        Assert.Null(informe.CausaId);
+        Assert.DoesNotContain(auditLogger.Registros, r => r.Accion == "CausaAutoAsignadaMigracion");
+        Assert.Empty(dbContext.Causas.ToList());
+    }
+
+    [Fact]
     public async Task CompletarMigracionPendiente_MigracionPendienteInexistente_RechazaConEntidadNoEncontrada()
     {
         var dbContext = new TestAppDbContext();

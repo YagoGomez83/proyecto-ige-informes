@@ -367,8 +367,38 @@ erDiagram
   en la extensión `unaccent` usada por Búsqueda combinada, ver
   `project_busqueda_combinada_2026-07-31` en memoria) para que el
   usuario elija en vez de crear sin querer un duplicado; sigue pudiendo
-  crear una `Causa` nueva si ninguna sugerencia corresponde. Alcance
-  acotado a la pantalla de edición manual — la migración masiva (HU-04)
-  sigue creando la Causa tal cual la extrae el parser, sin matching
-  automático, para no introducir falsos positivos en un proceso masivo
-  sin supervisión por Informe.
+  crear una `Causa` nueva si ninguna sugerencia corresponde.
+- **Matching de `Causa` por N° de Pieza Sumarial también en la migración
+  masiva (HU-04)**: extensión del punto anterior tras uso real —
+  `MigrarInformesCommandHandler` (camino "Exitoso") y
+  `CrearInformeDesdeMigracionPendienteCommandHandler` ahora intentan el
+  mismo matching exacto por N° de Pieza Sumarial que la edición manual,
+  usando `CausaCaratula`/`PiezaSumarial` ya extraídos por el parser. A
+  diferencia de la edición manual, acá **nunca se crea una Causa
+  nueva** — el parser no extrae Circunscripción judicial (no es un
+  patrón presente en el texto del PDF, ver skill `pdf-informe-parser`) y
+  `Causa` exige los 3 campos no vacíos, así que sin match exacto el
+  Informe migrado sigue naciendo sin Causa, igual que antes (se completa
+  después vía HU-02, donde si pueden aparecer sugerencias por
+  similaridad). El helper `CausaMatcher`
+  (`Application/Common/Services`) centraliza la búsqueda por Pieza
+  Sumarial para no duplicarla entre los tres puntos donde se persiste
+  una Causa (edición manual, migración masiva exitosa, y completar una
+  `MigracionPendiente`). Hallazgo del `security-reviewer`: a diferencia
+  de la edición manual (donde el usuario ve la sugerencia y confirma
+  antes de vincular), acá **ningún humano revisa la vinculación en el
+  momento** — una colisión accidental de N° de Pieza Sumarial (parser
+  extrayendo mal el dato de un PDF, coincidiendo por casualidad con una
+  Causa real no relacionada) vincularía en silencio al expediente
+  equivocado. Mitigado registrando `AuditLog("CausaAutoAsignadaMigracion",
+  ...)` en cada auto-vinculación y agregando
+  `/informes/causas-auto-asignadas` (Admin) — reporte de revisión
+  posterior, ver `ListarCausasAutoAsignadasQuery` — en vez de dejarlo
+  como riesgo aceptado sin mecanismo de verificación. **Riesgo aceptado
+  explícitamente** (confirmado con el usuario, segunda pasada del
+  `security-reviewer`): la mitigación es detectiva, no preventiva — el
+  Informe queda operable con la Causa auto-asignada desde el momento en
+  que se crea, y el reporte no distingue ítems ya revisados de nuevos
+  (crece indefinidamente, sin botón de "marcar revisado"). Aceptable
+  mientras el volumen de migraciones masivas sea manejable a ojo; si se
+  vuelve incómodo, agregar esa marca es la siguiente iteración natural.

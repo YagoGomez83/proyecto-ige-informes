@@ -1,6 +1,7 @@
 using IGE.Informes.Application.Common;
 using IGE.Informes.Application.Common.Exceptions;
 using IGE.Informes.Application.Common.Interfaces;
+using IGE.Informes.Application.Common.Services;
 using IGE.Informes.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -61,6 +62,15 @@ public sealed class MigrarInformesCommandHandler(
         var idsRegistradosEnLote = new HashSet<string>();
 
         var detalle = new List<MigracionArchivoResultDto>();
+
+        // Informes cuya Causa se vinculó por auto-match, sin que ningún
+        // humano la haya visto/confirmado en el momento (a diferencia de la
+        // edición manual, donde el usuario ve la sugerencia antes de
+        // aceptarla) — se audita aparte para poder armar un reporte de
+        // revisión posterior (hallazgo del security-reviewer: colisión
+        // accidental de N° de Pieza Sumarial vincularía en silencio al
+        // expediente equivocado).
+        var informesConCausaAutoAsignada = new List<Guid>();
 
         foreach (var pdf in request.Pdfs)
         {
@@ -167,13 +177,6 @@ public sealed class MigrarInformesCommandHandler(
                 continue;
             }
 
-            // El parser nunca extrae Circunscripción judicial (no es un
-            // patrón presente en el texto del PDF, ver skill
-            // pdf-informe-parser) y Causa exige los 3 campos no vacíos —
-            // por eso ningún Informe migrado nace con Causa asociada; el
-            // Admin la completa después vía HU-02 si hace falta. Mismo
-            // criterio "los 3 campos o ninguno" que ya usa
-            // ConfirmarCargaInformeCommandHandler.
             var estaLimpioExitoso = await antivirusScanner.EstaLimpioAsync(pdf.Contenido, cancellationToken);
             if (!estaLimpioExitoso)
             {
@@ -192,6 +195,25 @@ public sealed class MigrarInformesCommandHandler(
                 informe.CompletarRelato(extraido.Relato);
             }
 
+            // El parser nunca extrae Circunscripción judicial (no es un
+            // patrón presente en el texto del PDF, ver skill
+            // pdf-informe-parser), así que la migración masiva nunca puede
+            // crear una Causa nueva completa — pero si la Carátula/Pieza
+            // Sumarial extraída matchea exacto con una Causa ya existente,
+            // se vincula automáticamente sin esperar a que el Admin la
+            // complete a mano (mismo criterio de matching que HU-02, ver
+            // CausaMatcher). Sin match, el Informe queda sin Causa como
+            // antes — se completa después vía edición.
+            if (!string.IsNullOrWhiteSpace(extraido.CausaCaratula) && !string.IsNullOrWhiteSpace(extraido.PiezaSumarial))
+            {
+                var causaExistente = await CausaMatcher.BuscarPorPiezaSumarialAsync(dbContext, extraido.PiezaSumarial, cancellationToken);
+                if (causaExistente is not null)
+                {
+                    informe.AsignarCausa(causaExistente.Id);
+                    informesConCausaAutoAsignada.Add(informe.Id);
+                }
+            }
+
             dbContext.Informes.Add(informe);
             idsRegistradosEnLote.Add(idRegistro);
 
@@ -199,6 +221,11 @@ public sealed class MigrarInformesCommandHandler(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (var informeId in informesConCausaAutoAsignada)
+        {
+            await auditLogger.RegistrarAccesoAsync("CausaAutoAsignadaMigracion", nameof(Informe), informeId, cancellationToken);
+        }
 
         return new MigracionLoteResultDto(
             detalle.Count,

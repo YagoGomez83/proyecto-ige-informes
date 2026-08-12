@@ -55,6 +55,8 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
 
     public DbSet<MigracionPendiente> MigracionesPendientes => Set<MigracionPendiente>();
 
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
     public void MarcarInformeAnalistaComoAgregado(InformeAnalista informeAnalista)
     {
         Entry(informeAnalista).State = EntityState.Added;

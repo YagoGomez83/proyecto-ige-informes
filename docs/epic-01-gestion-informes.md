@@ -165,6 +165,23 @@ Característica: Migración masiva
       otro Informe
     Entonces el sistema rechaza la operación sin crear el Informe
     Y la Migración Pendiente sigue listada para corregir el dato
+
+  Escenario: Un PDF migrado se vincula automáticamente a una Causa ya existente
+    Dado que el parser reconoce Carátula y N° de Pieza Sumarial en un PDF del lote
+    Y ya existe una Causa con ese mismo N° de Pieza Sumarial exacto
+    Cuando se procesa ese PDF durante la migración (exitosa o al
+      completar una Migración Pendiente)
+    Entonces el Informe creado queda vinculado a la Causa existente
+    Y no se crea una Causa nueva
+
+  Escenario: Un PDF migrado sin match exacto de Causa queda sin Causa asociada
+    Dado que el parser reconoce Carátula y N° de Pieza Sumarial en un PDF del lote
+    Y ningún N° de Pieza Sumarial existente coincide exacto
+    Cuando se procesa ese PDF durante la migración
+    Entonces el Informe se crea sin Causa asociada, igual que si el
+      parser no hubiera reconocido esos campos
+    Para que se complete después desde la edición manual (HU-02), donde
+      sí se sugieren Causas parecidas
 ```
 
 ### Notas técnicas

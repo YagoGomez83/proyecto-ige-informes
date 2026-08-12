@@ -1,5 +1,6 @@
 using IGE.Informes.Application.Common.Exceptions;
 using IGE.Informes.Application.Common.Interfaces;
+using IGE.Informes.Application.Common.Services;
 using IGE.Informes.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -52,27 +53,12 @@ public sealed class EditarInformeCommandHandler(IAppDbContext dbContext, ICurren
             && !string.IsNullOrWhiteSpace(request.CausaNroPiezaSumarial)
             && !string.IsNullOrWhiteSpace(request.CausaCircunscripcionJudicial))
         {
-            // Matching por N° de Pieza Sumarial exacto (no la carátula, que
-            // es texto libre con variaciones de transcripción entre PDFs
-            // del mismo expediente) — evita crear una Causa duplicada
-            // cuando dos Informes distintos citan el mismo expediente
-            // judicial real (ver docs/03-modelo-dominio.md, "Decisiones ya
-            // resueltas"). Sin match exacto, se crea una Causa nueva; el
-            // usuario puede elegir una sugerencia por similaridad de
-            // carátula antes de llegar a este punto (ver SugerirCausasQuery).
-            var causaExistente = await dbContext.Causas
-                .FirstOrDefaultAsync(c => c.NroPiezaSumarial == request.CausaNroPiezaSumarial, cancellationToken);
-
-            if (causaExistente is not null)
-            {
-                informe.AsignarCausa(causaExistente.Id);
-            }
-            else
-            {
-                var causa = new Causa(request.CausaCaratula, request.CausaNroPiezaSumarial, request.CausaCircunscripcionJudicial);
-                dbContext.Causas.Add(causa);
-                informe.AsignarCausa(causa.Id);
-            }
+            // Sin match exacto, se crea una Causa nueva; el usuario puede
+            // elegir una sugerencia por similaridad de carátula antes de
+            // llegar a este punto (ver SugerirCausasQuery).
+            var causaId = await CausaMatcher.ObtenerOCrearIdAsync(
+                dbContext, request.CausaCaratula, request.CausaNroPiezaSumarial, request.CausaCircunscripcionJudicial, cancellationToken);
+            informe.AsignarCausa(causaId);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Relato))

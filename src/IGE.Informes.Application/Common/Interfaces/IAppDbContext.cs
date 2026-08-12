@@ -45,6 +45,15 @@ public interface IAppDbContext
 
     DbSet<Alerta> Alertas { get; }
 
+    /// <summary>
+    /// Solo lectura desde Application — append-only, la escritura pasa
+    /// exclusivamente por IAuditLogger/AuditLogInterceptor, nunca por acá.
+    /// Expuesto para reportes de revisión (ej. Informes con Causa
+    /// auto-asignada en migración masiva, ver
+    /// ListarCausasAutoAsignadasQuery), no para lógica de negocio.
+    /// </summary>
+    DbSet<AuditLog> AuditLogs { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

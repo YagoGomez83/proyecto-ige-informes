@@ -1,0 +1,65 @@
+@page "/informes/causas-auto-asignadas"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using IGE.Informes.Application.Common.Security
+@using IGE.Informes.Application.Informes.Queries.ListarCausasAutoAsignadas
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Causas auto-asignadas · IGE 4.0</PageTitle>
+
+<h1 class="headline-md mb-3">Causas auto-asignadas en migración</h1>
+
+<p class="body-sm mb-3">
+    Informes migrados cuya Causa se vinculó automáticamente por coincidencia exacta de N° de
+    pieza sumarial — ningún usuario la vio ni la confirmó en el momento. Revisá que la Causa
+    vinculada sea correcta, sobre todo si el N° de pieza sumarial pudo haberse extraído mal
+    del PDF.
+</p>
+
+@if (_informes is null)
+{
+    <p class="body-md">Cargando...</p>
+}
+else if (_informes.Count == 0)
+{
+    <p class="body-md">No hay Causas auto-asignadas pendientes de revisión.</p>
+}
+else
+{
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="label-md">ID Registro</th>
+                    <th class="label-md">Causa vinculada</th>
+                    <th class="label-md">N° de pieza sumarial</th>
+                    <th class="label-md">Fecha de asignación</th>
+                    <th class="label-md"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var informe in _informes)
+                {
+                    <tr>
+                        <td class="body-sm mono-data">@informe.IdRegistro</td>
+                        <td class="body-sm">@informe.CausaCaratula</td>
+                        <td class="body-sm mono-data">@informe.CausaNroPiezaSumarial</td>
+                        <td class="body-sm">@informe.FechaAutoAsignacion.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="body-sm">
+                            <a class="btn-secondary" href="@($"informes/{informe.InformeId}")">Revisar</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<InformeConCausaAutoAsignadaDto>? _informes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _informes = await Sender.Send(new ListarCausasAutoAsignadasQuery());
+    }
+}

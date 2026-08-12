@@ -151,6 +151,51 @@ public class MigrarInformesCommandHandlerTests
     }
 
     [Fact]
+    public async Task MigrarInformes_CausaExtraidaCoincideConCausaExistente_VinculaAutomaticamenteSinCrearUnaNueva()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var causaExistente = new Causa("AV. INFRACCION LEY 23.737", "7070029/26", "Primera Circunscripción");
+        dbContext.Causas.Add(causaExistente);
+        await dbContext.SaveChangesAsync();
+        var cantidadCausasAntes = dbContext.Causas.Count();
+
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoExitoso("103/2020", causaCaratula: "AV. INFRACCION LEY 23.737"));
+        var auditLogger = new FakeAuditLogger();
+        var handler = CrearHandler(dbContext, parser, auditLogger: auditLogger);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "103-2020.pdf"));
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informe = Assert.Single(dbContext.Informes.ToList());
+        Assert.Equal(causaExistente.Id, informe.CausaId);
+        Assert.Equal(cantidadCausasAntes, dbContext.Causas.Count());
+
+        // Ningún humano vio/confirmó esta vinculación en el momento — se
+        // audita aparte para poder revisarla después (hallazgo del
+        // security-reviewer).
+        Assert.Contains(auditLogger.Registros, r => r.Accion == "CausaAutoAsignadaMigracion" && r.EntidadId == informe.Id);
+    }
+
+    [Fact]
+    public async Task MigrarInformes_CausaExtraidaSinCoincidenciaExacta_InformeQuedaSinCausaAsociada()
+    {
+        var (dbContext, dependencia) = await PrepararAsync();
+        var parser = new FakeInformePdfParserPorArchivo().ConResultado(CrearExtraidoExitoso("104/2020", causaCaratula: "AV. INFRACCION LEY 23.737"));
+        var auditLogger = new FakeAuditLogger();
+        var handler = CrearHandler(dbContext, parser, auditLogger: auditLogger);
+
+        var command = CrearCommand(dependencia.Id, new PdfMigrarDto(ContenidoPdfFalso, "104-2020.pdf"));
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informe = Assert.Single(dbContext.Informes.ToList());
+        Assert.Null(informe.CausaId);
+        Assert.Empty(dbContext.Causas.ToList());
+        Assert.DoesNotContain(auditLogger.Registros, r => r.Accion == "CausaAutoAsignadaMigracion");
+    }
+
+    [Fact]
     public async Task MigrarInformes_PdfNoLegible_CuentaComoFallidoYNoAbortaElRestoDelLote()
     {
         var (dbContext, dependencia) = await PrepararAsync();
