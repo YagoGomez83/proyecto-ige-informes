@@ -392,6 +392,110 @@ Característica: Catálogo de Tipos de Causa
 
 ---
 
+## HU-20 · Catálogo de Marca y Color de Vehículo
+
+**Como** Administrador
+**Quiero** mantener catálogos preseteados de Marca y Color de Vehículo,
+con opción de tipear un valor libre si el real no está en la lista
+**Para** que dar de alta un Vehículo sea más rápido y consistente, sin
+perder la posibilidad de cargar una marca/color poco común
+
+> Contexto: el usuario reportó que tipear Marca y Color a mano en cada
+> alta de Vehículo generaba muchas variaciones del mismo dato real (ej.
+> "VW", "VOLKSWAGEN", "VOLKWAGEN", "VOLSWAGEN", "WV" para la misma marca
+> — confirmado contando los valores reales ya cargados en producción).
+> Mismo problema de fondo que ya motivó `TipoCausa` (HU-19) para la
+> Carátula de Causa — mismo criterio de solución: catálogo preseteado
+> con `<select>`, más un atajo de alta para no bloquear un caso real que
+> no esté todavía en la lista.
+
+```gherkin
+Característica: Catálogo de Marca de Vehículo
+
+  Escenario: Alta de una Marca
+    Dado que completo el nombre "Chevrolet"
+    Cuando confirmo el alta
+    Entonces queda disponible en el selector de Marca al registrar cualquier Vehículo
+
+  Escenario: Nombre duplicado
+    Dado que ya existe una Marca con el nombre "Ford"
+    Cuando intento dar de alta otra Marca con el mismo nombre
+    Entonces el sistema rechaza el alta y me indica que el nombre ya existe
+
+Característica: Catálogo de Color de Vehículo
+
+  Escenario: Alta de un Color
+    Dado que completo el nombre "Gris Oscuro"
+    Cuando confirmo el alta
+    Entonces queda disponible en el selector de Color al registrar cualquier Vehículo
+
+  Escenario: Nombre duplicado
+    Dado que ya existe un Color con el nombre "Blanco"
+    Cuando intento dar de alta otro Color con el mismo nombre
+    Entonces el sistema rechaza el alta y me indica que el nombre ya existe
+
+Característica: Elegir Marca/Color al registrar un Vehículo
+
+  Escenario: Elegir una Marca del catálogo
+    Dado que estoy registrando un Vehículo nuevo
+    Cuando elijo "Toyota" del selector de Marca
+    Entonces el Vehículo queda registrado con Marca "Toyota"
+
+  Escenario: La Marca real no está en el catálogo
+    Dado que estoy registrando un Vehículo nuevo
+    Y la Marca real no está en el selector
+    Cuando elijo la opción "Otra (especificar)" y tipeo "Hyundai"
+    Entonces el Vehículo queda registrado con Marca "Hyundai" como texto
+    libre, sin necesidad de agregarla antes al catálogo
+
+  Escenario: Agregar una Marca faltante sin salir del alta del Vehículo
+    Dado que soy Administrador y estoy registrando un Vehículo
+    Y la Marca real no está en el catálogo
+    Cuando la creo desde el atajo de la pantalla de alta
+    Entonces queda disponible en el selector y seleccionada
+    automáticamente, sin interrumpir la carga del Vehículo en curso
+
+  Escenario: Mismo comportamiento para Color
+    Dado que estoy registrando un Vehículo nuevo
+    Cuando el Color real no está en el selector
+    Entonces puedo elegir "Otra (especificar)" y tipearlo libremente,
+    igual que con Marca
+```
+
+### Notas de modelado
+
+- Dos entidades nuevas, mismo patrón que `TipoCausa`: `MarcaVehiculo`
+  (`Nombre` único) y `ColorVehiculo` (`Nombre` único) —
+  `src/IGE.Informes.Domain/Entities/MarcaVehiculo.cs` y
+  `ColorVehiculo.cs`.
+- **No son FK desde `Vehiculo`** — `Vehiculo.Marca` y `Vehiculo.Color`
+  siguen siendo `string` (sin cambio de tipo ni migración de esas
+  columnas). Los catálogos solo alimentan el `<select>` de la UI; el
+  valor elegido (o tipeado libremente con "Otra") se copia como texto,
+  mismo criterio que `TipoCausa` con `Causa.Caratula`.
+- El histórico migrado (~1100 Vehículos, con Marca/Color ya cargados
+  como texto libre desde antes de esta HU) **no se toca ni se
+  normaliza** — sigue tal cual quedó migrado, decisión explícita del
+  usuario. El catálogo nuevo aplica solo hacia adelante, para altas
+  nuevas.
+- `[Autorizar(Roles.Admin)]` en los Commands de alta de ambos catálogos.
+  Páginas de listado en `/configuracion` junto al resto de los
+  catálogos; atajo de alta embebido en `/vehiculos/nuevo` y en
+  `/informes/{id}/editar` (atajo "+ Nuevo Vehículo", ver HU-02) — mismo
+  patrón ya usado para `Dependencia` y `TipoCausa`.
+- Catálogo base cargado manualmente por el Admin tras el despliegue (no
+  vía importador de `IGE.Informes.DataMigration`, a diferencia de
+  `TipoCausa` — acá son solo ~16 valores por catálogo, no justifica un
+  importador de línea de comandos): marcas más comunes en Argentina
+  (Chevrolet, Citroën, Fiat, Ford, Honda, Jeep, Nissan, Peugeot,
+  Renault, Suzuki, Toyota, Volkswagen, más las motos más frecuentes en
+  los datos reales — Motomel, Zanella, Corven, Bajaj); colores más
+  comunes (Blanco, Negro, Gris, Gris Claro, Gris Oscuro, Rojo, Azul,
+  Verde, Bordo, Celeste, Beige, Champagne, Crema, Plateado, Amarillo,
+  Naranja).
+
+---
+
 ## HU-17 · Gestión de Usuarios
 
 **Como** Administrador

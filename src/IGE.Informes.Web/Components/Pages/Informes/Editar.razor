@@ -9,6 +9,8 @@
 @using IGE.Informes.Application.Informes.Queries.ObtenerInformePorId
 @using IGE.Informes.Application.Informes.Queries.SugerirCausas
 @using IGE.Informes.Application.CategoriasAlerta.Queries.ListarCategoriasAlerta
+@using IGE.Informes.Application.ColorVehiculo.Queries.ListarColorVehiculo
+@using IGE.Informes.Application.MarcaVehiculo.Queries.ListarMarcaVehiculo
 @using IGE.Informes.Application.Personas.Commands.RegistrarPersona
 @using IGE.Informes.Application.Personas.Queries.BuscarPersonas
 @using IGE.Informes.Application.TipoCausa.Commands.CrearTipoCausa
@@ -299,7 +301,21 @@ else
 
                         <div class="mb-2">
                             <label class="label-md" for="nuevoVehiculoMarca">Marca</label>
-                            <input id="nuevoVehiculoMarca" class="form-control" @bind="_nuevoVehiculoMarca" />
+                            <select id="nuevoVehiculoMarca" class="form-control" @bind="_nuevoVehiculoMarcaSeleccionada">
+                                <option value="">Seleccionar...</option>
+                                @if (_marcasVehiculo is not null)
+                                {
+                                    @foreach (var marca in _marcasVehiculo)
+                                    {
+                                        <option value="@marca.Nombre">@marca.Nombre</option>
+                                    }
+                                }
+                                <option value="@OtraOpcionMarcaColor">Otra (especificar)</option>
+                            </select>
+                            @if (_nuevoVehiculoMarcaSeleccionada == OtraOpcionMarcaColor)
+                            {
+                                <input class="form-control mt-2" placeholder="Marca no listada" @bind="_nuevoVehiculoMarca" @bind:event="oninput" />
+                            }
                         </div>
 
                         <div class="mb-2">
@@ -309,7 +325,21 @@ else
 
                         <div class="mb-2">
                             <label class="label-md" for="nuevoVehiculoColor">Color</label>
-                            <input id="nuevoVehiculoColor" class="form-control" @bind="_nuevoVehiculoColor" />
+                            <select id="nuevoVehiculoColor" class="form-control" @bind="_nuevoVehiculoColorSeleccionado">
+                                <option value="">Seleccionar...</option>
+                                @if (_coloresVehiculo is not null)
+                                {
+                                    @foreach (var color in _coloresVehiculo)
+                                    {
+                                        <option value="@color.Nombre">@color.Nombre</option>
+                                    }
+                                }
+                                <option value="@OtraOpcionMarcaColor">Otra (especificar)</option>
+                            </select>
+                            @if (_nuevoVehiculoColorSeleccionado == OtraOpcionMarcaColor)
+                            {
+                                <input class="form-control mt-2" placeholder="Color no listado" @bind="_nuevoVehiculoColor" @bind:event="oninput" />
+                            }
                         </div>
 
                         <div class="mb-2">
@@ -511,10 +541,16 @@ else
     private bool _vinculando;
 
     private IReadOnlyCollection<CategoriaAlertaDto>? _categoriasAlerta;
+    private IReadOnlyCollection<MarcaVehiculoDto>? _marcasVehiculo;
+    private IReadOnlyCollection<ColorVehiculoDto>? _coloresVehiculo;
+
+    private const string OtraOpcionMarcaColor = "__otra__";
 
     private bool _mostrandoNuevoVehiculo;
+    private string _nuevoVehiculoMarcaSeleccionada = string.Empty;
     private string _nuevoVehiculoMarca = string.Empty;
     private string _nuevoVehiculoModelo = string.Empty;
+    private string _nuevoVehiculoColorSeleccionado = string.Empty;
     private string _nuevoVehiculoColor = string.Empty;
     private string? _nuevoVehiculoDominio;
     private CertezaDominio _nuevoVehiculoDominioCerteza = CertezaDominio.Incierto;
@@ -539,6 +575,8 @@ else
         _dependencias = await Sender.Send(new ListarDependenciasQuery());
         _tiposCausa = await Sender.Send(new ListarTipoCausaQuery());
         _categoriasAlerta = await Sender.Send(new ListarCategoriasAlertaQuery());
+        _marcasVehiculo = await Sender.Send(new ListarMarcaVehiculoQuery());
+        _coloresVehiculo = await Sender.Send(new ListarColorVehiculoQuery());
 
         if (_informe is not null)
         {
@@ -756,8 +794,10 @@ else
     private void CancelarNuevoVehiculo()
     {
         _mostrandoNuevoVehiculo = false;
+        _nuevoVehiculoMarcaSeleccionada = string.Empty;
         _nuevoVehiculoMarca = string.Empty;
         _nuevoVehiculoModelo = string.Empty;
+        _nuevoVehiculoColorSeleccionado = string.Empty;
         _nuevoVehiculoColor = string.Empty;
         _nuevoVehiculoDominio = null;
         _nuevoVehiculoDominioCerteza = CertezaDominio.Incierto;
@@ -770,9 +810,12 @@ else
 
     private async Task CrearYVincularVehiculoAsync()
     {
-        if (string.IsNullOrWhiteSpace(_nuevoVehiculoMarca)
+        var marcaFinal = _nuevoVehiculoMarcaSeleccionada == OtraOpcionMarcaColor ? _nuevoVehiculoMarca : _nuevoVehiculoMarcaSeleccionada;
+        var colorFinal = _nuevoVehiculoColorSeleccionado == OtraOpcionMarcaColor ? _nuevoVehiculoColor : _nuevoVehiculoColorSeleccionado;
+
+        if (string.IsNullOrWhiteSpace(marcaFinal)
             || string.IsNullOrWhiteSpace(_nuevoVehiculoModelo)
-            || string.IsNullOrWhiteSpace(_nuevoVehiculoColor)
+            || string.IsNullOrWhiteSpace(colorFinal)
             || string.IsNullOrWhiteSpace(_nuevoVehiculoAvisarA))
         {
             _errorNuevoVehiculo = "Completá Marca, Modelo, Color y a quién avisar.";
@@ -786,9 +829,9 @@ else
         try
         {
             vehiculoId = await Sender.Send(new RegistrarVehiculoCommand(
-                _nuevoVehiculoMarca,
+                marcaFinal,
                 _nuevoVehiculoModelo,
-                _nuevoVehiculoColor,
+                colorFinal,
                 _nuevoVehiculoDominioCerteza,
                 _nuevoVehiculoAccionARealizar,
                 _nuevoVehiculoAvisarA,

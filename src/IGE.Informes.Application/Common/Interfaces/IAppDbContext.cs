@@ -33,6 +33,10 @@ public interface IAppDbContext
 
     DbSet<Vehiculo> Vehiculos { get; }
 
+    DbSet<Domain.Entities.MarcaVehiculo> MarcasVehiculo { get; }
+
+    DbSet<Domain.Entities.ColorVehiculo> ColoresVehiculo { get; }
+
     DbSet<Persona> Personas { get; }
 
     DbSet<Camara> Camaras { get; }

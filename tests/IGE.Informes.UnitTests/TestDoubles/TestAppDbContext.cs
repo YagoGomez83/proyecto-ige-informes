@@ -41,6 +41,10 @@ public sealed class TestAppDbContext : DbContext, IAppDbContext
 
     public DbSet<Vehiculo> Vehiculos => Set<Vehiculo>();
 
+    public DbSet<IGE.Informes.Domain.Entities.MarcaVehiculo> MarcasVehiculo => Set<IGE.Informes.Domain.Entities.MarcaVehiculo>();
+
+    public DbSet<IGE.Informes.Domain.Entities.ColorVehiculo> ColoresVehiculo => Set<IGE.Informes.Domain.Entities.ColorVehiculo>();
+
     public DbSet<Persona> Personas => Set<Persona>();
 
     public DbSet<Camara> Camaras => Set<Camara>();

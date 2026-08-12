@@ -37,6 +37,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Vehiculo> Vehiculos => Set<Vehiculo>();
 
+    public DbSet<MarcaVehiculo> MarcasVehiculo => Set<MarcaVehiculo>();
+
+    public DbSet<ColorVehiculo> ColoresVehiculo => Set<ColorVehiculo>();
+
     public DbSet<Persona> Personas => Set<Persona>();
 
     public DbSet<Camara> Camaras => Set<Camara>();
