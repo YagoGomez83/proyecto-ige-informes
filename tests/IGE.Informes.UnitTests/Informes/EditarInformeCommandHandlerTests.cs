@@ -469,4 +469,99 @@ public class EditarInformeCommandHandlerTests
         Assert.Equal("7070099/26", causaActualizada.NroPiezaSumarial);
         Assert.Null(causaActualizada.CircunscripcionJudicial);
     }
+
+    // HU-02 · escenario "Completar solo la Carátula, sin N° de Pieza
+    // Sumarial" — docs/03-modelo-dominio.md, entrada "Causa.NroPiezaSumarial
+    // pasa a ser opcional". El Handler debe crear/vincular la Causa con
+    // solo la Carátula completa, sin exigir Pieza Sumarial (condición pasa
+    // de exigir ambos campos a exigir solo CausaCaratula).
+    [Fact]
+    public async Task EditarInforme_CompletaSoloCaratulaSinNroPiezaSumarial_CreaLaCausaConNroPiezaSumarialNulo()
+    {
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: "AV. INFRACCION LEY 23.737",
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null);
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informeActualizado = await dbContext.Informes.FindAsync(informe.Id);
+        Assert.NotNull(informeActualizado);
+        Assert.NotNull(informeActualizado.CausaId);
+
+        var causaActualizada = await dbContext.Causas.FindAsync(informeActualizado.CausaId);
+        Assert.NotNull(causaActualizada);
+        Assert.Equal("AV. INFRACCION LEY 23.737", causaActualizada.Caratula);
+        Assert.Null(causaActualizada.NroPiezaSumarial);
+    }
+
+    // HU-02 · escenario "Dos informes distintos sin N° de Pieza Sumarial no
+    // comparten Causa" — reproduce el bug real (Informes 38/2023 y
+    // 73/2022, ver docs/03-modelo-dominio.md). Cada Informe editado con su
+    // propia Carátula y sin Pieza Sumarial debe terminar con un CausaId
+    // DISTINTO y su propia Carátula, sin pisar la del otro.
+    [Fact]
+    public async Task EditarInforme_DosInformesDistintosSinNroPiezaSumarial_NoComparten_CadaUnoTieneSuPropiaCausa()
+    {
+        var (dbContext, caso, dependenciaOriginal, informeExistente) = await PrepararAsync();
+
+        var informe38 = new Informe(
+            "38/2023",
+            new DateOnly(2023, 3, 10),
+            caso.Id,
+            dependenciaOriginal.Id,
+            UsuarioId);
+        var informe73 = new Informe(
+            "73/2022",
+            new DateOnly(2022, 11, 2),
+            caso.Id,
+            dependenciaOriginal.Id,
+            UsuarioId);
+        dbContext.Informes.Add(informe38);
+        dbContext.Informes.Add(informe73);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        await handler.Handle(
+            new EditarInformeCommand(
+                informe38.Id,
+                Relato: null,
+                DependenciaDestinoId: null,
+                CausaCaratula: "AV. INFRACCION LEY 23.737",
+                CausaNroPiezaSumarial: null,
+                CausaCircunscripcionJudicial: null),
+            CancellationToken.None);
+
+        await handler.Handle(
+            new EditarInformeCommand(
+                informe73.Id,
+                Relato: null,
+                DependenciaDestinoId: null,
+                CausaCaratula: "TAREA INVESTIGATIVA",
+                CausaNroPiezaSumarial: null,
+                CausaCircunscripcionJudicial: null),
+            CancellationToken.None);
+
+        var informe38Actualizado = await dbContext.Informes.FindAsync(informe38.Id);
+        var informe73Actualizado = await dbContext.Informes.FindAsync(informe73.Id);
+        Assert.NotNull(informe38Actualizado);
+        Assert.NotNull(informe73Actualizado);
+        Assert.NotNull(informe38Actualizado.CausaId);
+        Assert.NotNull(informe73Actualizado.CausaId);
+        Assert.NotEqual(informe38Actualizado.CausaId, informe73Actualizado.CausaId);
+
+        var causa38 = await dbContext.Causas.FindAsync(informe38Actualizado.CausaId);
+        var causa73 = await dbContext.Causas.FindAsync(informe73Actualizado.CausaId);
+        Assert.NotNull(causa38);
+        Assert.NotNull(causa73);
+        Assert.Equal("AV. INFRACCION LEY 23.737", causa38.Caratula);
+        Assert.Equal("TAREA INVESTIGATIVA", causa73.Caratula);
+    }
 }

@@ -23,24 +23,39 @@ public static class CausaMatcher
     /// extrae Circunscripción judicial, ver skill pdf-informe-parser) y
     /// solo tiene sentido vincular si ya existe, nunca crear una Causa
     /// nueva incompleta.
+    ///
+    /// Si <paramref name="nroPiezaSumarial"/> es null/vacío, devuelve null
+    /// sin consultar la base — sin número real no hay forma confiable de
+    /// saber si dos Informes son el mismo expediente (ver
+    /// docs/03-modelo-dominio.md, "Causa.NroPiezaSumarial pasa a ser
+    /// opcional"; bug real: dos Informes usando el mismo valor de
+    /// referencia como "--/--" terminaban compartiendo Causa y pisando la
+    /// Carátula real del otro).
     /// </summary>
     public static Task<Causa?> BuscarPorPiezaSumarialAsync(
-        IAppDbContext dbContext, string nroPiezaSumarial, CancellationToken cancellationToken) =>
-        dbContext.Causas.FirstOrDefaultAsync(c => c.NroPiezaSumarial == nroPiezaSumarial, cancellationToken);
+        IAppDbContext dbContext, string? nroPiezaSumarial, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(nroPiezaSumarial))
+        {
+            return Task.FromResult<Causa?>(null);
+        }
+
+        return dbContext.Causas.FirstOrDefaultAsync(c => c.NroPiezaSumarial == nroPiezaSumarial, cancellationToken);
+    }
 
     /// <summary>
     /// Busca una Causa existente con el mismo N° de Pieza Sumarial exacto;
-    /// si no hay match, crea una nueva y la agrega al DbContext. En ambos
-    /// casos devuelve el Id a usar para vincular el Informe. Solo se llama
-    /// cuando Carátula y Pieza Sumarial están completos — son los únicos
-    /// campos obligatorios de Causa; Circunscripción judicial es opcional
-    /// (varios expedientes reales no la especifican, ver
+    /// si no hay match (o no hay Pieza Sumarial para buscar), crea una
+    /// nueva y la agrega al DbContext. En ambos casos devuelve el Id a
+    /// usar para vincular el Informe. Solo se llama cuando la Carátula
+    /// está completa — es el único campo obligatorio de Causa; Pieza
+    /// Sumarial y Circunscripción judicial son opcionales (ver
     /// docs/03-modelo-dominio.md "Decisiones ya resueltas").
     /// </summary>
     public static async Task<Guid> ObtenerOCrearIdAsync(
         IAppDbContext dbContext,
         string caratula,
-        string nroPiezaSumarial,
+        string? nroPiezaSumarial,
         string? circunscripcionJudicial,
         CancellationToken cancellationToken)
     {

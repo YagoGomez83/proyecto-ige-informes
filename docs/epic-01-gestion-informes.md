@@ -179,6 +179,24 @@ Característica: Edición de metadatos
     Cuando dejo la Circunscripción judicial sin especificar
     Entonces la Causa se crea o vincula igual, sin Circunscripción judicial
 
+  Escenario: Completar solo la Carátula, sin N° de Pieza Sumarial
+    Dado que tengo abierto un informe en estado Borrador cuya Dependencia
+      no aporta N° de Pieza Sumarial (ej. Narcotráfico)
+    Cuando completo la Carátula de la Causa y dejo el N° de Pieza
+      Sumarial vacío
+    Entonces la Causa se crea igual, con Carátula y sin N° de Pieza
+      Sumarial
+    Y no se reutiliza la Causa de ningún otro informe que también esté
+      sin N° de Pieza Sumarial
+
+  Escenario: Dos informes distintos sin N° de Pieza Sumarial no comparten Causa
+    Dado que el informe "38/2023" y el informe "73/2022" tienen
+      Carátulas distintas y ninguno tiene N° de Pieza Sumarial
+    Cuando completo la Causa de cada uno por separado
+    Entonces cada informe queda vinculado a su propia Causa, con su
+      propia Carátula
+    Y ninguno de los dos pisa la Carátula del otro
+
   Escenario: Vincular Vehículos y Personas sin salir de la edición
     Dado que tengo abierto un informe en estado Borrador para editar
     Cuando busco un Vehículo por dominio o una Persona por DNI desde la

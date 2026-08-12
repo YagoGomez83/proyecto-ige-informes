@@ -252,11 +252,9 @@ else
     private async Task GenerarInformeAsync()
     {
         if (string.IsNullOrWhiteSpace(_generarInforme.DependenciaDestinoId)
-            || string.IsNullOrWhiteSpace(_generarInforme.CausaCaratula)
-            || string.IsNullOrWhiteSpace(_generarInforme.CausaNroPiezaSumarial)
-            || string.IsNullOrWhiteSpace(_generarInforme.CausaCircunscripcionJudicial))
+            || string.IsNullOrWhiteSpace(_generarInforme.CausaCaratula))
         {
-            _errorMessage = "Completá la Dependencia solicitante y los datos de la Causa.";
+            _errorMessage = "Completá la Dependencia solicitante y la Carátula de la Causa.";
             return;
         }
 

@@ -17,10 +17,36 @@ public class CausaTests
 
     [Theory]
     [InlineData("", "7070029/26")]
-    [InlineData("N.N. s/Robo", "")]
     public void Alta_rechaza_campos_obligatorios_vacios(string caratula, string pieza)
     {
         Assert.Throws<ArgumentException>(() => new Causa(caratula, pieza, "Primera Circunscripción"));
+    }
+
+    // docs/03-modelo-dominio.md, entrada "Causa.NroPiezaSumarial pasa a ser
+    // opcional" (hallazgo real: Informes 38/2023 y 73/2022 compartiendo
+    // Causa por el placeholder "--/--"). Solo Caratula sigue siendo
+    // obligatoria — NroPiezaSumarial nulo o vacío ya NO debe lanzar
+    // ArgumentException.
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Alta_AceptaNroPiezaSumarialNuloOVacio_NoLanzaExcepcion(string? nroPiezaSumarial)
+    {
+        var causa = new Causa("AV. INFRACCIÓN LEY 23.737", nroPiezaSumarial, "Primera Circunscripción");
+
+        Assert.NotEqual(Guid.Empty, causa.Id);
+        Assert.Equal("AV. INFRACCIÓN LEY 23.737", causa.Caratula);
+        Assert.Null(causa.NroPiezaSumarial);
+    }
+
+    // La carátula sigue siendo el único campo realmente obligatorio, incluso
+    // cuando NroPiezaSumarial viene null (no alcanza con "no lanzar antes
+    // por la pieza sumarial vacía" — Caratula vacía debe seguir fallando).
+    [Fact]
+    public void Alta_RechazaCaratulaVaciaAunConNroPiezaSumarialNulo()
+    {
+        Assert.Throws<ArgumentException>(() => new Causa("", null, "Primera Circunscripción"));
     }
 
     // docs/03-modelo-dominio.md, "Decisiones ya resueltas" —

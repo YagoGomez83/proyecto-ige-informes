@@ -49,12 +49,16 @@ public sealed class EditarInformeCommandHandler(IAppDbContext dbContext, ICurren
             informe.AsignarDependenciaDestino(dependenciaDestinoId);
         }
 
-        if (!string.IsNullOrWhiteSpace(request.CausaCaratula)
-            && !string.IsNullOrWhiteSpace(request.CausaNroPiezaSumarial))
+        if (!string.IsNullOrWhiteSpace(request.CausaCaratula))
         {
-            // Sin match exacto, se crea una Causa nueva; el usuario puede
-            // elegir una sugerencia por similaridad de carátula antes de
-            // llegar a este punto (ver SugerirCausasQuery).
+            // Sin match exacto por N° de Pieza Sumarial, se crea una Causa
+            // nueva; el usuario puede elegir una sugerencia por similaridad
+            // de carátula antes de llegar a este punto (ver
+            // SugerirCausasQuery). Si CausaNroPiezaSumarial viene vacío
+            // (ej. Narcotráfico, que no aporta N° real), CausaMatcher
+            // nunca reutiliza la Causa de otro Informe — ver
+            // docs/03-modelo-dominio.md "Causa.NroPiezaSumarial pasa a
+            // ser opcional".
             var causaId = await CausaMatcher.ObtenerOCrearIdAsync(
                 dbContext, request.CausaCaratula, request.CausaNroPiezaSumarial, request.CausaCircunscripcionJudicial, cancellationToken);
             informe.AsignarCausa(causaId);

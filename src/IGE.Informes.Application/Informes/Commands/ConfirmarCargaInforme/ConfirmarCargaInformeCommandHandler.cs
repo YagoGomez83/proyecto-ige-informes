@@ -69,9 +69,11 @@ public sealed class ConfirmarCargaInformeCommandHandler(
         }
 
         Causa? causa = null;
-        if (!string.IsNullOrWhiteSpace(request.CausaCaratula)
-            && !string.IsNullOrWhiteSpace(request.CausaNroPiezaSumarial))
+        if (!string.IsNullOrWhiteSpace(request.CausaCaratula))
         {
+            // N° de Pieza Sumarial es opcional (ej. Narcotráfico, que no
+            // aporta un número real) — ver docs/03-modelo-dominio.md,
+            // "Causa.NroPiezaSumarial pasa a ser opcional".
             causa = new Causa(request.CausaCaratula, request.CausaNroPiezaSumarial, request.CausaCircunscripcionJudicial);
             dbContext.Causas.Add(causa);
         }

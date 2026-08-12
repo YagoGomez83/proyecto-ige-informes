@@ -8,5 +8,5 @@ public sealed record GenerarInformeDesdeCasoCommand(
     Guid CasoAnalisisId,
     Guid DependenciaDestinoId,
     string CausaCaratula,
-    string CausaNroPiezaSumarial,
+    string? CausaNroPiezaSumarial,
     string? CausaCircunscripcionJudicial) : IRequest<Guid>;

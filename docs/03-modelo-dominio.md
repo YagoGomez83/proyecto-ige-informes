@@ -458,3 +458,48 @@ erDiagram
   "Primera Circunscripción Judicial", con texto libre previo a este
   cambio), el `<select>` inyecta una opción extra con el valor actual
   para no perderlo en silencio al cargar la página.
+- **`Causa.NroPiezaSumarial` pasa a ser opcional** (cambio de invariante,
+  hallazgo del usuario editando Informes de Narcotráfico): hasta acá era
+  obligatorio junto con la Carátula — pero hay Dependencias/tipos de
+  análisis (ej. Narcotráfico) que directamente no aportan un N° de Pieza
+  Sumarial real. Como el campo era obligatorio, el usuario tipeaba un
+  valor de referencia fijo (`--/--`) para no dejarlo vacío — y como
+  `CausaMatcher` matchea por **N° de Pieza Sumarial exacto** (ver más
+  arriba), todos los Informes con ese mismo placeholder terminaban
+  compartiendo la primera `Causa` creada con ese "número", pisando su
+  Carátula real por la de otro Informe sin relación. Caso real detectado:
+  Informes `73/2022` y `38/2023` (carátulas reales distintas) quedaron
+  ambos apuntando a la misma `Causa` ("TAREA INVESTIGATIVA", `--/--`) por
+  este motivo — corregido a mano tras el fix, ver
+  `project_causa_sin_sumario_2026-08-12` en memoria del proyecto.
+
+  **Aclaración de dominio importante** (explicada por el usuario): el N°
+  de Pieza Sumarial **no** es un identificador de la Carátula/tipo de
+  delito — es el número de expediente judicial real, con estructura
+  `DDMM???/AA` (día y mes de inicio + correlativo + año, a veces con los
+  4 dígitos). Dos Informes con la misma Carátula (ej. dos "AV. ROBO" en
+  meses distintos) tienen Piezas Sumariales **distintas** porque son
+  expedientes distintos — el matching por N° de Pieza Sumarial exacto
+  sigue siendo correcto y no se tocó para ese caso. El problema era
+  exclusivamente el uso de un valor de referencia repetido para "no hay
+  número", que el matching no puede distinguir de una coincidencia real.
+
+  Cambios aplicados:
+  - `Causa.NroPiezaSumarial` es ahora `string?` — el constructor solo
+    exige `Caratula` no vacía.
+  - `CausaMatcher.ObtenerOCrearIdAsync`/`BuscarPorPiezaSumarialAsync`
+    **nunca matchean cuando `nroPiezaSumarial` es null/vacío** — sin
+    número no hay forma confiable de saber si es el mismo expediente,
+    así que cada Informe sin Pieza Sumarial recibe su propia `Causa`
+    nueva, nunca reutiliza la de otro Informe.
+  - Aplicado en los mismos **3 flujos** que ya se alinearon para
+    Circunscripción Judicial: `EditarInformeCommandHandler` (HU-02),
+    `ConfirmarCargaInformeCommandHandler` (HU-01) y
+    `GenerarInformeDesdeCasoCommandHandler` (HU-03) —
+    `GenerarInformeDesdeCasoCommand.CausaNroPiezaSumarial` pasa de
+    `string` a `string?`.
+  - En la UI (`Editar.razor`), el campo "N° de Pieza Sumarial" admite
+    quedar vacío sin escribir ningún valor de referencia — no se agrega
+    ningún placeholder textual nuevo tipo "S/C", el dato real en la base
+    queda `NULL`. El listado de Informes (`/informes`) sigue mostrando
+    la Carátula igual si existe, con o sin número de expediente.

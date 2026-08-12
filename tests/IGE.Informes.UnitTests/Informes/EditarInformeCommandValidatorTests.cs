@@ -3,28 +3,27 @@ using IGE.Informes.Application.Informes.Commands.EditarInforme;
 namespace IGE.Informes.UnitTests.Informes;
 
 /// <summary>
-/// Bug real reportado por el usuario: al editar solo la Carátula (ej. con
-/// el <select> de TipoCausa, HU-19) sin tocar el N° de Pieza Sumarial de
-/// un Informe migrado que nunca lo tuvo, el Handler descartaba el cambio
-/// de Causa en silencio (Causa exige ambos campos, ver Domain/Causa.cs) —
-/// la Dependencia se guardaba igual, sin ningún aviso de que la Causa no.
-/// Este Validator convierte ese descarte silencioso en un error explícito
-/// antes de llegar al Handler.
+/// docs/03-modelo-dominio.md, entrada "Causa.NroPiezaSumarial pasa a ser
+/// opcional": hay Dependencias/tipos de análisis (ej. Narcotráfico) que no
+/// aportan un N° de Pieza Sumarial real. Completar solo la Carátula, sin
+/// Pieza Sumarial, es un caso válido — el bug real (Informes 38/2023 y
+/// 73/2022 compartiendo Causa por el placeholder "--/--") se corrigió en
+/// CausaMatcher, no exigiendo Pieza Sumarial acá. La regla inversa
+/// (Pieza Sumarial sin Carátula) sigue siendo inválida.
 /// </summary>
 public class EditarInformeCommandValidatorTests
 {
     private readonly EditarInformeCommandValidator _validator = new();
 
     [Fact]
-    public void Rechaza_caratula_sin_pieza_sumarial()
+    public void Acepta_caratula_sin_pieza_sumarial()
     {
         var command = new EditarInformeCommand(
             Guid.NewGuid(), null, null, "AV. ROBO", null, null);
 
         var resultado = _validator.Validate(command);
 
-        Assert.False(resultado.IsValid);
-        Assert.Contains(resultado.Errors, e => e.PropertyName == nameof(EditarInformeCommand.CausaNroPiezaSumarial));
+        Assert.True(resultado.IsValid);
     }
 
     [Fact]

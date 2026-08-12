@@ -9,7 +9,7 @@ public sealed class GenerarInformeDesdeCasoCommandValidator : AbstractValidator<
         RuleFor(x => x.CasoAnalisisId).NotEmpty();
         RuleFor(x => x.DependenciaDestinoId).NotEmpty();
         RuleFor(x => x.CausaCaratula).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.CausaNroPiezaSumarial).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.CausaNroPiezaSumarial).MaximumLength(100);
         RuleFor(x => x.CausaCircunscripcionJudicial).MaximumLength(200);
     }
 }

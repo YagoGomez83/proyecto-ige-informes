@@ -7,7 +7,7 @@ public sealed record InformeConCausaAutoAsignadaDto(
     Guid InformeId,
     string IdRegistro,
     string CausaCaratula,
-    string CausaNroPiezaSumarial,
+    string? CausaNroPiezaSumarial,
     DateTime FechaAutoAsignacion);
 
 /// <summary>

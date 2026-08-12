@@ -6,8 +6,8 @@ namespace IGE.Informes.Application.Informes.Queries.SugerirCausas;
 public sealed record CausaSugeridaDto(
     Guid Id,
     string Caratula,
-    string NroPiezaSumarial,
-    string CircunscripcionJudicial);
+    string? NroPiezaSumarial,
+    string? CircunscripcionJudicial);
 
 /// <summary>
 /// HU-02 · Editar / corregir metadatos de un informe (Épica 01), escenario
