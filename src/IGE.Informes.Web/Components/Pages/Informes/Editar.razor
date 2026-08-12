@@ -600,6 +600,10 @@ else
         {
             _errorMessage = ex.Message;
         }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
         catch (Exception)
         {
             _errorMessage = "No se pudieron guardar los cambios. Verificá los datos e intentá de nuevo.";

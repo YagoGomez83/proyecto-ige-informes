@@ -15,5 +15,15 @@ public sealed class EditarInformeCommandValidator : AbstractValidator<EditarInfo
             .Must(fecha => fecha <= DateOnly.FromDateTime(DateTime.UtcNow))
             .WithMessage("La Fecha de Análisis no puede ser futura.")
             .When(x => x.FechaAnalisis is not null);
+
+        RuleFor(x => x.CausaNroPiezaSumarial)
+            .NotEmpty()
+            .WithMessage("El N° de Pieza Sumarial es obligatorio para guardar la Carátula de la Causa.")
+            .When(x => !string.IsNullOrWhiteSpace(x.CausaCaratula));
+
+        RuleFor(x => x.CausaCaratula)
+            .NotEmpty()
+            .WithMessage("La Carátula es obligatoria para guardar el N° de Pieza Sumarial de la Causa.")
+            .When(x => !string.IsNullOrWhiteSpace(x.CausaNroPiezaSumarial));
     }
 }
