@@ -19,4 +19,5 @@ public sealed record EditarInformeCommand(
     string? CausaCaratula,
     string? CausaNroPiezaSumarial,
     string? CausaCircunscripcionJudicial,
-    DateOnly? FechaAnalisis = null) : IRequest;
+    DateOnly? FechaAnalisis = null,
+    string? IdRegistro = null) : IRequest;

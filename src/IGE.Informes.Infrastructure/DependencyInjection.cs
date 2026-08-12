@@ -2,6 +2,7 @@ using IGE.Informes.Application.CasosAnalisis.Queries.BuscarCasos;
 using IGE.Informes.Application.CasosAnalisis.Queries.ListarCasos;
 using IGE.Informes.Application.Common.Interfaces;
 using IGE.Informes.Application.Informes.Queries.BuscarInformes;
+using IGE.Informes.Application.Informes.Queries.SugerirCausas;
 using IGE.Informes.Application.Personas.Queries.BuscarPersonas;
 using IGE.Informes.Application.Vehiculos.Queries.BuscarVehiculos;
 using IGE.Informes.Application.Vehiculos.Queries.ListarVehiculos;
@@ -76,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<IRequestHandler<BuscarVehiculosQuery, IReadOnlyCollection<VehiculoResumenDto>>, BuscarVehiculosQueryHandler>();
         services.AddScoped<IRequestHandler<BuscarPersonasQuery, IReadOnlyCollection<PersonaBusquedaResultDto>>, BuscarPersonasQueryHandler>();
         services.AddScoped<IRequestHandler<BuscarCasosQuery, IReadOnlyCollection<CasoAnalisisResumenDto>>, BuscarCasosQueryHandler>();
+        services.AddScoped<IRequestHandler<SugerirCausasQuery, IReadOnlyCollection<CausaSugeridaDto>>, SugerirCausasQueryHandler>();
 
         return services;
     }

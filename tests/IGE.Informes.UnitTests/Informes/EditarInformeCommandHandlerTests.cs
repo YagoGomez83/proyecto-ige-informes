@@ -1,3 +1,4 @@
+using System.Linq;
 using IGE.Informes.Application.Common.Exceptions;
 using IGE.Informes.Application.Informes.Commands.EditarInforme;
 using IGE.Informes.Domain.Entities;
@@ -255,5 +256,185 @@ public class EditarInformeCommandHandlerTests
             CausaCircunscripcionJudicial: null);
 
         await Assert.ThrowsAsync<EntidadNoEncontradaException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    // HU-02 · Editar / corregir metadatos de un informe (Épica 01),
+    // escenarios "Corregir el ID Registro de un informe en Borrador" y
+    // "Rechazar un ID Registro que ya existe en otro informe". Requieren:
+    // (a) EditarInformeCommand con un parámetro IdRegistro (string?, null =
+    // no tocar, mismo criterio que el resto de los campos opcionales del
+    // Command); (b) que el Handler llame a Informe.CorregirIdRegistro(...)
+    // (ver InformeTests) y antes chequee duplicado contra otros Informes
+    // (invariante 2 de docs/03-modelo-dominio.md), mismo patrón que ya usa
+    // ConfirmarCargaInformeCommandHandler.
+
+    [Fact]
+    public async Task EditarInforme_CorrigeIdRegistroAUnoLibre_PersisteElNuevoIdRegistro()
+    {
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: null,
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null,
+            IdRegistro: "101/2022");
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informeActualizado = await dbContext.Informes.FindAsync(informe.Id);
+        Assert.NotNull(informeActualizado);
+        Assert.Equal("101/2022", informeActualizado.IdRegistro);
+    }
+
+    [Fact]
+    public async Task EditarInforme_SinTocarIdRegistro_MantieneElIdRegistroOriginal()
+    {
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        var idRegistroOriginal = informe.IdRegistro;
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: "Solo el relato.",
+            DependenciaDestinoId: null,
+            CausaCaratula: null,
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null);
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informeActualizado = await dbContext.Informes.FindAsync(informe.Id);
+        Assert.NotNull(informeActualizado);
+        Assert.Equal(idRegistroOriginal, informeActualizado.IdRegistro);
+    }
+
+    [Fact]
+    public async Task EditarInforme_IdRegistroYaExisteEnOtroInforme_RechazaConEntidadDuplicadaException()
+    {
+        var (dbContext, caso, dependenciaOriginal, informe) = await PrepararAsync();
+        var otroInforme = new Informe(
+            "101/2022",
+            new DateOnly(2022, 1, 5),
+            caso.Id,
+            dependenciaOriginal.Id,
+            UsuarioId);
+        dbContext.Informes.Add(otroInforme);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: null,
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null,
+            IdRegistro: "101/2022");
+
+        await Assert.ThrowsAsync<EntidadDuplicadaException>(() => handler.Handle(command, CancellationToken.None));
+
+        var informeSinTocar = await dbContext.Informes.FindAsync(informe.Id);
+        Assert.NotNull(informeSinTocar);
+        Assert.Equal("290/2026", informeSinTocar.IdRegistro);
+    }
+
+    [Fact]
+    public async Task EditarInforme_CorrigeIdRegistroAlMismoValorQueYaTiene_NoLoConsideraDuplicadoConsigoMismo()
+    {
+        // El chequeo de duplicado debe excluir al propio Informe que se está
+        // editando — corregir el ID Registro a su mismo valor actual (o
+        // volver a enviar el mismo dato sin cambiarlo) no debe explotar
+        // contra sí mismo.
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: null,
+            CausaNroPiezaSumarial: null,
+            CausaCircunscripcionJudicial: null,
+            IdRegistro: informe.IdRegistro);
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informeActualizado = await dbContext.Informes.FindAsync(informe.Id);
+        Assert.NotNull(informeActualizado);
+        Assert.Equal(informe.IdRegistro, informeActualizado.IdRegistro);
+    }
+
+    // HU-02 · escenario "Vincular la Causa a una ya existente por Pieza
+    // Sumarial": el Handler todavía siempre crea una Causa nueva (ver
+    // EditarInforme_CorreccionDeCamposEnBorrador_PersisteRelatoDependenciaYCausaNuevos
+    // más arriba, que espera justamente eso) — falta el matching por
+    // NroPiezaSumarial exacto contra Causas ya existentes descripto en
+    // docs/03-modelo-dominio.md, "Decisiones ya resueltas".
+
+    [Fact]
+    public async Task EditarInforme_PiezaSumarialCoincideExactoConCausaExistente_ReusaLaCausaExistenteSinCrearUnaNueva()
+    {
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        // NroPiezaSumarial distinto del que ya usa PrepararAsync() ("7070029/26",
+        // ver causaOriginal) — si coincidieran, ambas Causas matchean el
+        // mismo número (no hay índice único en NroPiezaSumarial) y el
+        // resultado de FirstOrDefaultAsync sería ambiguo.
+        var causaExistente = new Causa("N.N. s/Hurto", "8080099/26", "Primera Circunscripción");
+        dbContext.Causas.Add(causaExistente);
+        await dbContext.SaveChangesAsync();
+        var cantidadCausasAntes = dbContext.Causas.Count();
+
+        // Uso otro Informe (sin Causa asignada) para no pisar la Causa que
+        // ya trae el Informe de PrepararAsync().
+        var informeSinCausa = new Informe(
+            "291/2026",
+            new DateOnly(2026, 7, 22),
+            informe.CasoAnalisisId!.Value,
+            informe.DependenciaDestinoId,
+            UsuarioId);
+        dbContext.Informes.Add(informeSinCausa);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informeSinCausa.Id,
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: "N.N. s/Hurto",
+            CausaNroPiezaSumarial: "8080099/26",
+            CausaCircunscripcionJudicial: "Primera Circunscripción");
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var informeActualizado = await dbContext.Informes.FindAsync(informeSinCausa.Id);
+        Assert.NotNull(informeActualizado);
+        Assert.Equal(causaExistente.Id, informeActualizado.CausaId);
+        Assert.Equal(cantidadCausasAntes, dbContext.Causas.Count());
+    }
+
+    [Fact]
+    public async Task EditarInforme_PiezaSumarialSinCoincidenciaExacta_CreaUnaCausaNueva()
+    {
+        var (dbContext, _, _, informe) = await PrepararAsync();
+        var cantidadCausasAntes = dbContext.Causas.Count();
+        var handler = new EditarInformeCommandHandler(dbContext, new FakeCurrentUserService(UsuarioId));
+
+        var command = new EditarInformeCommand(
+            informe.Id,
+            Relato: null,
+            DependenciaDestinoId: null,
+            CausaCaratula: "AV. INFRACCION LEY 23.737",
+            CausaNroPiezaSumarial: "9999999/26",
+            CausaCircunscripcionJudicial: "Segunda Circunscripción");
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(cantidadCausasAntes + 1, dbContext.Causas.Count());
     }
 }

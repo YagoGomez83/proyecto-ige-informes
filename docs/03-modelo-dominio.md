@@ -340,3 +340,35 @@ erDiagram
   falta) en el mismo formulario — antes de crear el `Informe`, valida
   que el ID Registro ingresado no choque con uno ya existente (mismo
   chequeo que ya hacía el Handler para el caso de fecha faltante).
+- **`Informe.IdRegistro` se puede corregir en edición (HU-02)**: se agregó
+  `Informe.CorregirIdRegistro(...)`, con la misma regla de inmutabilidad
+  que el resto de los campos editables (`Estado == Publicado` lo
+  bloquea) más un chequeo explícito de duplicado contra la invariante 2
+  (`Informe.id_registro` es único en todo el sistema) — necesario porque
+  se descubrió en producción que el parser puede reconocer un ID
+  Registro equivocado (el nombre de archivo no siempre coincide con el
+  contenido real del PDF, ver `project_migracion_pendiente_2026-08-06`
+  en memoria del proyecto) y hasta ahora no había forma de corregirlo sin
+  recrear el Informe entero.
+- **Matching de `Causa` por N° de Pieza Sumarial al editar un Informe
+  (HU-02)**: antes, `EditarInformeCommandHandler` creaba una `Causa`
+  nueva cada vez que se completaban los 3 campos, sin buscar si ya
+  existía una — dos Informes sobre el mismo expediente judicial real
+  terminaban con dos filas de `Causa` distintas y desvinculadas entre
+  sí. Se eligió el **N° de Pieza Sumarial** como clave de matching (no
+  la carátula) porque es el identificador judicial más parecido a una
+  clave natural — la carátula es texto libre con variaciones de
+  transcripción entre PDFs distintos del mismo expediente. Si el N° de
+  Pieza Sumarial ingresado coincide **exacto** con una `Causa`
+  existente, el Informe se vincula a esa `Causa` en vez de crear una
+  nueva. Si no hay match exacto, la UI de edición sugiere las `Causa`
+  existentes con carátula parecida (similaridad de texto vía
+  `pg_trgm`/`similarity()` de Postgres — mismo mecanismo ya disponible
+  en la extensión `unaccent` usada por Búsqueda combinada, ver
+  `project_busqueda_combinada_2026-07-31` en memoria) para que el
+  usuario elija en vez de crear sin querer un duplicado; sigue pudiendo
+  crear una `Causa` nueva si ninguna sugerencia corresponde. Alcance
+  acotado a la pantalla de edición manual — la migración masiva (HU-04)
+  sigue creando la Causa tal cual la extrae el parser, sin matching
+  automático, para no introducir falsos positivos en un proceso masivo
+  sin supervisión por Informe.

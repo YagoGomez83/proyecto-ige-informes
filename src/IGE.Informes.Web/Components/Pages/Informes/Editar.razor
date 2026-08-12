@@ -1,8 +1,10 @@
 @page "/informes/{InformeId:guid}/editar"
 @attribute [Authorize]
+@using IGE.Informes.Application.Common.Exceptions
 @using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
 @using IGE.Informes.Application.Informes.Commands.EditarInforme
 @using IGE.Informes.Application.Informes.Queries.ObtenerInformePorId
+@using IGE.Informes.Application.Informes.Queries.SugerirCausas
 @using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
@@ -36,6 +38,11 @@ else
 
     <div class="card card-form-md">
         <div class="mb-3">
+            <label class="label-md" for="idRegistro">ID Registro</label>
+            <input id="idRegistro" class="form-control mono-data" @bind="_idRegistro" />
+        </div>
+
+        <div class="mb-3">
             <label class="label-md" for="fechaAnalisis">Fecha de Análisis</label>
             <input id="fechaAnalisis" type="date" class="form-control" @bind="_fechaAnalisis" />
         </div>
@@ -65,13 +72,31 @@ else
 
         <div class="mb-3">
             <label class="label-md" for="piezaSumarial">N° de pieza sumarial</label>
-            <input id="piezaSumarial" class="form-control mono-data" @bind="_piezaSumarial" />
+            <input id="piezaSumarial" class="form-control mono-data" @bind="_piezaSumarial" @bind:after="BuscarSugerenciasDeCausaAsync" />
         </div>
 
         <div class="mb-3">
             <label class="label-md" for="circunscripcion">Circunscripción judicial</label>
             <input id="circunscripcion" class="form-control" @bind="_circunscripcion" />
         </div>
+
+        @if (_causasSugeridas is { Count: > 0 })
+        {
+            <div class="mb-3">
+                <p class="body-sm mb-1">
+                    Ninguna Causa existente tiene exactamente ese N° de pieza sumarial —
+                    ¿es alguna de estas?
+                </p>
+                @foreach (var sugerencia in _causasSugeridas)
+                {
+                    <button type="button" class="btn-secondary mb-1 d-block" @onclick="() => UsarCausaSugerida(sugerencia)">
+                        @sugerencia.Caratula
+                        <span class="mono-data">(@sugerencia.NroPiezaSumarial)</span>
+                        — @sugerencia.CircunscripcionJudicial
+                    </button>
+                }
+            </div>
+        }
 
         <div class="d-flex gap-2">
             <button type="button" class="btn-primary" @onclick="GuardarAsync" disabled="@_guardando">Guardar cambios</button>
@@ -90,12 +115,14 @@ else
     private bool _guardando;
     private string? _errorMessage;
 
+    private string? _idRegistro;
     private DateOnly _fechaAnalisis;
     private string? _relato;
     private string _dependenciaDestinoId = string.Empty;
     private string? _causaCaratula;
     private string? _piezaSumarial;
     private string? _circunscripcion;
+    private IReadOnlyCollection<CausaSugeridaDto>? _causasSugeridas;
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,6 +131,7 @@ else
 
         if (_informe is not null)
         {
+            _idRegistro = _informe.IdRegistro;
             _fechaAnalisis = _informe.FechaAnalisis;
             _relato = _informe.Relato;
             _dependenciaDestinoId = _informe.DependenciaDestinoId.ToString();
@@ -113,6 +141,33 @@ else
         }
 
         _cargado = true;
+    }
+
+    private async Task BuscarSugerenciasDeCausaAsync()
+    {
+        _causasSugeridas = null;
+
+        if (string.IsNullOrWhiteSpace(_causaCaratula) || string.IsNullOrWhiteSpace(_piezaSumarial))
+        {
+            return;
+        }
+
+        // Si ya hay una Causa con exactamente ese N° de pieza sumarial, el
+        // Handler la va a reusar directamente al guardar (ver
+        // EditarInformeCommandHandler) — no tiene sentido mostrar
+        // sugerencias en ese caso, solo cuando no hay match exacto.
+        var sugerencias = await Sender.Send(new SugerirCausasQuery(_causaCaratula));
+        _causasSugeridas = sugerencias
+            .Where(c => c.NroPiezaSumarial != _piezaSumarial)
+            .ToList();
+    }
+
+    private void UsarCausaSugerida(CausaSugeridaDto sugerencia)
+    {
+        _causaCaratula = sugerencia.Caratula;
+        _piezaSumarial = sugerencia.NroPiezaSumarial;
+        _circunscripcion = sugerencia.CircunscripcionJudicial;
+        _causasSugeridas = null;
     }
 
     private async Task GuardarAsync()
@@ -129,9 +184,14 @@ else
                 _causaCaratula,
                 _piezaSumarial,
                 _circunscripcion,
-                _fechaAnalisis));
+                _fechaAnalisis,
+                _idRegistro));
 
             NavigationManager.NavigateTo($"informes/{InformeId}");
+        }
+        catch (EntidadDuplicadaException ex)
+        {
+            _errorMessage = ex.Message;
         }
         catch (Exception)
         {

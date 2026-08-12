@@ -52,6 +52,35 @@ Característica: Edición de metadatos
     Cuando modifico causa, dependencia, vehículos o personas asociadas
     Entonces los cambios se guardan y quedan registrados en el log de auditoría
       con mi usuario y fecha/hora
+
+  Escenario: Corregir el ID Registro de un informe en Borrador
+    Dado que tengo abierto un informe en estado Borrador con ID Registro "100/2022"
+    Cuando corrijo el ID Registro a "101/2022"
+    Y ningún otro informe tiene ya el ID Registro "101/2022"
+    Entonces el ID Registro del informe pasa a ser "101/2022"
+    Y el cambio queda registrado en el log de auditoría
+
+  Escenario: Rechazar un ID Registro que ya existe en otro informe
+    Dado que ya existe un informe Publicado o Borrador con ID Registro "101/2022"
+    Y tengo abierto otro informe distinto en estado Borrador
+    Cuando intento corregir su ID Registro a "101/2022"
+    Entonces el sistema rechaza el cambio e indica que el ID Registro ya está en uso
+
+  Escenario: Vincular la Causa a una ya existente por Pieza Sumarial
+    Dado que tengo abierto un informe en estado Borrador
+    Y ya existe una Causa con N° de Pieza Sumarial "7070029/26"
+    Cuando completo la Causa del informe con Pieza Sumarial "7070029/26"
+    Entonces el informe queda vinculado a la Causa existente
+    Y no se crea una Causa nueva
+
+  Escenario: Sugerir Causas existentes cuando la Pieza Sumarial no matchea ninguna
+    Dado que tengo abierto un informe en estado Borrador
+    Y estoy completando el campo Causa
+    Cuando el N° de Pieza Sumarial que ingreso no coincide exactamente con
+      ninguna Causa existente
+    Entonces el sistema me muestra las Causas existentes con carátula
+      parecida como sugerencia
+    Y puedo elegir una de esas sugerencias en vez de crear una Causa nueva
 ```
 
 ---

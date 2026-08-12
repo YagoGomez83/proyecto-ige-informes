@@ -59,11 +59,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
         // case-insensitive pero sensible a acentos.
         builder.HasPostgresExtension("unaccent");
 
-        // El [DbFunction] de FuncionesPostgres.Unaccent no se descubre por
-        // convención porque no está referenciado desde ningún mapeo de
-        // entidad — hay que registrarlo explícitamente acá.
+        // Extensión pg_trgm: SugerirCausasQueryHandler (HU-02) usa
+        // similarity() para sugerir Causas existentes con carátula parecida
+        // cuando el N° de Pieza Sumarial no matchea exacto con ninguna.
+        builder.HasPostgresExtension("pg_trgm");
+
+        // El [DbFunction] de FuncionesPostgres.Unaccent/Similarity no se
+        // descubre por convención porque no está referenciado desde ningún
+        // mapeo de entidad — hay que registrarlo explícitamente acá.
         builder.HasDbFunction(typeof(FuncionesPostgres).GetMethod(nameof(FuncionesPostgres.Unaccent), [typeof(string)])!)
             .HasName("unaccent");
+        builder.HasDbFunction(typeof(FuncionesPostgres).GetMethod(nameof(FuncionesPostgres.Similarity), [typeof(string), typeof(string)])!)
+            .HasName("similarity");
 
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }

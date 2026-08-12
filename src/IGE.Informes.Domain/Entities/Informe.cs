@@ -155,6 +155,21 @@ public sealed class Informe : IAuditable
         FechaAnalisis = fechaAnalisis;
     }
 
+    public void CorregirIdRegistro(string idRegistro)
+    {
+        if (string.IsNullOrWhiteSpace(idRegistro))
+        {
+            throw new ArgumentException("El ID Registro es obligatorio.", nameof(idRegistro));
+        }
+
+        if (Estado == EstadoInforme.Publicado)
+        {
+            throw new InvalidOperationException("Un Informe Publicado es inmutable — no se puede corregir el ID Registro.");
+        }
+
+        IdRegistro = idRegistro;
+    }
+
     public void AsignarDependenciaDestino(Guid dependenciaDestinoId)
     {
         if (dependenciaDestinoId == Guid.Empty)

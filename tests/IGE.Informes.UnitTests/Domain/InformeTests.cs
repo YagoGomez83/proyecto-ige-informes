@@ -192,4 +192,40 @@ public class InformeTests
 
         Assert.Throws<InvalidOperationException>(() => informe.AsignarPdf("otro.pdf"));
     }
+
+    // HU-02 · Editar / corregir metadatos de un informe (Épica 01),
+    // escenario "Corregir el ID Registro de un informe en Borrador":
+    // mismo patrón que CorregirFechaAnalisis (bloquea si Estado ==
+    // Publicado). El chequeo de duplicado contra otros Informes NO es
+    // responsabilidad del dominio, vive en EditarInformeCommandHandler (ver
+    // EditarInformeCommandHandlerTests, escenario "Rechazar un ID Registro
+    // que ya existe en otro informe").
+
+    [Fact]
+    public void CorregirIdRegistro_EnBorrador_ActualizaElIdRegistro()
+    {
+        var informe = CrearInforme();
+
+        informe.CorregirIdRegistro("101/2022");
+
+        Assert.Equal("101/2022", informe.IdRegistro);
+    }
+
+    [Fact]
+    public void CorregirIdRegistro_ConValorVacio_LoRechaza()
+    {
+        var informe = CrearInforme();
+
+        Assert.Throws<ArgumentException>(() => informe.CorregirIdRegistro(""));
+    }
+
+    [Fact]
+    public void CorregirIdRegistro_InformePublicado_EsInmutable()
+    {
+        var informe = CrearInforme(Guid.NewGuid());
+        informe.AgregarFirmante(Guid.NewGuid());
+        informe.Publicar();
+
+        Assert.Throws<InvalidOperationException>(() => informe.CorregirIdRegistro("101/2022"));
+    }
 }

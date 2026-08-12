@@ -1,6 +1,7 @@
 using IGE.Informes.Application;
 using IGE.Informes.Application.CasosAnalisis.Queries.BuscarCasos;
 using IGE.Informes.Application.Common.Interfaces;
+using IGE.Informes.Application.Informes.Queries.SugerirCausas;
 using IGE.Informes.Application.Personas.Queries.BuscarPersonas;
 using IGE.Informes.Application.Vehiculos.Queries.BuscarVehiculos;
 using IGE.Informes.Infrastructure;
@@ -104,6 +105,17 @@ public class RegistroDeHandlersDeBusquedaTests : IAsyncLifetime
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
         var resultado = await sender.Send(new BuscarCasosQuery("ABC"));
+
+        Assert.NotNull(resultado);
+    }
+
+    [Fact]
+    public async Task SugerirCausasQuery_TieneHandlerRegistradoEnElContenedorReal()
+    {
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+
+        var resultado = await sender.Send(new SugerirCausasQuery("ABC"));
 
         Assert.NotNull(resultado);
     }
