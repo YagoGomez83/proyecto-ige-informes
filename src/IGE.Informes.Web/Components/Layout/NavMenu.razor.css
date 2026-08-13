@@ -154,6 +154,10 @@
     flex-shrink: 0;
 }
 
+.sidebar-user-avatar-img {
+    object-fit: cover;
+}
+
 .sidebar-user-info {
     display: flex;
     flex-direction: column;

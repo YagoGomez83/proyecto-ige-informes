@@ -1,3 +1,10 @@
+@using IGE.Informes.Application.Usuarios.Queries.ObtenerPerfilPropio
+@using MediatR
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.DependencyInjection
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceScopeFactory ScopeFactory
+
 <div class="sidebar-brand">
     <span class="sidebar-brand-title">IGE 4.0</span>
     <span class="sidebar-brand-subtitle label-md">Portal de Investigación</span>
@@ -75,7 +82,14 @@
     <AuthorizeView>
         <Authorized>
             <div class="sidebar-user">
-                <div class="sidebar-user-avatar">@Iniciales(context.User.Identity?.Name)</div>
+                @if (_imagenPerfilUrl is not null)
+                {
+                    <img src="@_imagenPerfilUrl" alt="Foto de perfil" class="sidebar-user-avatar sidebar-user-avatar-img" />
+                }
+                else
+                {
+                    <div class="sidebar-user-avatar">@Iniciales(context.User.Identity?.Name)</div>
+                }
                 <div class="sidebar-user-info">
                     <span class="sidebar-user-name">@(context.User.Identity?.Name ?? "Usuario")</span>
                     <span class="sidebar-user-role label-md">@(context.User.IsInRole("Admin") ? "Administrador" : context.User.IsInRole("Supervisor") ? "Supervisor" : "Analista")</span>
@@ -106,6 +120,36 @@
 </div>
 
 @code {
+    private string? _imagenPerfilUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity?.IsAuthenticated ?? true)
+        {
+            return;
+        }
+
+        // Scope propio, mismo motivo que MainLayout.razor: este componente
+        // vive durante todo el circuito (no se recrea al navegar entre
+        // páginas), así que no puede compartir el AppDbContext scoped con
+        // el que la página activa dispara sus propias Queries en paralelo.
+        await using var scope = ScopeFactory.CreateAsyncScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+
+        try
+        {
+            var perfil = await sender.Send(new ObtenerPerfilPropioQuery());
+            _imagenPerfilUrl = perfil.ImagenPerfilUrl;
+        }
+        catch (Exception)
+        {
+            // Sin foto de perfil o error al resolverla: el fallback de
+            // iniciales cubre este caso, no vale la pena romper el sidebar
+            // completo por esto.
+        }
+    }
+
     private static string Iniciales(string? nombre)
     {
         if (string.IsNullOrWhiteSpace(nombre))

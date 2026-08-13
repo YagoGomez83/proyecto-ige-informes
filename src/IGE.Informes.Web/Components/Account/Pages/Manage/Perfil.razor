@@ -7,6 +7,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using MediatR
 @inject ISender Sender
+@inject NavigationManager NavigationManager
 
 <PageTitle>Perfil · IGE 4.0</PageTitle>
 
@@ -88,7 +89,12 @@
             await stream.CopyToAsync(memoria);
 
             await Sender.Send(new SubirImagenPerfilCommand(memoria.ToArray(), archivo.Name, archivo.ContentType));
-            await CargarAsync();
+
+            // forceLoad: true recarga toda la página, incluido NavMenu (layout
+            // persistente que no se re-renderiza solo por navegar) — es la
+            // forma más simple de que el avatar del sidebar refleje la foto
+            // nueva sin introducir un mecanismo de notificación entre componentes.
+            NavigationManager.NavigateTo("Account/Manage/Perfil", forceLoad: true);
         }
         catch (FluentValidation.ValidationException ex)
         {
