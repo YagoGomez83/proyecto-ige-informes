@@ -25,7 +25,21 @@ Característica: Gestión de vehículos
     Cuando busco un vehículo del catálogo por su dominio y lo vinculo
     Entonces el vehículo queda visible en la ficha del Informe
     Y el Informe queda visible en el historial de ese vehículo
+
+  Escenario: Orden del listado de vehículos
+    Dado que existen vehículos con distintos Estados y Marcas
+    Cuando accedo al listado de vehículos
+    Entonces los "Vigente" aparecen antes que los "Identificado"
+    Y dentro de cada Estado, ordenados alfabéticamente por Marca y Modelo
 ```
+
+> **Nota de implementación (extensión 2026-08-13)**: el orden del listado
+> es fijo (sin selector en la UI) — Estado primero (Vigente antes que
+> Identificado, más urgente primero, mismo criterio que el color del
+> `StatusChip`), Marca y Modelo alfabético dentro de cada Estado. Probado
+> con Testcontainers/Postgres real porque la expresión condicional sobre
+> el enum no se traduce igual en EF Core InMemory (ver
+> `ListarVehiculosOrdenTests`).
 
 ---
 
@@ -52,7 +66,24 @@ Característica: Gestión de personas
     Dado que estoy en la ficha de una persona
     Cuando subo una o más fotos
     Entonces quedan asociadas a esa persona y visibles en su ficha
+
+  Escenario: Orden del listado de personas
+    Dado que existen personas con distintos Estados (identificada o no),
+    Roles y Nombres
+    Cuando accedo al listado de personas
+    Entonces las identificadas aparecen antes que las sin identificar
+    Y dentro de cada grupo, ordenadas alfabéticamente por Rol
+    Y dentro de cada Rol, ordenadas alfabéticamente por Nombre
 ```
+
+> **Nota de implementación (extensión 2026-08-13)**: el orden del listado
+> es fijo (sin selector en la UI) — identificada primero (más útil para
+> el equipo, mismo criterio que el `StatusChip`), luego Rol alfabético,
+> luego Nombre alfabético dentro de cada Rol. `RolPersona` se mapea como
+> `string` en la base (`HasConversion<string>()`, ver
+> `PersonaConfiguration`), así que ordenar por esa columna ya es
+> alfabético real, no el orden numérico del enum. Probado con
+> Testcontainers/Postgres real (ver `ListarPersonasOrdenTests`).
 
 > **Nota de implementación**: "vincular Persona a un Vehículo" (este escenario) es
 > un vínculo **directo** entre ambas entidades (`PersonaVehiculo`), independiente

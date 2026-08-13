@@ -11,8 +11,12 @@ public sealed class ListarVehiculosQueryHandler(IAppDbContext dbContext, IAuditL
 {
     public async Task<PagedResult<VehiculoResumenDto>> Handle(ListarVehiculosQuery request, CancellationToken cancellationToken)
     {
+        // Vigente antes que Identificado (más urgente primero) — mismo criterio
+        // que el chip de estado (VehiculoChips), no alfabético del nombre del enum.
         var query = dbContext.Vehiculos.AsNoTracking()
-            .OrderBy(v => v.Marca).ThenBy(v => v.Modelo);
+            .OrderBy(v => v.Estado == EstadoVehiculo.Vigente ? 0 : 1)
+            .ThenBy(v => v.Marca)
+            .ThenBy(v => v.Modelo);
 
         var totalItems = await query.CountAsync(cancellationToken);
 
