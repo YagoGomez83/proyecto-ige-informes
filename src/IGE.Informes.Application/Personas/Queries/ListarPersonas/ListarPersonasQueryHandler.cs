@@ -11,12 +11,28 @@ public sealed class ListarPersonasQueryHandler(IAppDbContext dbContext, IAuditLo
 {
     public async Task<PagedResult<PersonaResumenDto>> Handle(ListarPersonasQuery request, CancellationToken cancellationToken)
     {
+        var query = dbContext.Personas.AsNoTracking();
+
+        if (request.Identificada is not null)
+        {
+            query = request.Identificada.Value
+                ? query.Where(p => p.Nombre != null)
+                : query.Where(p => p.Nombre == null);
+        }
+
+        if (request.Rol is not null)
+        {
+            query = query.Where(p => p.Rol == request.Rol);
+        }
+
         // Identificada antes que Sin identificar (más útil primero), luego Rol
         // alfabético, luego Nombre alfabético dentro de cada Rol.
-        var query = dbContext.Personas.AsNoTracking()
-            .OrderBy(p => p.Nombre == null ? 1 : 0)
-            .ThenBy(p => p.Rol)
-            .ThenBy(p => p.Nombre);
+        query = request.Orden switch
+        {
+            OrdenPersonas.Rol => query.OrderBy(p => p.Rol).ThenBy(p => p.Nombre == null ? 1 : 0).ThenBy(p => p.Nombre),
+            OrdenPersonas.Nombre => query.OrderBy(p => p.Nombre == null ? 1 : 0).ThenBy(p => p.Nombre),
+            _ => query.OrderBy(p => p.Nombre == null ? 1 : 0).ThenBy(p => p.Rol).ThenBy(p => p.Nombre),
+        };
 
         var totalItems = await query.CountAsync(cancellationToken);
 

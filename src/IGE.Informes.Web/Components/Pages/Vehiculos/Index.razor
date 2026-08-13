@@ -13,6 +13,24 @@
     <a class="btn-primary" href="vehiculos/nuevo">Nuevo Vehículo</a>
 </div>
 
+<div class="d-flex gap-3 mb-3">
+    <div>
+        <label class="label-md" for="filtroEstado">Estado</label>
+        <select id="filtroEstado" class="form-control" @bind="_filtroEstado" @bind:after="AplicarFiltrosAsync">
+            <option value="">Todos</option>
+            <option value="Vigente">Vigente</option>
+            <option value="Identificado">Identificado</option>
+        </select>
+    </div>
+    <div>
+        <label class="label-md" for="ordenVehiculos">Ordenar por</label>
+        <select id="ordenVehiculos" class="form-control" @bind="_orden" @bind:after="AplicarFiltrosAsync">
+            <option value="@OrdenVehiculos.Estado">Estado</option>
+            <option value="@OrdenVehiculos.Alfabetico">Alfabético</option>
+        </select>
+    </div>
+</div>
+
 @if (_vehiculos is null)
 {
     <p class="body-md">Cargando...</p>
@@ -70,6 +88,8 @@ else
     private PagedResult<VehiculoResumenDto>? _resultado;
     private IReadOnlyCollection<VehiculoResumenDto>? _vehiculos;
     private int _pagina = 1;
+    private string _filtroEstado = string.Empty;
+    private OrdenVehiculos _orden = OrdenVehiculos.Estado;
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,13 +98,24 @@ else
 
     private async Task CargarAsync()
     {
-        _resultado = await Sender.Send(new ListarVehiculosQuery(_pagina));
+        EstadoVehiculo? estado = string.IsNullOrEmpty(_filtroEstado)
+            ? null
+            : Enum.Parse<EstadoVehiculo>(_filtroEstado);
+
+        _resultado = await Sender.Send(new ListarVehiculosQuery(_pagina, Estado: estado, Orden: _orden));
         _vehiculos = _resultado.Items;
     }
 
     private async Task CambiarPaginaAsync(int nuevaPagina)
     {
         _pagina = nuevaPagina;
+        _vehiculos = null;
+        await CargarAsync();
+    }
+
+    private async Task AplicarFiltrosAsync()
+    {
+        _pagina = 1;
         _vehiculos = null;
         await CargarAsync();
     }

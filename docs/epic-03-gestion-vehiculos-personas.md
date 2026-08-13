@@ -29,17 +29,28 @@ Característica: Gestión de vehículos
   Escenario: Orden del listado de vehículos
     Dado que existen vehículos con distintos Estados y Marcas
     Cuando accedo al listado de vehículos
-    Entonces los "Vigente" aparecen antes que los "Identificado"
+    Entonces por defecto los "Vigente" aparecen antes que los "Identificado"
     Y dentro de cada Estado, ordenados alfabéticamente por Marca y Modelo
+
+  Escenario: Filtrar el listado de vehículos por Estado
+    Dado que estoy en el listado de vehículos
+    Cuando selecciono el filtro "Estado: Vigente"
+    Entonces solo veo vehículos en estado "Vigente"
+
+  Escenario: Cambiar el criterio de orden del listado de vehículos
+    Dado que estoy en el listado de vehículos
+    Cuando selecciono "Ordenar por: Alfabético"
+    Entonces el listado se ordena solo por Marca y Modelo, sin agrupar por Estado
 ```
 
-> **Nota de implementación (extensión 2026-08-13)**: el orden del listado
-> es fijo (sin selector en la UI) — Estado primero (Vigente antes que
-> Identificado, más urgente primero, mismo criterio que el color del
-> `StatusChip`), Marca y Modelo alfabético dentro de cada Estado. Probado
-> con Testcontainers/Postgres real porque la expresión condicional sobre
-> el enum no se traduce igual en EF Core InMemory (ver
-> `ListarVehiculosOrdenTests`).
+> **Nota de implementación (extensión 2026-08-13)**: `ListarVehiculosQuery`
+> gana `Estado` (filtro opcional) y `Orden` (`Estado` | `Alfabetico`,
+> default `Estado`) — dropdowns en `Vehiculos/Index.razor`, sin
+> paginación al cambiar (vuelve a página 1). El orden por Estado usa una
+> expresión condicional sobre el enum (Vigente antes que Identificado,
+> más urgente primero, mismo criterio que el color del `StatusChip`) que
+> no se traduce igual en EF Core InMemory que en Npgsql real — probado
+> con Testcontainers/Postgres real (`ListarVehiculosOrdenTests`).
 
 ---
 
@@ -71,19 +82,33 @@ Característica: Gestión de personas
     Dado que existen personas con distintos Estados (identificada o no),
     Roles y Nombres
     Cuando accedo al listado de personas
-    Entonces las identificadas aparecen antes que las sin identificar
-    Y dentro de cada grupo, ordenadas alfabéticamente por Rol
-    Y dentro de cada Rol, ordenadas alfabéticamente por Nombre
+    Entonces por defecto las identificadas aparecen antes que las sin
+    identificar, dentro de cada grupo ordenadas alfabéticamente por Rol,
+    y dentro de cada Rol ordenadas alfabéticamente por Nombre
+
+  Escenario: Filtrar el listado de personas por Estado y Rol
+    Dado que estoy en el listado de personas
+    Cuando selecciono el filtro "Estado: Identificada" y "Rol: Sospechoso"
+    Entonces solo veo personas identificadas con Rol "Sospechoso"
+
+  Escenario: Cambiar el criterio de orden del listado de personas
+    Dado que estoy en el listado de personas
+    Cuando selecciono "Ordenar por: Nombre"
+    Entonces el listado se ordena solo alfabéticamente por Nombre, sin
+    agrupar por Estado ni por Rol
 ```
 
-> **Nota de implementación (extensión 2026-08-13)**: el orden del listado
-> es fijo (sin selector en la UI) — identificada primero (más útil para
-> el equipo, mismo criterio que el `StatusChip`), luego Rol alfabético,
-> luego Nombre alfabético dentro de cada Rol. `RolPersona` se mapea como
-> `string` en la base (`HasConversion<string>()`, ver
-> `PersonaConfiguration`), así que ordenar por esa columna ya es
-> alfabético real, no el orden numérico del enum. Probado con
-> Testcontainers/Postgres real (ver `ListarPersonasOrdenTests`).
+> **Nota de implementación (extensión 2026-08-13)**: `ListarPersonasQuery`
+> gana `Identificada` (filtro opcional, bool) y `Rol` (filtro opcional) más
+> `Orden` (`Estado` | `Rol` | `Nombre`, default `Estado`) — dropdowns en
+> `Personas/Index.razor`, sin paginación al cambiar (vuelve a página 1).
+> El orden por Estado usa identificada primero (más útil para el equipo,
+> mismo criterio que el `StatusChip`), luego Rol alfabético, luego Nombre
+> alfabético dentro de cada Rol. `RolPersona` se mapea como `string` en
+> la base (`HasConversion<string>()`, ver `PersonaConfiguration`), así
+> que ordenar por esa columna ya es alfabético real, no el orden numérico
+> del enum. Probado con Testcontainers/Postgres real (ver
+> `ListarPersonasOrdenTests`).
 
 > **Nota de implementación**: "vincular Persona a un Vehículo" (este escenario) es
 > un vínculo **directo** entre ambas entidades (`PersonaVehiculo`), independiente

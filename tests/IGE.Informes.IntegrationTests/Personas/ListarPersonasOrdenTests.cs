@@ -64,4 +64,70 @@ public class ListarPersonasOrdenTests : IAsyncLifetime
         // Sin identificar (null) al final.
         Assert.Equal(["Alfa", "Zeta", "Beta", null], nombres);
     }
+
+    [Fact]
+    public async Task ListarPersonas_FiltraPorEstadoIdentificadaYPorRol()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(_postgres.GetConnectionString())
+            .Options;
+
+        await using (var migrationContext = new AppDbContext(options))
+        {
+            await migrationContext.Database.MigrateAsync();
+        }
+
+        await using (var setupContext = new AppDbContext(options))
+        {
+            var sospechosoIdentificado = new Persona(RolPersona.Sospechoso, "Ana");
+            var sospechosoSinIdentificar = new Persona(RolPersona.Sospechoso, caracteristicas: "Contextura media");
+            var testigoIdentificado = new Persona(RolPersona.Testigo, "Bruno");
+
+            setupContext.Personas.AddRange(sospechosoIdentificado, sospechosoSinIdentificar, testigoIdentificado);
+            await setupContext.SaveChangesAsync();
+        }
+
+        await using var dbContext = new AppDbContext(options);
+        var handler = new ListarPersonasQueryHandler(dbContext, new NullAuditLogger());
+
+        var resultado = await handler.Handle(
+            new ListarPersonasQuery(Pagina: 1, TamanioPagina: 50, Identificada: true, Rol: RolPersona.Sospechoso),
+            CancellationToken.None);
+
+        var nombres = resultado.Items.Select(p => p.Nombre).ToList();
+        Assert.Equal(["Ana"], nombres);
+    }
+
+    [Fact]
+    public async Task ListarPersonas_OrdenNombre_IgnoraEstadoYRol()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(_postgres.GetConnectionString())
+            .Options;
+
+        await using (var migrationContext = new AppDbContext(options))
+        {
+            await migrationContext.Database.MigrateAsync();
+        }
+
+        await using (var setupContext = new AppDbContext(options))
+        {
+            var zeta = new Persona(RolPersona.Testigo, "Zeta");
+            var alfa = new Persona(RolPersona.Sospechoso, "Alfa");
+
+            setupContext.Personas.AddRange(zeta, alfa);
+            await setupContext.SaveChangesAsync();
+        }
+
+        await using var dbContext = new AppDbContext(options);
+        var handler = new ListarPersonasQueryHandler(dbContext, new NullAuditLogger());
+
+        var resultado = await handler.Handle(
+            new ListarPersonasQuery(Pagina: 1, TamanioPagina: 50, Orden: OrdenPersonas.Nombre), CancellationToken.None);
+
+        var nombres = resultado.Items.Select(p => p.Nombre).ToList();
+
+        // Alfabético puro: Alfa (Sospechoso) antes que Zeta (Testigo).
+        Assert.Equal(["Alfa", "Zeta"], nombres);
+    }
 }

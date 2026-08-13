@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @using IGE.Informes.Application.Common.Dtos
 @using IGE.Informes.Application.Personas.Queries.ListarPersonas
+@using IGE.Informes.Domain.Entities
 @using MediatR
 @inject ISender Sender
 
@@ -10,6 +11,36 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="headline-md">Personas</h1>
     <a class="btn-primary" href="personas/nueva">Nueva Persona</a>
+</div>
+
+<div class="d-flex gap-3 mb-3">
+    <div>
+        <label class="label-md" for="filtroEstado">Estado</label>
+        <select id="filtroEstado" class="form-control" @bind="_filtroEstado" @bind:after="AplicarFiltrosAsync">
+            <option value="">Todas</option>
+            <option value="Identificada">Identificada</option>
+            <option value="SinIdentificar">Sin identificar</option>
+        </select>
+    </div>
+    <div>
+        <label class="label-md" for="filtroRol">Rol</label>
+        <select id="filtroRol" class="form-control" @bind="_filtroRol" @bind:after="AplicarFiltrosAsync">
+            <option value="">Todos</option>
+            <option value="@RolPersona.Denunciante">Denunciante</option>
+            <option value="@RolPersona.Damnificado">Damnificado</option>
+            <option value="@RolPersona.Sospechoso">Sospechoso</option>
+            <option value="@RolPersona.ConductorIdentificado">Conductor identificado</option>
+            <option value="@RolPersona.Testigo">Testigo</option>
+        </select>
+    </div>
+    <div>
+        <label class="label-md" for="ordenPersonas">Ordenar por</label>
+        <select id="ordenPersonas" class="form-control" @bind="_orden" @bind:after="AplicarFiltrosAsync">
+            <option value="@OrdenPersonas.Estado">Estado</option>
+            <option value="@OrdenPersonas.Rol">Rol</option>
+            <option value="@OrdenPersonas.Nombre">Nombre</option>
+        </select>
+    </div>
 </div>
 
 @if (_personas is null)
@@ -66,6 +97,9 @@ else
     private PagedResult<PersonaResumenDto>? _resultado;
     private IReadOnlyCollection<PersonaResumenDto>? _personas;
     private int _pagina = 1;
+    private string _filtroEstado = string.Empty;
+    private string _filtroRol = string.Empty;
+    private OrdenPersonas _orden = OrdenPersonas.Estado;
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,13 +108,31 @@ else
 
     private async Task CargarAsync()
     {
-        _resultado = await Sender.Send(new ListarPersonasQuery(_pagina));
+        bool? identificada = _filtroEstado switch
+        {
+            "Identificada" => true,
+            "SinIdentificar" => false,
+            _ => null,
+        };
+
+        RolPersona? rol = string.IsNullOrEmpty(_filtroRol)
+            ? null
+            : Enum.Parse<RolPersona>(_filtroRol);
+
+        _resultado = await Sender.Send(new ListarPersonasQuery(_pagina, Identificada: identificada, Rol: rol, Orden: _orden));
         _personas = _resultado.Items;
     }
 
     private async Task CambiarPaginaAsync(int nuevaPagina)
     {
         _pagina = nuevaPagina;
+        _personas = null;
+        await CargarAsync();
+    }
+
+    private async Task AplicarFiltrosAsync()
+    {
+        _pagina = 1;
         _personas = null;
         await CargarAsync();
     }
