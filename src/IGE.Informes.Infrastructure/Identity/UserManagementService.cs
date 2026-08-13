@@ -172,6 +172,33 @@ public sealed class UserManagementService(
         return resultado.Succeeded;
     }
 
+    public async Task<PerfilUsuarioDto?> ObtenerPerfilPropioAsync(Guid usuarioId, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(usuarioId.ToString());
+        if (usuario is null)
+        {
+            return null;
+        }
+
+        var roles = await userManager.GetRolesAsync(usuario);
+
+        return new PerfilUsuarioDto(
+            usuario.Id,
+            usuario.NombreCompleto,
+            usuario.Email ?? string.Empty,
+            roles.Count > 0 ? roles[0] : string.Empty,
+            usuario.ImagenPerfilPath);
+    }
+
+    public async Task ActualizarImagenPerfilAsync(Guid usuarioId, string? imagenPerfilPath, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(usuarioId.ToString())
+            ?? throw new InvalidOperationException($"Usuario '{usuarioId}' no encontrado.");
+
+        usuario.ImagenPerfilPath = imagenPerfilPath;
+        await userManager.UpdateAsync(usuario);
+    }
+
     private async Task<UsuarioDto> MapearAsync(ApplicationUser usuario)
     {
         var roles = await userManager.GetRolesAsync(usuario);

@@ -635,6 +635,59 @@ Característica: Cambio de la propia contraseña (extensión de HU-17)
 - Página en `Account/Manage/CambiarPassword`, accesible desde el ícono de
   llave junto al usuario en el sidebar (`NavMenu.razor`).
 
+### Perfil propio: nombre, rol y foto (extensión de HU-17)
+
+**Como** Analista, Supervisor o Administrador
+**Quiero** ver mi nombre y rol, y subir/cambiar mi foto de perfil
+**Para** identificar visualmente mi cuenta en el sistema
+
+```gherkin
+Característica: Perfil propio
+
+  Escenario: Ver los datos de mi perfil
+    Dado que estoy logueado con cualquier rol
+    Cuando voy a "Cuenta > Perfil"
+    Entonces veo mi nombre completo, mi email y mi rol
+
+  Escenario: Subir una foto de perfil por primera vez
+    Dado que estoy en "Cuenta > Perfil" y no tengo foto cargada
+    Cuando subo una imagen JPEG, PNG o WebP de hasta 10MB
+    Entonces la foto queda visible en mi perfil, reemplazando el ícono de
+    iniciales
+
+  Escenario: Reemplazar una foto de perfil existente
+    Dado que ya tengo una foto de perfil cargada
+    Cuando subo una imagen nueva
+    Entonces la foto anterior se reemplaza por la nueva y deja de estar
+    disponible
+
+  Escenario: Imagen rechazada por el escaneo antivirus
+    Dado que subo un archivo que el escaneo antivirus detecta como amenaza
+    Cuando confirmo la subida
+    Entonces el sistema la rechaza y no queda ningún dato guardado
+```
+
+Notas de modelado:
+
+- `ApplicationUser` gana `ImagenPerfilPath` (`string?`, nullable) — path
+  crudo en MinIO, mismo `IFileStorage` que `VehiculoImagen`/
+  `PersonaImagen`, nunca una URL directa persistida.
+- A diferencia de `VehiculoImagen`/`PersonaImagen` (colección con
+  histórico, una entidad `Domain` propia con `IAuditable`), acá es un
+  campo único directo en `ApplicationUser` — no hay galería ni historial
+  de fotos de perfil, cada subida reemplaza la anterior y la borra de
+  MinIO (`SubirImagenPerfilCommandHandler`, mismo escaneo antivirus
+  fail-closed y validación de magic bytes que el resto de las imágenes
+  del sistema, ver `FormatoImagenHelper`).
+- `SubirImagenPerfilCommand`/`ObtenerPerfilPropioQuery`
+  (`[Autorizar(Analista, Supervisor, Admin)]`) operan siempre sobre
+  `ICurrentUserService.UsuarioId`, mismo criterio que
+  `CambiarPasswordPropiaCommand` — nunca reciben un `UsuarioId` del
+  cliente, un usuario no puede subir/ver la foto de otro por esta vía.
+- Página en `Account/Manage/Perfil`, accesible desde un ícono nuevo junto
+  al usuario en el sidebar (`NavMenu.razor`), al lado del de "Cambiar
+  contraseña".
+
 ### Notas de modelado
 
 - No se agrega ninguna entidad nueva a `Domain` — esta HU opera sobre

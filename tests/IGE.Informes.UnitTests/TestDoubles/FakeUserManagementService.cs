@@ -19,6 +19,7 @@ public sealed class FakeUserManagementService : IUserManagementService
         public required string Rol { get; set; }
         public bool Bloqueado { get; set; }
         public string PasswordActual { get; set; } = "PasswordOriginal123";
+        public string? ImagenPerfilPath { get; set; }
     }
 
     private readonly Dictionary<Guid, UsuarioInterno> _usuarios = [];
@@ -166,5 +167,26 @@ public sealed class FakeUserManagementService : IUserManagementService
 
         usuario.PasswordActual = passwordNueva;
         return Task.FromResult(true);
+    }
+
+    public Task<PerfilUsuarioDto?> ObtenerPerfilPropioAsync(Guid usuarioId, CancellationToken cancellationToken)
+    {
+        if (!_usuarios.TryGetValue(usuarioId, out var usuario))
+        {
+            return Task.FromResult<PerfilUsuarioDto?>(null);
+        }
+
+        return Task.FromResult<PerfilUsuarioDto?>(
+            new PerfilUsuarioDto(usuario.Id, usuario.NombreCompleto, usuario.Email, usuario.Rol, usuario.ImagenPerfilPath));
+    }
+
+    public Task ActualizarImagenPerfilAsync(Guid usuarioId, string? imagenPerfilPath, CancellationToken cancellationToken)
+    {
+        if (_usuarios.TryGetValue(usuarioId, out var usuario))
+        {
+            usuario.ImagenPerfilPath = imagenPerfilPath;
+        }
+
+        return Task.CompletedTask;
     }
 }

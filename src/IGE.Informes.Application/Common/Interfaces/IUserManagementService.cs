@@ -2,6 +2,8 @@ namespace IGE.Informes.Application.Common.Interfaces;
 
 public sealed record UsuarioDto(Guid Id, string NombreCompleto, string Email, string Rol, bool Bloqueado);
 
+public sealed record PerfilUsuarioDto(Guid Id, string NombreCompleto, string Email, string Rol, string? ImagenPerfilPath);
+
 /// <summary>
 /// Puerto hacia ASP.NET Core Identity: Application depende solo de esta
 /// interfaz, nunca de UserManager/RoleManager directamente (Clean
@@ -51,4 +53,23 @@ public interface IUserManagementService
     /// negocio con el detalle, mismo patrón que el resto del servicio.
     /// </summary>
     Task<bool> CambiarPasswordPropiaAsync(Guid usuarioId, string passwordActual, string passwordNueva, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Datos del propio usuario autenticado para la pantalla de Perfil —
+    /// nombre, email, rol e ImagenPerfilPath (path crudo en MinIO, no URL;
+    /// el Handler de la Query resuelve la URL prefirmada vía IFileStorage,
+    /// mismo criterio que ListarImagenesVehiculoQueryHandler). Null si el
+    /// usuario no existe (no debería pasar para un UsuarioId autenticado
+    /// real, pero el Handler lo traduce a excepción igual que el resto).
+    /// </summary>
+    Task<PerfilUsuarioDto?> ObtenerPerfilPropioAsync(Guid usuarioId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reemplaza la foto de perfil del propio usuario autenticado. A
+    /// diferencia de VehiculoImagen/PersonaImagen (colección con
+    /// histórico), acá es un campo único — el Handler es responsable de
+    /// eliminar el archivo anterior de MinIO antes de llamar a esto (mismo
+    /// motivo que QuitarImagenVehiculoCommandHandler, evitar huérfanos).
+    /// </summary>
+    Task ActualizarImagenPerfilAsync(Guid usuarioId, string? imagenPerfilPath, CancellationToken cancellationToken);
 }

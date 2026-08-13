@@ -1,0 +1,126 @@
+@page "/Account/Manage/Perfil"
+@attribute [Authorize]
+
+@using IGE.Informes.Application.Usuarios.Commands.SubirImagenPerfil
+@using IGE.Informes.Application.Usuarios.Queries.ObtenerPerfilPropio
+@using Microsoft.AspNetCore.Components.Forms
+@using MediatR
+@inject ISender Sender
+
+<PageTitle>Perfil · IGE 4.0</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card">
+            <h1 class="headline-md mb-3">Perfil</h1>
+
+            @if (_perfil is null)
+            {
+                <p class="body-md">Cargando...</p>
+            }
+            else
+            {
+                <div class="perfil-imagen-wrapper mb-3">
+                    @if (_perfil.ImagenPerfilUrl is not null)
+                    {
+                        <img src="@_perfil.ImagenPerfilUrl" alt="Foto de perfil" class="perfil-imagen" />
+                    }
+                    else
+                    {
+                        <div class="perfil-imagen perfil-imagen-fallback">@Iniciales(_perfil.NombreCompleto)</div>
+                    }
+                </div>
+
+                <InputFile class="form-control mb-3" OnChange="SubirImagenAsync" accept="image/jpeg,image/png,image/webp" disabled="@_subiendoImagen" />
+                @if (_subiendoImagen)
+                {
+                    <p class="body-sm mb-3">Subiendo...</p>
+                }
+
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 label-md">Nombre</dt>
+                    <dd class="col-sm-8 body-md">@_perfil.NombreCompleto</dd>
+
+                    <dt class="col-sm-4 label-md">Email</dt>
+                    <dd class="col-sm-8 body-md">@_perfil.Email</dd>
+
+                    <dt class="col-sm-4 label-md">Rol</dt>
+                    <dd class="col-sm-8 body-md">@NombreRol(_perfil.Rol)</dd>
+                </dl>
+            }
+
+            @if (_errorMessage is not null)
+            {
+                <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private PerfilPropioDto? _perfil;
+    private bool _subiendoImagen;
+    private string? _errorMessage;
+
+    private const long TamanioMaximoImagenBytes = 10 * 1024 * 1024;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _perfil = await Sender.Send(new ObtenerPerfilPropioQuery());
+    }
+
+    private async Task SubirImagenAsync(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _subiendoImagen = true;
+
+        try
+        {
+            var archivo = e.File;
+            using var stream = archivo.OpenReadStream(TamanioMaximoImagenBytes);
+            using var memoria = new MemoryStream();
+            await stream.CopyToAsync(memoria);
+
+            await Sender.Send(new SubirImagenPerfilCommand(memoria.ToArray(), archivo.Name, archivo.ContentType));
+            await CargarAsync();
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(err => err.ErrorMessage));
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo subir la imagen. Verificá el formato (JPEG/PNG/WebP) y el tamaño (máx. 10MB).";
+        }
+        finally
+        {
+            _subiendoImagen = false;
+        }
+    }
+
+    private static string NombreRol(string rol) => rol switch
+    {
+        "Admin" => "Administrador",
+        "Supervisor" => "Supervisor",
+        "Analista" => "Analista",
+        _ => rol,
+    };
+
+    private static string Iniciales(string nombre)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            return "?";
+        }
+
+        var partes = nombre.Split(new[] { ' ', '@', '.' }, StringSplitOptions.RemoveEmptyEntries);
+        return partes.Length >= 2
+            ? $"{partes[0][0]}{partes[1][0]}".ToUpperInvariant()
+            : nombre[0].ToString().ToUpperInvariant();
+    }
+}
