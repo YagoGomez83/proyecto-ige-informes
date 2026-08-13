@@ -6,6 +6,7 @@
 @using IGE.Informes.Application.Vehiculos.Commands.AsignarCategoriaAlerta
 @using IGE.Informes.Application.Vehiculos.Commands.CambiarEstadoVehiculo
 @using IGE.Informes.Application.Vehiculos.Commands.DarDeBajaVehiculo
+@using IGE.Informes.Application.Vehiculos.Commands.EliminarVehiculo
 @using IGE.Informes.Application.Personas.Queries.BuscarPersonas
 @using IGE.Informes.Application.Vehiculos.Commands.QuitarImagenVehiculo
 @using IGE.Informes.Application.Personas.Commands.VincularVehiculo
@@ -38,7 +39,14 @@ else
             <h1 class="headline-md mb-1">@_vehiculo.Marca @_vehiculo.Modelo</h1>
             <StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" />
         </div>
-        <a class="btn-secondary" href="vehiculos">Volver al listado</a>
+        <div class="d-flex gap-2">
+            <AuthorizeView Roles="Supervisor,Admin">
+                <Authorized>
+                    <button type="button" class="btn-destructive" @onclick="() => _mostrarConfirmacionEliminar = true">Eliminar</button>
+                </Authorized>
+            </AuthorizeView>
+            <a class="btn-secondary" href="vehiculos">Volver al listado</a>
+        </div>
     </div>
 
     <div class="card mb-3">
@@ -267,6 +275,14 @@ else
     {
         <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
     }
+
+    <ConfirmacionModal Visible="_mostrarConfirmacionEliminar"
+                        Titulo="Eliminar Vehículo"
+                        Mensaje="@($"¿Confirmás eliminar el Vehículo \"{_vehiculo.Marca} {_vehiculo.Modelo}\"? El registro deja de aparecer en listados, búsquedas, Dashboard e historiales vinculados, pero se conserva para auditoría.")"
+                        TextoConfirmar="Eliminar"
+                        Procesando="_eliminando"
+                        OnConfirmar="EliminarAsync"
+                        OnCancelar="() => _mostrarConfirmacionEliminar = false" />
 }
 
 @code {
@@ -287,6 +303,8 @@ else
     private string? _errorMessage;
     private bool _procesando;
     private bool _subiendoImagen;
+    private bool _mostrarConfirmacionEliminar;
+    private bool _eliminando;
 
     private const long TamanioMaximoImagenBytes = 10 * 1024 * 1024;
     private const int CantidadMaximaArchivosPorSeleccion = 20;
@@ -467,6 +485,27 @@ else
         finally
         {
             _procesando = false;
+        }
+    }
+
+    private async Task EliminarAsync()
+    {
+        _errorMessage = null;
+        _eliminando = true;
+
+        try
+        {
+            await Sender.Send(new EliminarVehiculoCommand(VehiculoId));
+            NavigationManager.NavigateTo("vehiculos");
+        }
+        catch (Exception)
+        {
+            _mostrarConfirmacionEliminar = false;
+            _errorMessage = "No se pudo eliminar el Vehículo.";
+        }
+        finally
+        {
+            _eliminando = false;
         }
     }
 }

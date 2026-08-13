@@ -3,6 +3,7 @@
 @using IGE.Informes.Application.Common.Dtos
 @using IGE.Informes.Application.Personas.Commands.AgregarImagenPersona
 @using IGE.Informes.Application.Personas.Commands.CambiarRolPersona
+@using IGE.Informes.Application.Personas.Commands.EliminarPersona
 @using IGE.Informes.Application.Personas.Commands.IdentificarPersona
 @using IGE.Informes.Application.Personas.Commands.QuitarImagenPersona
 @using IGE.Informes.Application.Personas.Commands.VincularVehiculo
@@ -42,7 +43,14 @@ else
                 <StatusChip Texto="Sin identificar" Semantica="ChipSemantica.Neutral" />
             }
         </div>
-        <a class="btn-secondary" href="personas">Volver al listado</a>
+        <div class="d-flex gap-2">
+            <AuthorizeView Roles="Supervisor,Admin">
+                <Authorized>
+                    <button type="button" class="btn-destructive" @onclick="() => _mostrarConfirmacionEliminar = true">Eliminar</button>
+                </Authorized>
+            </AuthorizeView>
+            <a class="btn-secondary" href="personas">Volver al listado</a>
+        </div>
     </div>
 
     <div class="card mb-3">
@@ -227,6 +235,14 @@ else
     {
         <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
     }
+
+    <ConfirmacionModal Visible="_mostrarConfirmacionEliminar"
+                        Titulo="Eliminar Persona"
+                        Mensaje="@($"¿Confirmás eliminar a \"{_persona.Nombre ?? "esta persona sin identificar"}\"? El registro deja de aparecer en listados, búsquedas e historiales vinculados, pero se conserva para auditoría.")"
+                        TextoConfirmar="Eliminar"
+                        Procesando="_eliminando"
+                        OnConfirmar="EliminarAsync"
+                        OnCancelar="() => _mostrarConfirmacionEliminar = false" />
 }
 
 @code {
@@ -247,6 +263,8 @@ else
     private string? _errorMessage;
     private bool _procesando;
     private bool _subiendoImagen;
+    private bool _mostrarConfirmacionEliminar;
+    private bool _eliminando;
 
     private const long TamanioMaximoImagenBytes = 10 * 1024 * 1024;
     private const int CantidadMaximaArchivosPorSeleccion = 20;
@@ -411,6 +429,27 @@ else
         finally
         {
             _procesando = false;
+        }
+    }
+
+    private async Task EliminarAsync()
+    {
+        _errorMessage = null;
+        _eliminando = true;
+
+        try
+        {
+            await Sender.Send(new EliminarPersonaCommand(PersonaId));
+            NavigationManager.NavigateTo("personas");
+        }
+        catch (Exception)
+        {
+            _mostrarConfirmacionEliminar = false;
+            _errorMessage = "No se pudo eliminar la Persona.";
+        }
+        finally
+        {
+            _eliminando = false;
         }
     }
 }

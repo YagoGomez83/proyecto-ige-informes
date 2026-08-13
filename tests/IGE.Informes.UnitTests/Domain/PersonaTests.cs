@@ -58,4 +58,21 @@ public class PersonaTests
 
         Assert.Equal(RolPersona.Testigo, persona.Rol);
     }
+
+    // HU-21 · Borrado lógico de Informe, Caso de Análisis, Vehículo y
+    // Persona (docs/epic-01-gestion-informes.md), Característica "Borrado
+    // lógico de una Persona": Eliminado/FechaEliminacion/Eliminar() todavía
+    // no existen en el dominio — deben fallar en rojo (TDD) hasta
+    // implementarse.
+
+    [Fact]
+    public void Eliminar_Persona_MarcaEliminadoYFechaEliminacion()
+    {
+        var persona = new Persona(RolPersona.Sospechoso, "Juan Pérez", "30123456");
+
+        persona.Eliminar();
+
+        Assert.True(persona.Eliminado);
+        Assert.NotNull(persona.FechaEliminacion);
+    }
 }

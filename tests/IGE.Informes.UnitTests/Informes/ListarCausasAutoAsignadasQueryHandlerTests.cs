@@ -18,8 +18,14 @@ public class ListarCausasAutoAsignadasQueryHandlerTests
 {
     private static readonly Guid UsuarioId = Guid.NewGuid();
 
+    // HU-04 · Migración histórica de informes desde Drive
+    // (docs/epic-01-gestion-informes.md), extensión (2026-08-12): se abre a
+    // los 3 roles (Analista, Supervisor, Admin) — ya no es exclusiva de
+    // Admin. Reemplaza al viejo
+    // "ListarCausasAutoAsignadasQuery_DeclaraAutorizacionSoloParaAdmin" y
+    // debe fallar en rojo hasta que se actualice el atributo [Autorizar].
     [Fact]
-    public void ListarCausasAutoAsignadasQuery_DeclaraAutorizacionSoloParaAdmin()
+    public void ListarCausasAutoAsignadasQuery_DeclaraAutorizacion_ParaAnalistaSupervisorYAdmin()
     {
         var atributo = typeof(ListarCausasAutoAsignadasQuery)
             .GetCustomAttributes(typeof(AutorizarAttribute), inherit: true)
@@ -27,7 +33,10 @@ public class ListarCausasAutoAsignadasQueryHandlerTests
             .SingleOrDefault();
 
         Assert.NotNull(atributo);
-        Assert.Single(atributo.Roles, Roles.Admin);
+        Assert.Equal(3, atributo.Roles.Count);
+        Assert.Contains(Roles.Analista, atributo.Roles);
+        Assert.Contains(Roles.Supervisor, atributo.Roles);
+        Assert.Contains(Roles.Admin, atributo.Roles);
     }
 
     [Fact]

@@ -38,6 +38,13 @@ public sealed class InformeConfiguration : IEntityTypeConfiguration<Informe>
         builder.HasIndex(i => i.CausaId);
         builder.HasIndex(i => i.DependenciaDestinoId);
 
+        builder.Property(i => i.Eliminado).IsRequired();
+        builder.HasIndex(i => i.Eliminado);
+
+        // Borrado lógico (HU-21): filtro global, no aparece en ninguna
+        // consulta salvo que se use IgnoreQueryFilters() explícitamente.
+        builder.HasQueryFilter(i => !i.Eliminado);
+
         // Token de concurrencia optimista mapeado sobre la columna de
         // sistema xmin que Postgres ya mantiene implícitamente en toda
         // tabla (no crea una columna nueva) — propiedad shadow, no requiere

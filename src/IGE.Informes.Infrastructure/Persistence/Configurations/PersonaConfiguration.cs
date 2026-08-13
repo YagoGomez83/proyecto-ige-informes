@@ -22,5 +22,12 @@ public sealed class PersonaConfiguration : IEntityTypeConfiguration<Persona>
             .IsRequired();
 
         builder.HasIndex(p => p.Dni);
+
+        builder.Property(p => p.Eliminado).IsRequired();
+        builder.HasIndex(p => p.Eliminado);
+
+        // Borrado lógico (HU-21): filtro global, no aparece en ninguna
+        // consulta salvo que se use IgnoreQueryFilters() explícitamente.
+        builder.HasQueryFilter(p => !p.Eliminado);
     }
 }

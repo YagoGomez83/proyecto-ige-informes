@@ -32,6 +32,13 @@ public sealed class CasoAnalisisConfiguration : IEntityTypeConfiguration<CasoAna
         builder.HasIndex(c => c.DependenciaId);
         builder.HasIndex(c => c.TipoIncidenteId);
 
+        builder.Property(c => c.Eliminado).IsRequired();
+        builder.HasIndex(c => c.Eliminado);
+
+        // Borrado lógico (HU-21): filtro global, no aparece en ninguna
+        // consulta salvo que se use IgnoreQueryFilters() explícitamente.
+        builder.HasQueryFilter(c => !c.Eliminado);
+
         builder.Metadata
             .FindNavigation(nameof(CasoAnalisis.Analistas))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);

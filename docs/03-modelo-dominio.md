@@ -537,3 +537,52 @@ erDiagram
     normales, sin alertar activamente para acción, pero sigue en el
     contador del Dashboard hasta que se dé de baja explícitamente), o
     darlo de baja igual si además no se quiere que aparezca ahí.
+- **Borrado lógico de Informe, CasoAnalisis, Vehiculo y Persona** (HU-21,
+  pedido explícito del usuario como parte de una revisión general de
+  roles — hasta esta HU, ninguna de las 4 tenía forma de eliminarse):
+  - Cada entidad gana `Eliminado` (`bool`, default `false`) y
+    `FechaEliminacion` (`DateTime?`), más un método `Eliminar()` en el
+    dominio. **No reemplaza ni colisiona con `Vehiculo.FechaBaja`**
+    (semántica de negocio distinta, "fin de vigilancia activa", el
+    registro sigue siendo listado) — son dos conceptos independientes
+    que pueden coexistir en el mismo `Vehiculo`.
+  - `Informe.Eliminar()` lanza `InvalidOperationException` si
+    `Estado == EstadoInforme.Publicado` — mismo patrón textual que ya
+    usan `CompletarRelato`/`AsignarPdf`/`AsignarCausa`/
+    `CorregirFechaAnalisis`/`CorregirIdRegistro`/
+    `AsignarDependenciaDestino` (ver HU-03, "Publicado es inmutable").
+  - `CasoAnalisis.Eliminar()` **no** tiene guarda por `Estado` — decisión
+    explícita del usuario: a diferencia de `Informe.Publicado`,
+    `CasoAnalisis.Cerrado` no es una barrera de inmutabilidad hoy (un
+    Caso Cerrado se puede reabrir/editar sin restricción,
+    `CerrarConResultado()`/`MarcarEnRevision()` no tienen ninguna
+    guarda) — no se introduce una regla nueva de inmutabilidad ligada al
+    Estado solo para el borrado, sería inconsistente con el resto del
+    comportamiento de `CasoAnalisis`.
+  - Autorización: los 4 Commands nuevos (`EliminarInformeCommand`,
+    `EliminarCasoAnalisisCommand`, `EliminarVehiculoCommand`,
+    `EliminarPersonaCommand`) llevan
+    `[Autorizar(Roles.Supervisor, Roles.Admin)]` — la primera
+    diferenciación real de permisos entre Analista y Supervisor en todo
+    el sistema (antes de esta HU, ambos roles eran equivalentes en la
+    práctica en el 100% de los Commands/Queries salvo
+    `QuitarImagenVehiculo`/`QuitarImagenPersona`, que ya excluían
+    Analista, y `ObtenerTableroAnaliticaQuery`, mismo caso).
+  - Visibilidad: EF Core **Global Query Filter**
+    (`HasQueryFilter(e => !e.Eliminado)`) en las 4 `Configuration` —
+    primera vez que se usa este patrón en el proyecto. Se prefirió sobre
+    agregar el filtro a mano en cada Query Handler porque hay ~33 puntos
+    de código que consultan estas 4 entidades (listados, búsquedas,
+    Dashboard, tablero de analítica, historiales cruzados
+    Persona↔Vehiculo↔Informe vía Evidencia) — un filtro centralizado en
+    la Configuration hace imposible que un Handler nuevo (hoy o en el
+    futuro) se olvide de excluir los eliminados.
+  - Auditoría: `AuditLogInterceptor` (genérico, decide la `Accion` por
+    `entry.State` del `ChangeTracker`, no por qué propiedad cambió) NO
+    distingue de forma nativa un borrado lógico (`UPDATE` de `Eliminado`,
+    estado `Modified`) de cualquier otra edición — ambos caerían como
+    `"Modificacion"` sin un chequeo explícito. Se agregó detección de
+    `entry.Property(nameof(Eliminado)).IsModified` con valor `true` para
+    registrar `Accion = "BajaLogica"` en ese caso específico, distinto de
+    `"Alta"`/`"Modificacion"`/`"Baja"` (esta última reservada al DELETE
+    físico real, ej. `Dependencia`).

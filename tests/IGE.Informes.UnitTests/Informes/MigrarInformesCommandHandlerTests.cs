@@ -656,8 +656,16 @@ public class MigrarInformesCommandHandlerTests
         await Assert.ThrowsAsync<EntidadNoEncontradaException>(() => handler.Handle(command, CancellationToken.None));
     }
 
+    // HU-04 · Migración histórica de informes desde Drive
+    // (docs/epic-01-gestion-informes.md), extensión (2026-08-12): se abre a
+    // los 3 roles (Analista, Supervisor, Admin), mismo criterio que el
+    // resto de las operaciones sobre Informe (cargar, editar, publicar) —
+    // ya no es exclusiva de Admin. Este test reemplaza al viejo
+    // "MigrarInformesCommand_DeclaraAutorizacion_SoloParaRolAdmin" y debe
+    // fallar en rojo hasta que se actualice el atributo [Autorizar] de
+    // MigrarInformesCommand.
     [Fact]
-    public void MigrarInformesCommand_DeclaraAutorizacion_SoloParaRolAdmin()
+    public void MigrarInformesCommand_DeclaraAutorizacion_ParaAnalistaSupervisorYAdmin()
     {
         var atributo = typeof(MigrarInformesCommand)
             .GetCustomAttributes(typeof(AutorizarAttribute), inherit: true)
@@ -665,8 +673,10 @@ public class MigrarInformesCommandHandlerTests
             .SingleOrDefault();
 
         Assert.NotNull(atributo);
-        Assert.Single(atributo.Roles);
-        Assert.Equal(Roles.Admin, atributo.Roles.Single());
+        Assert.Equal(3, atributo.Roles.Count);
+        Assert.Contains(Roles.Analista, atributo.Roles);
+        Assert.Contains(Roles.Supervisor, atributo.Roles);
+        Assert.Contains(Roles.Admin, atributo.Roles);
     }
 
     [Fact]

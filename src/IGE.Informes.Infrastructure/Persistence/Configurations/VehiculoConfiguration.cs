@@ -26,6 +26,14 @@ public sealed class VehiculoConfiguration : IEntityTypeConfiguration<Vehiculo>
         builder.HasIndex(v => v.Dominio);
         builder.HasIndex(v => v.Estado);
 
+        builder.Property(v => v.Eliminado).IsRequired();
+        builder.HasIndex(v => v.Eliminado);
+
+        // Borrado lógico (HU-21): filtro global, no aparece en ninguna
+        // consulta salvo que se use IgnoreQueryFilters() explícitamente.
+        // Distinto de FechaBaja (fin de vigilancia activa, sigue visible).
+        builder.HasQueryFilter(v => !v.Eliminado);
+
         builder.PrimitiveCollection(v => v.CategoriasAlertaIds)
             .HasColumnName("CategoriasAlertaIds")
             .Metadata.SetPropertyAccessMode(PropertyAccessMode.Field);

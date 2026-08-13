@@ -1,6 +1,7 @@
 @page "/casos/{CasoId:guid}"
 @attribute [Authorize]
 @using IGE.Informes.Application.CasosAnalisis.Commands.CerrarCaso
+@using IGE.Informes.Application.CasosAnalisis.Commands.EliminarCasoAnalisis
 @using IGE.Informes.Application.CasosAnalisis.Commands.VincularVehiculoTexto
 @using IGE.Informes.Application.CasosAnalisis.Queries.ObtenerCasoPorId
 @using IGE.Informes.Application.Dependencias.Queries.ListarDependencias
@@ -34,7 +35,14 @@ else
                 <StatusChip Texto="@resultadoChip.Texto" Semantica="resultadoChip.Semantica" />
             </div>
         </div>
-        <a class="btn-secondary" href="casos">Volver al listado</a>
+        <div class="d-flex gap-2">
+            <AuthorizeView Roles="Supervisor,Admin">
+                <Authorized>
+                    <button type="button" class="btn-destructive" @onclick="() => _mostrarConfirmacionEliminar = true">Eliminar</button>
+                </Authorized>
+            </AuthorizeView>
+            <a class="btn-secondary" href="casos">Volver al listado</a>
+        </div>
     </div>
 
     @if (_mensajeExito is not null)
@@ -169,6 +177,14 @@ else
     {
         <div class="status-chip status-chip--alert mt-3">@_errorMessage</div>
     }
+
+    <ConfirmacionModal Visible="_mostrarConfirmacionEliminar"
+                        Titulo="Eliminar Caso de Análisis"
+                        Mensaje="@($"¿Confirmás eliminar el Caso {_caso.Fecha.ToString("dd/MM/yyyy")}? El registro deja de aparecer en listados, búsquedas y el tablero de analítica, pero se conserva para auditoría.")"
+                        TextoConfirmar="Eliminar"
+                        Procesando="_eliminando"
+                        OnConfirmar="EliminarAsync"
+                        OnCancelar="() => _mostrarConfirmacionEliminar = false" />
 }
 
 @code {
@@ -185,6 +201,8 @@ else
     private IReadOnlyCollection<InformeResumenDto>? _informes;
     private IReadOnlyCollection<DependenciaDto>? _dependencias;
     private readonly GenerarInformeInputModel _generarInforme = new();
+    private bool _mostrarConfirmacionEliminar;
+    private bool _eliminando;
 
     protected override async Task OnInitializedAsync()
     {
@@ -279,6 +297,27 @@ else
         finally
         {
             _procesando = false;
+        }
+    }
+
+    private async Task EliminarAsync()
+    {
+        _errorMessage = null;
+        _eliminando = true;
+
+        try
+        {
+            await Sender.Send(new EliminarCasoAnalisisCommand(CasoId));
+            NavigationManager.NavigateTo("casos");
+        }
+        catch (Exception)
+        {
+            _mostrarConfirmacionEliminar = false;
+            _errorMessage = "No se pudo eliminar el Caso de Análisis.";
+        }
+        finally
+        {
+            _eliminando = false;
         }
     }
 

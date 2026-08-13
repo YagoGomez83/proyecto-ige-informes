@@ -14,7 +14,7 @@ public enum ResultadoCaso
     Revision,
 }
 
-public sealed class CasoAnalisis : IAuditable
+public sealed class CasoAnalisis : IAuditable, IEliminableLogicamente
 {
     private readonly List<CasoAnalista> _analistas = [];
 
@@ -29,6 +29,8 @@ public sealed class CasoAnalisis : IAuditable
     public string? ElementoSustraido { get; private set; }
     public string? CamarasAnalizadasTexto { get; private set; }
     public string? Observaciones { get; private set; }
+    public bool Eliminado { get; private set; }
+    public DateTime? FechaEliminacion { get; private set; }
 
     public IReadOnlyCollection<CasoAnalista> Analistas => _analistas;
 
@@ -118,5 +120,16 @@ public sealed class CasoAnalisis : IAuditable
         CamarasAnalizadasTexto = string.IsNullOrWhiteSpace(CamarasAnalizadasTexto)
             ? camaraLibre
             : $"{CamarasAnalizadasTexto}; {camaraLibre}";
+    }
+
+    /// <summary>
+    /// Borrado lógico (HU-21) — sin guarda por Estado: a diferencia de
+    /// Informe.Publicado, "Cerrado" no es una barrera de inmutabilidad
+    /// hoy en CasoAnalisis (ver docs/03-modelo-dominio.md).
+    /// </summary>
+    public void Eliminar()
+    {
+        Eliminado = true;
+        FechaEliminacion = DateTime.UtcNow;
     }
 }

@@ -37,11 +37,10 @@ public sealed record MigracionLoteResultDto(
 /// carga individual (ver ADR-004), sin subirlos a MinIO (no se conserva el
 /// archivo original migrado, solo los datos extraídos). Los Informes nacen
 /// en Borrador con Origen=Migrado y sin CasoAnalisis de origen (el
-/// histórico de Casos no se migra, ver docs/03-modelo-dominio.md). Solo
-/// Administrador — el Gherkin de esta HU es explícito ("Como
-/// Administrador"), a diferencia de HU-01/02/03 que también permiten
-/// Analista/Supervisor.
+/// histórico de Casos no se migra, ver docs/03-modelo-dominio.md).
+/// Abierto a Analista/Supervisor/Admin (extensión 2026-08-12, pedido
+/// explícito del usuario) — originalmente era exclusivo de Administrador.
 /// </summary>
-[Autorizar(Roles.Admin)]
+[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
 public sealed record MigrarInformesCommand(Guid DependenciaDestinoId, IReadOnlyCollection<PdfMigrarDto> Pdfs)
     : IRequest<MigracionLoteResultDto>;

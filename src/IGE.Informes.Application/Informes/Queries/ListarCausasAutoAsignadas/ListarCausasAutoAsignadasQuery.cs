@@ -20,5 +20,5 @@ public sealed record InformeConCausaAutoAsignadaDto(
 /// uno (hallazgo del security-reviewer: colisión accidental de N° de
 /// Pieza Sumarial vincularía en silencio al expediente equivocado).
 /// </summary>
-[Autorizar(Roles.Admin)]
+[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
 public sealed record ListarCausasAutoAsignadasQuery : IRequest<IReadOnlyCollection<InformeConCausaAutoAsignadaDto>>;

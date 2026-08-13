@@ -108,4 +108,35 @@ public class CasoAnalisisTests
 
         Assert.Equal("SL 18; JK 51", caso.CamarasAnalizadasTexto);
     }
+
+    // HU-21 · Borrado lógico de Informe, Caso de Análisis, Vehículo y
+    // Persona (docs/epic-01-gestion-informes.md), Característica "Borrado
+    // lógico de un Caso de Análisis": Eliminado/FechaEliminacion/Eliminar()
+    // todavía no existen en el dominio — deben fallar en rojo (TDD) hasta
+    // implementarse. A diferencia de Informe.Eliminar(), CasoAnalisis.Eliminar()
+    // no tiene ninguna guarda por Estado (ver docs/03-modelo-dominio.md).
+
+    [Fact]
+    public void Eliminar_CasoEnEstadoPendiente_MarcaEliminadoYFechaEliminacion()
+    {
+        var caso = CrearCaso();
+
+        caso.Eliminar();
+
+        Assert.True(caso.Eliminado);
+        Assert.NotNull(caso.FechaEliminacion);
+    }
+
+    [Fact]
+    public void Eliminar_CasoCerrado_NoBloqueaLaEliminacion()
+    {
+        var caso = CrearCaso();
+        caso.CerrarConResultado(ResultadoCaso.Positivo);
+
+        caso.Eliminar();
+
+        Assert.True(caso.Eliminado);
+        Assert.NotNull(caso.FechaEliminacion);
+        Assert.Equal(EstadoCaso.Cerrado, caso.Estado);
+    }
 }

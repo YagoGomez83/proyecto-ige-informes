@@ -306,9 +306,18 @@ Característica: Publicación de informe
 
 ## HU-04 · Migración histórica de informes desde Drive
 
-**Como** Administrador
+**Como** Analista, Supervisor o Administrador
 **Quiero** ejecutar una migración masiva de los PDFs históricos
 **Para** tener el histórico completo (500-5000 informes) indexado sin cargarlo informe por informe
+
+> Extensión (2026-08-12): originalmente esta HU era exclusiva de
+> Administrador (los 4 Commands/Queries del flujo — migrar el lote,
+> completar una Migración Pendiente, ver el listado de pendientes, y ver
+> el reporte de Causas auto-asignadas — tenían `[Autorizar(Roles.Admin)]`).
+> El usuario pidió explícitamente que los Analistas puedan migrar
+> Informes, como parte de la revisión general de roles — se abre a los 3
+> roles (Analista, Supervisor, Admin), mismo criterio que el resto de las
+> operaciones sobre `Informe` (cargar, editar, publicar).
 
 ```gherkin
 Característica: Migración masiva
@@ -399,3 +408,128 @@ Característica: Migración masiva
   corte) donde solo cubría la falta de fecha. El único caso que sigue sin
   persistir nada es un PDF ilegible/corrupto (`Fallido`, no
   `ConAdvertencia`) — ahí no hay datos que guardar.
+
+---
+
+## HU-21 · Borrado lógico de Informe, Caso de Análisis, Vehículo y Persona
+
+**Como** Supervisor o Administrador
+**Quiero** poder eliminar (de forma lógica, no física) un Informe, Caso de
+Análisis, Vehículo o Persona
+**Para** sacar de circulación un registro cargado por error o duplicado,
+sin perder el dato para auditoría/recuperación futura y sin dejar que
+cualquier Analista lo borre sin supervisión
+
+> Contexto: pedido explícito del usuario como parte de una revisión
+> general de roles — hasta esta HU, ninguna de las 4 entidades principales
+> del sistema tenía forma de eliminarse (solo "dar de baja"/"cerrar",
+> cambios de estado que no ocultan el registro). El único precedente de
+> borrado en todo el sistema era `EliminarDependenciaCommand` (HU-11,
+> catálogo, `[Autorizar(Roles.Admin)]`, borrado **físico** porque
+> `Dependencia` no tiene ningún historial propio que preservar). Acá es
+> distinto: estas 4 entidades sí tienen historial de investigación real
+> (Informes vinculados, Evidencias, AuditLog), así que el borrado es
+> **lógico** — el registro sigue en la base, pero deja de aparecer en el
+> uso normal del sistema.
+
+```gherkin
+Característica: Borrado lógico de un Informe
+
+  Escenario: Eliminar un Informe en Borrador
+    Dado que soy Supervisor o Administrador
+    Y tengo abierto un Informe en estado Borrador
+    Cuando lo elimino desde su ficha
+    Entonces el Informe deja de aparecer en el listado general, en
+    búsquedas, y en el historial de Vehículos/Personas vinculados
+    Y el registro sigue existiendo en la base de datos para auditoría
+
+  Escenario: Un Informe Publicado no se puede eliminar
+    Dado que tengo abierto un Informe en estado Publicado
+    Cuando intento eliminarlo
+    Entonces el sistema rechaza la operación e indica que un Informe
+    Publicado es inmutable
+
+  Escenario: Un Analista no puede eliminar un Informe
+    Dado que estoy logueado como Analista
+    Cuando abro la ficha de un Informe en Borrador
+    Entonces no veo la opción de eliminarlo
+    Y si igual intento el Command directamente, el sistema lo rechaza por
+    falta de autorización
+
+Característica: Borrado lógico de un Caso de Análisis
+
+  Escenario: Eliminar un Caso de Análisis en cualquier estado
+    Dado que soy Supervisor o Administrador
+    Y tengo abierto un Caso de Análisis, sin importar si está Pendiente,
+    En Revisión o Cerrado
+    Cuando lo elimino desde su ficha
+    Entonces el Caso deja de aparecer en el listado, en búsquedas y en el
+    tablero de analítica
+    Y el registro sigue existiendo en la base de datos para auditoría
+
+Característica: Borrado lógico de un Vehículo
+
+  Escenario: Eliminar un Vehículo
+    Dado que soy Supervisor o Administrador
+    Y tengo abierto un Vehículo del catálogo
+    Cuando lo elimino desde su ficha
+    Entonces el Vehículo deja de aparecer en el listado, en búsquedas, en
+    el Dashboard y en el historial de Personas/Informes vinculados
+    Y el registro sigue existiendo en la base de datos para auditoría
+    Y es distinto de "Dar de baja" (que solo marca fin de vigilancia
+    activa, sin ocultar el registro)
+
+Característica: Borrado lógico de una Persona
+
+  Escenario: Eliminar una Persona
+    Dado que soy Supervisor o Administrador
+    Y tengo abierta una Persona del catálogo
+    Cuando la elimino desde su ficha
+    Entonces la Persona deja de aparecer en el listado, en búsquedas y en
+    el historial de Vehículos/Informes vinculados
+    Y el registro sigue existiendo en la base de datos para auditoría
+
+Característica: Auditoría del borrado lógico
+
+  Escenario: El borrado lógico queda registrado distinto de una edición común
+    Dado que elimino lógicamente cualquiera de las 4 entidades
+    Cuando reviso el AuditLog de esa entidad
+    Entonces la acción queda registrada como "BajaLogica", no como
+    "Modificacion" (que se usa para cualquier otra corrección de datos)
+```
+
+### Notas de modelado
+
+- Cada entidad gana `Eliminado` (`bool`) y `FechaEliminacion`
+  (`DateTime?`), y un método `Eliminar()` en el dominio — mismo nombre en
+  las 4 para consistencia. **No es lo mismo que `Vehiculo.FechaBaja`**
+  (ya existente, significa "fin de vigilancia activa", el registro sigue
+  visible en listados) — son dos conceptos independientes que pueden
+  coexistir en el mismo Vehículo.
+- `Informe.Eliminar()` lanza `InvalidOperationException` si
+  `Estado == EstadoInforme.Publicado` — mismo patrón ya usado para el
+  resto de los métodos mutadores de `Informe` (ver HU-03).
+- `CasoAnalisis.Eliminar()` **no** tiene ninguna guarda por `Estado` —
+  decisión explícita del usuario: hoy "Cerrado" no es una barrera para
+  nada más en `CasoAnalisis` (a diferencia de "Publicado" en `Informe`),
+  así que no se introduce una regla de inmutabilidad nueva que no existía
+  antes solo para el borrado.
+- 4 Commands nuevos (`EliminarInformeCommand`, `EliminarCasoAnalisisCommand`,
+  `EliminarVehiculoCommand`, `EliminarPersonaCommand`), todos
+  `[Autorizar(Roles.Supervisor, Roles.Admin)]` — la única diferenciación
+  real de permisos entre Analista y Supervisor que existe hoy en todo el
+  sistema (antes de esta HU, ambos roles eran equivalentes en la
+  práctica salvo por "quitar imagen" y el tablero de analítica).
+- **EF Core Global Query Filter** (`HasQueryFilter(e => !e.Eliminado)`)
+  en las 4 `Configuration` — primera vez que se usa este patrón en el
+  proyecto. Se eligió sobre agregar el filtro a mano en cada Query
+  Handler porque hay 33 puntos de código distintos que consultan estas 4
+  entidades (listados, búsquedas, dashboard, historiales cruzados) —
+  un filtro centralizado evita que alguno quede sin filtrar por olvido.
+- `AuditLogInterceptor` distingue un borrado lógico (`Accion =
+  "BajaLogica"`) de una edición común (`"Modificacion"`) detectando si la
+  propiedad `Eliminado` fue la que cambió a `true` en ese
+  `SaveChangesAsync` — el estado del EF Core `ChangeTracker` para un
+  UPDATE simple es `Modified` en ambos casos, así que sin este chequeo
+  explícito un borrado lógico se vería igual que cualquier otra edición
+  en el historial de auditoría.

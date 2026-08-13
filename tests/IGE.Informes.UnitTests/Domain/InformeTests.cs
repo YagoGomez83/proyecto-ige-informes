@@ -228,4 +228,34 @@ public class InformeTests
 
         Assert.Throws<InvalidOperationException>(() => informe.CorregirIdRegistro("101/2022"));
     }
+
+    // HU-21 · Borrado lógico de Informe, Caso de Análisis, Vehículo y
+    // Persona (docs/epic-01-gestion-informes.md), Característica "Borrado
+    // lógico de un Informe": Eliminado/FechaEliminacion/Eliminar() todavía
+    // no existen en el dominio — estos tests deben fallar en rojo (TDD)
+    // hasta que se implementen (ver docs/03-modelo-dominio.md, "Borrado
+    // lógico de Informe, CasoAnalisis, Vehiculo y Persona").
+
+    [Fact]
+    public void Eliminar_InformeEnBorrador_MarcaEliminadoYFechaEliminacion()
+    {
+        var informe = CrearInforme();
+
+        informe.Eliminar();
+
+        Assert.True(informe.Eliminado);
+        Assert.NotNull(informe.FechaEliminacion);
+    }
+
+    [Fact]
+    public void Eliminar_InformePublicado_DebeRechazarPorInmutabilidad()
+    {
+        var informe = CrearInforme(Guid.NewGuid());
+        informe.AgregarFirmante(Guid.NewGuid());
+        informe.Publicar();
+
+        Assert.Throws<InvalidOperationException>(() => informe.Eliminar());
+        Assert.False(informe.Eliminado);
+        Assert.Null(informe.FechaEliminacion);
+    }
 }

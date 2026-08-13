@@ -12,6 +12,6 @@ namespace IGE.Informes.Application.Informes.Commands.CrearInformeDesdeMigracionP
 /// eso, no este record); si ya lo tenía, este valor se ignora. Ver
 /// docs/03-modelo-dominio.md, "Decisiones ya resueltas".
 /// </summary>
-[Autorizar(Roles.Admin)]
+[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
 public sealed record CrearInformeDesdeMigracionPendienteCommand(Guid MigracionPendienteId, DateOnly FechaAnalisis, string? IdRegistro = null)
     : IRequest<Guid>;

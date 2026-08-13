@@ -9,13 +9,15 @@ public enum RolPersona
     Testigo,
 }
 
-public sealed class Persona : IAuditable
+public sealed class Persona : IAuditable, IEliminableLogicamente
 {
     public Guid Id { get; private set; }
     public string? Nombre { get; private set; }
     public string? Dni { get; private set; }
     public RolPersona Rol { get; private set; }
     public string? Caracteristicas { get; private set; }
+    public bool Eliminado { get; private set; }
+    public DateTime? FechaEliminacion { get; private set; }
 
     private Persona()
     {
@@ -51,5 +53,15 @@ public sealed class Persona : IAuditable
     public void CambiarRol(RolPersona rol)
     {
         Rol = rol;
+    }
+
+    /// <summary>
+    /// Borrado lógico (HU-21) — sin guarda de Estado: Persona no tiene
+    /// ningún estado que bloquee el borrado.
+    /// </summary>
+    public void Eliminar()
+    {
+        Eliminado = true;
+        FechaEliminacion = DateTime.UtcNow;
     }
 }

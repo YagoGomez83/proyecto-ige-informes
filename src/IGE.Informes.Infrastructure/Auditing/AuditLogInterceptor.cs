@@ -49,7 +49,7 @@ public sealed class AuditLogInterceptor(ICurrentUserService currentUserService) 
 
         foreach (var entry in entradasAuditables)
         {
-            var accion = AccionDesdeEstado(entry.State);
+            var accion = AccionDesdeEntry(entry);
             var auditable = (IAuditable)entry.Entity;
 
             var auditLog = new AuditLog(
@@ -61,6 +61,24 @@ public sealed class AuditLogInterceptor(ICurrentUserService currentUserService) 
 
             context.Add(auditLog);
         }
+    }
+
+    /// <summary>
+    /// Un borrado lógico (HU-21) es, para el ChangeTracker de EF Core, un
+    /// UPDATE simple (EntityState.Modified) igual que cualquier otra
+    /// edición — sin este chequeo explícito, quedaría auditado como
+    /// "Modificacion" en vez de distinguirse como baja real del registro.
+    /// </summary>
+    private static string AccionDesdeEntry(EntityEntry entry)
+    {
+        if (entry.State == EntityState.Modified
+            && entry.Entity is IEliminableLogicamente { Eliminado: true }
+            && entry.Property(nameof(IEliminableLogicamente.Eliminado)).IsModified)
+        {
+            return "BajaLogica";
+        }
+
+        return AccionDesdeEstado(entry.State);
     }
 
     private static string AccionDesdeEstado(EntityState state) => state switch

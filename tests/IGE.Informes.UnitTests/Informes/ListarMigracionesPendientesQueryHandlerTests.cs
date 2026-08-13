@@ -116,8 +116,14 @@ public class ListarMigracionesPendientesQueryHandlerTests
         Assert.Equal("https://fake-storage.local/migraciones-pendientes/700-2022.pdf", migracion.PdfUrl);
     }
 
+    // HU-04 · Migración histórica de informes desde Drive
+    // (docs/epic-01-gestion-informes.md), extensión (2026-08-12): se abre a
+    // los 3 roles (Analista, Supervisor, Admin) — ya no es exclusiva de
+    // Admin. Reemplaza al viejo
+    // "ListarMigracionesPendientesQuery_DeclaraAutorizacion_SoloParaRolAdmin"
+    // y debe fallar en rojo hasta que se actualice el atributo [Autorizar].
     [Fact]
-    public void ListarMigracionesPendientesQuery_DeclaraAutorizacion_SoloParaRolAdmin()
+    public void ListarMigracionesPendientesQuery_DeclaraAutorizacion_ParaAnalistaSupervisorYAdmin()
     {
         var atributo = typeof(ListarMigracionesPendientesQuery)
             .GetCustomAttributes(typeof(AutorizarAttribute), inherit: true)
@@ -125,8 +131,10 @@ public class ListarMigracionesPendientesQueryHandlerTests
             .SingleOrDefault();
 
         Assert.NotNull(atributo);
-        Assert.Single(atributo.Roles);
-        Assert.Equal(Roles.Admin, atributo.Roles.Single());
+        Assert.Equal(3, atributo.Roles.Count);
+        Assert.Contains(Roles.Analista, atributo.Roles);
+        Assert.Contains(Roles.Supervisor, atributo.Roles);
+        Assert.Contains(Roles.Admin, atributo.Roles);
     }
 
     [Fact]

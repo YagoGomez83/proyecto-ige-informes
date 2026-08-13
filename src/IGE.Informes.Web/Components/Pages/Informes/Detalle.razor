@@ -1,5 +1,6 @@
 @page "/informes/{InformeId:guid}"
 @attribute [Authorize]
+@using IGE.Informes.Application.Informes.Commands.EliminarInforme
 @using IGE.Informes.Application.Informes.Commands.PublicarInforme
 @using IGE.Informes.Application.Informes.Commands.VincularPersonaInforme
 @using IGE.Informes.Application.Informes.Commands.VincularVehiculoInforme
@@ -50,6 +51,14 @@ else
             @if (_informe.CasoAnalisisId is not null)
             {
                 <a class="btn-secondary" href="@($"casos/{_informe.CasoAnalisisId}")">Ver Caso de origen</a>
+            }
+            @if (_informe.Estado != EstadoInforme.Publicado)
+            {
+                <AuthorizeView Roles="Supervisor,Admin">
+                    <Authorized>
+                        <button type="button" class="btn-destructive" @onclick="() => _mostrarConfirmacionEliminar = true">Eliminar</button>
+                    </Authorized>
+                </AuthorizeView>
             }
         </div>
     </div>
@@ -216,6 +225,14 @@ else
                         Procesando="_publicando"
                         OnConfirmar="PublicarAsync"
                         OnCancelar="() => _mostrarConfirmacionPublicar = false" />
+
+    <ConfirmacionModal Visible="_mostrarConfirmacionEliminar"
+                        Titulo="Eliminar Informe"
+                        Mensaje="@($"¿Confirmás eliminar el Informe {_informe.IdRegistro}? El registro deja de aparecer en listados y búsquedas, pero se conserva para auditoría.")"
+                        TextoConfirmar="Eliminar"
+                        Procesando="_eliminando"
+                        OnConfirmar="EliminarAsync"
+                        OnCancelar="() => _mostrarConfirmacionEliminar = false" />
 }
 
 @code {
@@ -226,6 +243,8 @@ else
     private bool _cargado;
     private bool _publicando;
     private bool _mostrarConfirmacionPublicar;
+    private bool _mostrarConfirmacionEliminar;
+    private bool _eliminando;
     private string? _errorMessage;
 
     private string _dominioBuscado = string.Empty;
@@ -331,6 +350,32 @@ else
         finally
         {
             _publicando = false;
+        }
+    }
+
+    private async Task EliminarAsync()
+    {
+        _errorMessage = null;
+        _eliminando = true;
+
+        try
+        {
+            await Sender.Send(new EliminarInformeCommand(InformeId));
+            NavigationManager.NavigateTo("informes");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _mostrarConfirmacionEliminar = false;
+            _errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            _mostrarConfirmacionEliminar = false;
+            _errorMessage = "No se pudo eliminar el Informe.";
+        }
+        finally
+        {
+            _eliminando = false;
         }
     }
 }

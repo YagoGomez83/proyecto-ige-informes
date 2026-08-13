@@ -19,7 +19,7 @@ public enum OrigenInforme
     Migrado,
 }
 
-public sealed class Informe : IAuditable
+public sealed class Informe : IAuditable, IEliminableLogicamente
 {
     private readonly List<InformeAnalista> _analistas = [];
 
@@ -33,6 +33,8 @@ public sealed class Informe : IAuditable
     public string? PdfPath { get; private set; }
     public EstadoInforme Estado { get; private set; }
     public OrigenInforme Origen { get; private set; }
+    public bool Eliminado { get; private set; }
+    public DateTime? FechaEliminacion { get; private set; }
 
     public IReadOnlyCollection<InformeAnalista> Analistas => _analistas;
 
@@ -224,5 +226,22 @@ public sealed class Informe : IAuditable
         }
 
         Estado = EstadoInforme.Publicado;
+    }
+
+    /// <summary>
+    /// Borrado lógico (HU-21) — el registro sigue en la base para
+    /// auditoría, pero deja de aparecer en listados/búsquedas (ver
+    /// InformeConfiguration.HasQueryFilter). No confundir con eliminar
+    /// físicamente ni con ningún otro estado.
+    /// </summary>
+    public void Eliminar()
+    {
+        if (Estado == EstadoInforme.Publicado)
+        {
+            throw new InvalidOperationException("Un Informe Publicado es inmutable — no se puede eliminar.");
+        }
+
+        Eliminado = true;
+        FechaEliminacion = DateTime.UtcNow;
     }
 }

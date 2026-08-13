@@ -120,4 +120,35 @@ public class VehiculoTests
 
         Assert.Empty(vehiculo.CategoriasAlertaIds);
     }
+
+    // HU-21 · Borrado lógico de Informe, Caso de Análisis, Vehículo y
+    // Persona (docs/epic-01-gestion-informes.md), Característica "Borrado
+    // lógico de un Vehículo": Eliminado/FechaEliminacion/Eliminar() todavía
+    // no existen en el dominio — deben fallar en rojo (TDD) hasta
+    // implementarse. Distinto de FechaBaja/DarDeBaja (fin de vigilancia
+    // activa, no oculta el registro) — ver docs/03-modelo-dominio.md.
+
+    [Fact]
+    public void Eliminar_Vehiculo_MarcaEliminadoYFechaEliminacion()
+    {
+        var vehiculo = CrearVehiculo();
+
+        vehiculo.Eliminar();
+
+        Assert.True(vehiculo.Eliminado);
+        Assert.NotNull(vehiculo.FechaEliminacion);
+    }
+
+    [Fact]
+    public void Eliminar_NoModificaFechaBajaNiEstado_SonConceptosIndependientes()
+    {
+        var vehiculo = CrearVehiculo();
+        vehiculo.DarDeBaja(new DateOnly(2026, 7, 21));
+
+        vehiculo.Eliminar();
+
+        Assert.True(vehiculo.Eliminado);
+        Assert.Equal(new DateOnly(2026, 7, 21), vehiculo.FechaBaja);
+        Assert.Equal(EstadoVehiculo.Vigente, vehiculo.Estado);
+    }
 }

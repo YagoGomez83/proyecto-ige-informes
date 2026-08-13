@@ -21,5 +21,5 @@ public sealed record MigracionPendienteDto(
 /// ObtenerInformePorIdQueryHandler) para poder leer la fecha/ID directo
 /// del PDF original en vez de completarlos a ciegas.
 /// </summary>
-[Autorizar(Roles.Admin)]
+[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
 public sealed record ListarMigracionesPendientesQuery : IRequest<IReadOnlyCollection<MigracionPendienteDto>>;

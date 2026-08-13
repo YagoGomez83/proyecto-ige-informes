@@ -27,7 +27,7 @@ public enum CertezaDominio
     Incierto,
 }
 
-public sealed class Vehiculo : IAuditable
+public sealed class Vehiculo : IAuditable, IEliminableLogicamente
 {
     private readonly List<Guid> _categoriasAlertaIds = [];
 
@@ -42,6 +42,8 @@ public sealed class Vehiculo : IAuditable
     public string AvisarA { get; private set; } = string.Empty;
     public DateOnly? FechaBaja { get; private set; }
     public string? Caracteristicas { get; private set; }
+    public bool Eliminado { get; private set; }
+    public DateTime? FechaEliminacion { get; private set; }
 
     public IReadOnlyCollection<Guid> CategoriasAlertaIds => _categoriasAlertaIds;
 
@@ -123,5 +125,16 @@ public sealed class Vehiculo : IAuditable
     public void QuitarCategoriaAlerta(Guid categoriaAlertaId)
     {
         _categoriasAlertaIds.Remove(categoriaAlertaId);
+    }
+
+    /// <summary>
+    /// Borrado lógico (HU-21) — distinto de DarDeBaja (que solo marca fin
+    /// de vigilancia activa y no oculta el Vehículo de los listados). Sin
+    /// guarda de Estado: no hay ningún estado que bloquee el borrado.
+    /// </summary>
+    public void Eliminar()
+    {
+        Eliminado = true;
+        FechaEliminacion = DateTime.UtcNow;
     }
 }
