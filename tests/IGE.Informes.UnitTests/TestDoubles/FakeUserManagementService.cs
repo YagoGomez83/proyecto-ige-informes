@@ -18,6 +18,7 @@ public sealed class FakeUserManagementService : IUserManagementService
         public required string Email { get; set; }
         public required string Rol { get; set; }
         public bool Bloqueado { get; set; }
+        public string PasswordActual { get; set; } = "PasswordOriginal123";
     }
 
     private readonly Dictionary<Guid, UsuarioInterno> _usuarios = [];
@@ -39,6 +40,9 @@ public sealed class FakeUserManagementService : IUserManagementService
 
     public IReadOnlyCollection<(Guid UsuarioId, string NuevaPassword)> ResetearPasswordAsyncLlamadoCon => _resetearPasswordAsyncLlamadoCon;
     private readonly List<(Guid UsuarioId, string NuevaPassword)> _resetearPasswordAsyncLlamadoCon = [];
+
+    public IReadOnlyCollection<(Guid UsuarioId, string PasswordActual, string PasswordNueva)> CambiarPasswordPropiaAsyncLlamadoCon => _cambiarPasswordPropiaAsyncLlamadoCon;
+    private readonly List<(Guid UsuarioId, string PasswordActual, string PasswordNueva)> _cambiarPasswordPropiaAsyncLlamadoCon = [];
 
     /// <summary>
     /// Helper de setup para pruebas: agrega un usuario preexistente sin pasar
@@ -144,5 +148,23 @@ public sealed class FakeUserManagementService : IUserManagementService
         }
 
         return Task.FromResult(_usuarios.ContainsKey(usuarioId));
+    }
+
+    public Task<bool> CambiarPasswordPropiaAsync(Guid usuarioId, string passwordActual, string passwordNueva, CancellationToken cancellationToken)
+    {
+        _cambiarPasswordPropiaAsyncLlamadoCon.Add((usuarioId, passwordActual, passwordNueva));
+
+        if (!_usuarios.TryGetValue(usuarioId, out var usuario))
+        {
+            return Task.FromResult(false);
+        }
+
+        if (usuario.PasswordActual != passwordActual || passwordNueva.Length < LongitudMinimaPassword)
+        {
+            return Task.FromResult(false);
+        }
+
+        usuario.PasswordActual = passwordNueva;
+        return Task.FromResult(true);
     }
 }

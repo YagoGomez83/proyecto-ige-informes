@@ -80,6 +80,9 @@
                     <span class="sidebar-user-name">@(context.User.Identity?.Name ?? "Usuario")</span>
                     <span class="sidebar-user-role label-md">@(context.User.IsInRole("Admin") ? "Administrador" : context.User.IsInRole("Supervisor") ? "Supervisor" : "Analista")</span>
                 </div>
+                <a href="Account/Manage/CambiarPassword" class="sidebar-user-logout-btn" title="Cambiar contraseña">
+                    <span class="bi bi-key-nav-menu" aria-hidden="true"></span>
+                </a>
                 <form action="Account/Logout" method="post" class="sidebar-user-logout">
                     <AntiforgeryToken />
                     <input type="hidden" name="returnUrl" value="" />

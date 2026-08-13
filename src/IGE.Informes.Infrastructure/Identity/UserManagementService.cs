@@ -157,6 +157,21 @@ public sealed class UserManagementService(
         return true;
     }
 
+    public async Task<bool> CambiarPasswordPropiaAsync(
+        Guid usuarioId, string passwordActual, string passwordNueva, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(usuarioId.ToString())
+            ?? throw new InvalidOperationException($"Usuario '{usuarioId}' no encontrado.");
+
+        // ChangePasswordAsync valida la actual internamente (a diferencia del par
+        // GeneratePasswordResetTokenAsync/ResetPasswordAsync que usa ResetearPasswordAsync)
+        // y ya invalida el SecurityStamp por sí solo — no hace falta el paso explícito que
+        // sí necesitan CambiarRolAsync/BloquearAsync/ResetearPasswordAsync.
+        var resultado = await userManager.ChangePasswordAsync(usuario, passwordActual, passwordNueva);
+
+        return resultado.Succeeded;
+    }
+
     private async Task<UsuarioDto> MapearAsync(ApplicationUser usuario)
     {
         var roles = await userManager.GetRolesAsync(usuario);

@@ -577,6 +577,27 @@ Característica: Gestión de Usuarios
     Cuando intento resetear la contraseña de mi propio usuario
     Entonces el sistema rechaza la operación (para cambiar la propia
     contraseña ya existe "Cuenta > Administrar > Contraseña")
+
+Característica: Cambio de la propia contraseña (extensión de HU-17)
+
+  Escenario: Un usuario cambia su propia contraseña conociendo la actual
+    Dado que estoy logueado con cualquier rol (Analista, Supervisor o Admin)
+    Cuando voy a "Cuenta > Administrar > Contraseña", ingreso mi contraseña
+    actual y una nueva de 12 o más caracteres, y confirmo
+    Entonces puedo volver a iniciar sesión con la contraseña nueva y ya no
+    con la anterior
+
+  Escenario: Contraseña actual incorrecta
+    Dado que estoy en "Cuenta > Administrar > Contraseña"
+    Cuando ingreso una contraseña actual incorrecta
+    Entonces el sistema rechaza el cambio e indica que la contraseña
+    actual no coincide, sin revelar cuál es la correcta
+
+  Escenario: Contraseña nueva que no cumple la política mínima
+    Dado que estoy en "Cuenta > Administrar > Contraseña" con la
+    contraseña actual correcta
+    Cuando ingreso una contraseña nueva de menos de 12 caracteres
+    Entonces el sistema rechaza el cambio e indica el motivo
 ```
 
 ### Reseteo de contraseña por un Admin (extensión de HU-17)
@@ -590,11 +611,29 @@ Característica: Gestión de Usuarios
   acotado a la resolución del reset en sí, igual de simple que el alta.
 - Reutiliza el mismo tratamiento de auto-gestión que bloqueo/cambio de
   rol: un Admin no puede resetearse su propia contraseña desde esta
-  pantalla (ya tiene su propio flujo en `Manage/ChangePassword`).
+  pantalla (ya tiene su propio flujo en `Account/Manage/CambiarPassword`).
 - Igual que `BloquearAsync`/`CambiarRolAsync`, invalida el `SecurityStamp`
   para cortar cualquier sesión Blazor ya abierta con la contraseña vieja
   (mismo mecanismo que `PersistingRevalidatingAuthenticationStateProvider`,
   ver `docs/06-seguridad-amenazas.md`).
+
+### Cambio de la propia contraseña (extensión de HU-17)
+
+- Abierto a los 3 roles (`CambiarPasswordPropiaCommand`,
+  `[Autorizar(Analista, Supervisor, Admin)]`) — a diferencia del reseteo
+  administrativo, requiere la contraseña actual (`UserManager.
+  ChangePasswordAsync`, no el par `GeneratePasswordResetTokenAsync`/
+  `ResetPasswordAsync` que usa el reseteo de Admin).
+- El `UsuarioId` sobre el que opera sale siempre de
+  `ICurrentUserService.UsuarioId` (el usuario autenticado), nunca de un
+  parámetro del cliente — un usuario no puede cambiar la contraseña de
+  otro por esta vía bajo ninguna circunstancia.
+- `ChangePasswordAsync` invalida el `SecurityStamp` internamente al
+  actualizar el hash — no hace falta el paso explícito de
+  `UpdateSecurityStampAsync` que sí necesitan `CambiarRolAsync`/
+  `BloquearAsync`/`ResetearPasswordAsync`.
+- Página en `Account/Manage/CambiarPassword`, accesible desde el ícono de
+  llave junto al usuario en el sidebar (`NavMenu.razor`).
 
 ### Notas de modelado
 

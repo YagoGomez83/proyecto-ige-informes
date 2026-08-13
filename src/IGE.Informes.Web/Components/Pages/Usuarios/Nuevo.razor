@@ -33,7 +33,12 @@
 
         <div class="mb-3">
             <label class="label-md" for="password">Contraseña temporal (12+ caracteres)</label>
-            <InputText id="password" type="password" class="form-control" @bind-Value="_input.Password" />
+            <div class="input-group-password">
+                <InputText id="password" type="@(_mostrarPassword ? "text" : "password")" class="form-control" @bind-Value="_input.Password" autocomplete="new-password" />
+                <button type="button" class="btn-toggle-password" @onclick="() => _mostrarPassword = !_mostrarPassword" tabindex="-1" aria-label="Mostrar u ocultar contraseña">
+                    <span class="bi @(_mostrarPassword ? "bi-eye-slash-toggle" : "bi-eye-toggle")" aria-hidden="true"></span>
+                </button>
+            </div>
         </div>
 
         <div class="mb-3">
@@ -56,6 +61,7 @@
     private readonly InputModel _input = new();
     private string? _errorMessage;
     private bool _guardando;
+    private bool _mostrarPassword;
 
     private async Task RegistrarAsync()
     {

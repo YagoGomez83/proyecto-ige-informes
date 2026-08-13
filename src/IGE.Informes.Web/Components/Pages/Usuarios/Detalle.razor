@@ -89,7 +89,12 @@ else
         <div class="d-flex align-items-end gap-2">
             <div class="flex-grow-1">
                 <label class="label-md" for="nuevaPassword">Contraseña nueva (12+ caracteres)</label>
-                <input id="nuevaPassword" type="password" class="form-control" @bind="_nuevaPassword" />
+                <div class="input-group-password">
+                    <input id="nuevaPassword" type="@(_mostrarPassword ? "text" : "password")" class="form-control" @bind="_nuevaPassword" autocomplete="new-password" />
+                    <button type="button" class="btn-toggle-password" @onclick="() => _mostrarPassword = !_mostrarPassword" tabindex="-1" aria-label="Mostrar u ocultar contraseña">
+                        <span class="bi @(_mostrarPassword ? "bi-eye-slash-toggle" : "bi-eye-toggle")" aria-hidden="true"></span>
+                    </button>
+                </div>
             </div>
             <button type="button" class="btn-secondary" @onclick="ResetearPasswordAsync" disabled="@_procesando">Confirmar</button>
         </div>
@@ -114,6 +119,7 @@ else
     private bool _cargado;
     private string _rolSeleccionado = Roles.Analista;
     private string _nuevaPassword = string.Empty;
+    private bool _mostrarPassword;
     private bool _passwordReseteada;
     private string? _errorMessage;
     private bool _procesando;

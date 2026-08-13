@@ -41,4 +41,14 @@ public interface IUserManagementService
     /// mismo patrón que <see cref="CrearUsuarioAsync"/>), true si el reseteo tuvo éxito.
     /// </summary>
     Task<bool> ResetearPasswordAsync(Guid usuarioId, string nuevaPassword, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Cambia la contraseña del propio usuario autenticado, requiriendo la
+    /// actual (a diferencia de <see cref="ResetearPasswordAsync"/>, que es
+    /// un reseteo administrativo sin conocerla). Devuelve false si la
+    /// actual no coincide o la nueva no cumple la política mínima de
+    /// Identity — el Handler traduce ambos casos a una excepción de
+    /// negocio con el detalle, mismo patrón que el resto del servicio.
+    /// </summary>
+    Task<bool> CambiarPasswordPropiaAsync(Guid usuarioId, string passwordActual, string passwordNueva, CancellationToken cancellationToken);
 }
