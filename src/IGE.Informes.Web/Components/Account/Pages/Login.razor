@@ -45,9 +45,9 @@
             <label class="label-md login-field-label">Contraseña</label>
             <div class="mb-3">
                 <div class="input-group-password">
-                    <InputText type="@(_mostrarPassword ? "text" : "password")" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="••••••••" />
-                    <button type="button" class="btn-toggle-password" @onclick="() => _mostrarPassword = !_mostrarPassword" tabindex="-1" aria-label="Mostrar u ocultar contraseña">
-                        <span class="bi @(_mostrarPassword ? "bi-eye-slash-toggle" : "bi-eye-toggle")" aria-hidden="true"></span>
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="••••••••" />
+                    <button type="button" class="btn-toggle-password" tabindex="-1" aria-label="Mostrar u ocultar contraseña">
+                        <span class="bi bi-eye-toggle" aria-hidden="true"></span>
                     </button>
                 </div>
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
@@ -73,7 +73,6 @@
 
 @code {
     private string? errorMessage;
-    private bool _mostrarPassword;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
