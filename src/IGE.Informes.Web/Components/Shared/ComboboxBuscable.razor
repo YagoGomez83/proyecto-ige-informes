@@ -1,0 +1,108 @@
+@typeparam TValor
+
+<div class="combobox-buscable">
+    <input class="form-control @CssClass" value="@_textoInput"
+           placeholder="@Placeholder"
+           @oninput="OnEscribirAsync"
+           @onfocus="AbrirAsync"
+           @onblur="CerrarConRetraso" />
+
+    @if (_abierto)
+    {
+        <div class="combobox-buscable-lista">
+            @if (_opcionesFiltradas.Count == 0)
+            {
+                <div class="combobox-buscable-vacio body-sm">Sin resultados.</div>
+            }
+            else
+            {
+                @foreach (var opcion in _opcionesFiltradas)
+                {
+                    <button type="button" class="combobox-buscable-opcion" @onmousedown="async () => await SeleccionarAsync(opcion)">
+                        @opcion.Texto
+                    </button>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyCollection<(TValor Valor, string Texto)> Opciones { get; set; } = [];
+
+    [Parameter]
+    public TValor? ValorSeleccionado { get; set; }
+
+    [Parameter]
+    public EventCallback<TValor?> ValorSeleccionadoChanged { get; set; }
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Buscar...";
+
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    private string _textoInput = string.Empty;
+    private bool _abierto;
+    private List<(TValor Valor, string Texto)> _opcionesFiltradas = [];
+
+    protected override void OnParametersSet()
+    {
+        _opcionesFiltradas = [.. Opciones];
+
+        // Sincroniza el texto mostrado con el valor seleccionado desde
+        // afuera (ej. al cargar el Informe con una Dependencia ya
+        // asignada) — solo cuando el usuario no está escribiendo/con el
+        // dropdown abierto, para no pisarle el filtro en curso.
+        if (!_abierto)
+        {
+            var actual = Opciones.FirstOrDefault(o => Equals(o.Valor, ValorSeleccionado));
+            _textoInput = actual.Texto ?? string.Empty;
+        }
+    }
+
+    private Task AbrirAsync()
+    {
+        _abierto = true;
+        _opcionesFiltradas = [.. Opciones];
+        return Task.CompletedTask;
+    }
+
+    // onblur dispara antes que el onmousedown de una opción — el retraso
+    // deja que el click de selección se procese antes de cerrar la lista.
+    private void CerrarConRetraso()
+    {
+        _ = CerrarLuegoDeAsync();
+    }
+
+    private async Task CerrarLuegoDeAsync()
+    {
+        await Task.Delay(200);
+        _abierto = false;
+
+        var actual = Opciones.FirstOrDefault(o => Equals(o.Valor, ValorSeleccionado));
+        _textoInput = actual.Texto ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private Task OnEscribirAsync(ChangeEventArgs e)
+    {
+        _textoInput = e.Value?.ToString() ?? string.Empty;
+        _abierto = true;
+
+        _opcionesFiltradas = string.IsNullOrWhiteSpace(_textoInput)
+            ? [.. Opciones]
+            : Opciones.Where(o => o.Texto.Contains(_textoInput, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task SeleccionarAsync((TValor Valor, string Texto) opcion)
+    {
+        _textoInput = opcion.Texto;
+        _abierto = false;
+        ValorSeleccionado = opcion.Valor;
+        await ValorSeleccionadoChanged.InvokeAsync(opcion.Valor);
+    }
+}

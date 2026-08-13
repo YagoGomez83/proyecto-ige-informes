@@ -69,15 +69,11 @@ else
 
                 <div class="mb-3">
                     <label class="label-md" for="dependenciaDestino">Dependencia destino</label>
-                    <select id="dependenciaDestino" class="form-control" @bind="_dependenciaDestinoId">
-                        @if (_dependencias is not null)
-                        {
-                            @foreach (var dependencia in _dependencias)
-                            {
-                                <option value="@dependencia.Id">@dependencia.Nombre</option>
-                            }
-                        }
-                    </select>
+                    <ComboboxBuscable TValor="string"
+                                      Opciones="@OpcionesDependencias"
+                                      ValorSeleccionado="_dependenciaDestinoId"
+                                      ValorSeleccionadoChanged="@(v => _dependenciaDestinoId = v ?? string.Empty)"
+                                      Placeholder="Buscar Dependencia..." />
 
                     <AuthorizeView Roles="Admin">
                         <Authorized>
@@ -126,20 +122,11 @@ else
 
                 <div class="mb-3">
                     <label class="label-md" for="causaCaratula">Carátula de la Causa</label>
-                    <select id="causaCaratula" class="form-control" @bind="_causaCaratula" @bind:after="BuscarSugerenciasDeCausaAsync">
-                        <option value=""></option>
-                        @if (_causaCaratula is not null && _tiposCausa is not null && !_tiposCausa.Any(t => t.Nombre == _causaCaratula))
-                        {
-                            <option value="@_causaCaratula">@_causaCaratula (valor actual, no está en el catálogo)</option>
-                        }
-                        @if (_tiposCausa is not null)
-                        {
-                            @foreach (var tipoCausa in _tiposCausa)
-                            {
-                                <option value="@tipoCausa.Nombre">@tipoCausa.Nombre</option>
-                            }
-                        }
-                    </select>
+                    <ComboboxBuscable TValor="string"
+                                      Opciones="@OpcionesCausas"
+                                      ValorSeleccionado="_causaCaratula"
+                                      ValorSeleccionadoChanged="OnCausaSeleccionadaAsync"
+                                      Placeholder="Buscar Carátula..." />
 
                     <AuthorizeView Roles="Admin">
                         <Authorized>
@@ -534,6 +521,27 @@ else
     private bool _creandoTipoCausa;
     private string? _errorNuevoTipoCausa;
 
+    private IReadOnlyCollection<(string Valor, string Texto)> OpcionesDependencias =>
+        _dependencias?.Select(d => (d.Id.ToString(), d.Nombre)).ToList() ?? [];
+
+    private IReadOnlyCollection<(string Valor, string Texto)> OpcionesCausas
+    {
+        get
+        {
+            var opciones = _tiposCausa?.Select(t => (t.Nombre, t.Nombre)).ToList() ?? [];
+
+            // El valor actual puede no estar en el catálogo (ej. Informe
+            // migrado con una carátula que después se corrigió/eliminó del
+            // catálogo) — se agrega igual para no perder la selección.
+            if (_causaCaratula is not null && opciones.All(o => o.Item1 != _causaCaratula))
+            {
+                opciones.Insert(0, (_causaCaratula, $"{_causaCaratula} (valor actual, no está en el catálogo)"));
+            }
+
+            return opciones;
+        }
+    }
+
     private string _dominioBuscado = string.Empty;
     private string _dniBuscado = string.Empty;
     private IReadOnlyCollection<VehiculoResumenDto>? _resultadosVehiculos;
@@ -609,6 +617,12 @@ else
         _causasSugeridas = sugerencias
             .Where(c => c.NroPiezaSumarial != _piezaSumarial)
             .ToList();
+    }
+
+    private async Task OnCausaSeleccionadaAsync(string? causaCaratula)
+    {
+        _causaCaratula = causaCaratula;
+        await BuscarSugerenciasDeCausaAsync();
     }
 
     private void UsarCausaSugerida(CausaSugeridaDto sugerencia)
