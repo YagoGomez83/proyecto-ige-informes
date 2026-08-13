@@ -42,6 +42,16 @@
                 <span class="bi bi-search-nav-menu" aria-hidden="true"></span> Búsqueda
             </NavLink>
         </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="informes/migrar">
+                <span class="bi bi-upload-nav-menu" aria-hidden="true"></span> Migrar Informes
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="informes/causas-auto-asignadas">
+                <span class="bi bi-bell-nav-menu" aria-hidden="true"></span> Causas auto-asignadas
+            </NavLink>
+        </div>
         <AuthorizeView Roles="Supervisor,Admin">
             <Authorized>
                 <div class="nav-item px-3">
@@ -56,16 +66,6 @@
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="configuracion">
                         <span class="bi bi-gear-nav-menu" aria-hidden="true"></span> Configuración
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="informes/migrar">
-                        <span class="bi bi-upload-nav-menu" aria-hidden="true"></span> Migrar Informes
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="informes/causas-auto-asignadas">
-                        <span class="bi bi-bell-nav-menu" aria-hidden="true"></span> Causas auto-asignadas
                     </NavLink>
                 </div>
             </Authorized>

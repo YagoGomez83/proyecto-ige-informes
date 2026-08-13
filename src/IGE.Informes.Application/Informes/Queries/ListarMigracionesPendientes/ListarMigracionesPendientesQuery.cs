@@ -14,8 +14,8 @@ public sealed record MigracionPendienteDto(
 /// <summary>
 /// Alimenta /informes/migrar/pendientes (HU-04) — PDFs históricos a los
 /// que el parser no les reconoció el ID Registro y/o la Fecha de
-/// Análisis, pendientes de que el Administrador complete lo que falte
-/// (ver MigracionPendiente en el Domain). IdRegistro null significa que
+/// Análisis, pendientes de que Analista/Supervisor/Admin complete lo que
+/// falte (ver MigracionPendiente en el Domain). IdRegistro null significa que
 /// también hay que completarlo, no solo la fecha. PdfUrl es una URL
 /// prefirmada de corta expiración (mismo criterio que
 /// ObtenerInformePorIdQueryHandler) para poder leer la fecha/ID directo
