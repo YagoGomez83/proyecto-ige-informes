@@ -219,6 +219,7 @@ foreach (var consolidado in consolidados)
         CertezaDominio.Incierto,
         AccionARealizar.Identificar,
         avisarADefault,
+        TipoVehiculo.Auto,
         dominio,
         caracteristicas);
 

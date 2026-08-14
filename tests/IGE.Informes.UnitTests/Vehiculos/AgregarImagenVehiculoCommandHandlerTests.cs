@@ -10,7 +10,7 @@ public class AgregarImagenVehiculoCommandHandlerTests
 {
     private static Vehiculo CrearVehiculo()
     {
-        return new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+        return new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
     }
 
     [Fact]

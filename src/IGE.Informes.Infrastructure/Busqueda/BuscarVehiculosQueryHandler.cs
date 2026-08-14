@@ -48,7 +48,7 @@ public sealed class BuscarVehiculosQueryHandler(IAppDbContext dbContext, IAuditL
                 (v.Caracteristicas != null && EF.Functions.ILike(FuncionesPostgres.Unaccent(v.Caracteristicas), "%" + FuncionesPostgres.Unaccent(EF.Constant(texto)) + "%")))
             .OrderBy(v => v.Marca).ThenBy(v => v.Modelo)
             .Take(LimiteResultados)
-            .Select(v => new VehiculoResumenDto(v.Id, v.Marca, v.Modelo, v.Dominio, v.Estado, v.AccionARealizar))
+            .Select(v => new VehiculoResumenDto(v.Id, v.Marca, v.Modelo, v.Dominio, v.Estado, v.AccionARealizar, v.TipoVehiculo))
             .ToListAsync(cancellationToken);
 
         await auditLogger.RegistrarAccesoAsync("Busqueda", nameof(Vehiculo), null, cancellationToken);

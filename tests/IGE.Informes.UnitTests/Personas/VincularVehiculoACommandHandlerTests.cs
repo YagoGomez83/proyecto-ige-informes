@@ -10,7 +10,7 @@ public class VincularVehiculoACommandHandlerTests
     private static Persona CrearPersona() => new(RolPersona.Testigo, nombre: "Juan Pérez");
 
     private static Vehiculo CrearVehiculo() =>
-        new("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+        new("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
 
     [Fact]
     public async Task Vincula_la_persona_al_vehiculo()

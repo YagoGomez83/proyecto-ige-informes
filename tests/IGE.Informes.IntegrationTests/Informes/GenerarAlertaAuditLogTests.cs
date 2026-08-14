@@ -47,7 +47,7 @@ public class GenerarAlertaAuditLogTests : IAsyncLifetime
         {
             var informeAnterior = Informe.CrearMigrado("1/2026", new DateOnly(2026, 1, 10), Guid.NewGuid(), Guid.NewGuid());
             var informeNuevo = Informe.CrearMigrado("2/2026", new DateOnly(2026, 2, 10), Guid.NewGuid(), Guid.NewGuid());
-            var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+            var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
             setupContext.Informes.Add(informeAnterior);
             setupContext.Informes.Add(informeNuevo);
             setupContext.Vehiculos.Add(vehiculo);

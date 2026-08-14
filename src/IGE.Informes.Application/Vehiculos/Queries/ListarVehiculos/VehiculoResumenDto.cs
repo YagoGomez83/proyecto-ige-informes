@@ -8,4 +8,5 @@ public sealed record VehiculoResumenDto(
     string Modelo,
     string? Dominio,
     EstadoVehiculo Estado,
-    AccionARealizar AccionARealizar);
+    AccionARealizar AccionARealizar,
+    TipoVehiculo TipoVehiculo);

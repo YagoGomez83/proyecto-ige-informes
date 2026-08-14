@@ -58,6 +58,24 @@ else
             <dt class="col-sm-3 label-md">Color</dt>
             <dd class="col-sm-9 body-md">@_vehiculo.Color</dd>
 
+            <dt class="col-sm-3 label-md">Tipo</dt>
+            <dd class="col-sm-9 body-md">
+                @(_vehiculo.TipoVehiculo switch
+                {
+                    TipoVehiculo.Auto => "Auto",
+                    TipoVehiculo.Moto => "Moto",
+                    TipoVehiculo.Camioneta => "Camioneta",
+                    TipoVehiculo.Camion => "Camión",
+                    _ => _vehiculo.TipoVehiculo.ToString(),
+                })
+            </dd>
+
+            @if (_vehiculo.TipoVehiculo == TipoVehiculo.Moto)
+            {
+                <dt class="col-sm-3 label-md">Cilindrada</dt>
+                <dd class="col-sm-9 body-md">@(_vehiculo.Cilindrada ?? "—")</dd>
+            }
+
             <dt class="col-sm-3 label-md">Acción a realizar</dt>
             <dd class="col-sm-9 body-md">
                 @(_vehiculo.AccionARealizar switch

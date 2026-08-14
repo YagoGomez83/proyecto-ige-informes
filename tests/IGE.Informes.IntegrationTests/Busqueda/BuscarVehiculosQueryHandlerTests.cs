@@ -45,7 +45,7 @@ public class BuscarVehiculosQueryHandlerTests : IAsyncLifetime
         Guid vehiculoId;
         await using (var setupContext = new AppDbContext(options))
         {
-            var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", "IAK 796");
+            var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto, "IAK 796");
             setupContext.Vehiculos.Add(vehiculo);
             await setupContext.SaveChangesAsync();
             vehiculoId = vehiculo.Id;
@@ -74,7 +74,7 @@ public class BuscarVehiculosQueryHandlerTests : IAsyncLifetime
         Guid vehiculoId;
         await using (var setupContext = new AppDbContext(options))
         {
-            var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", "IAK-796");
+            var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto, "IAK-796");
             setupContext.Vehiculos.Add(vehiculo);
             await setupContext.SaveChangesAsync();
             vehiculoId = vehiculo.Id;
@@ -102,7 +102,7 @@ public class BuscarVehiculosQueryHandlerTests : IAsyncLifetime
 
         await using (var setupContext = new AppDbContext(options))
         {
-            setupContext.Vehiculos.Add(new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", "IAK796"));
+            setupContext.Vehiculos.Add(new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto, "IAK796"));
             await setupContext.SaveChangesAsync();
         }
 

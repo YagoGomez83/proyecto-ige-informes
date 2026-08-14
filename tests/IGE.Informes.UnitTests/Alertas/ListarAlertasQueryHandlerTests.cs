@@ -14,7 +14,7 @@ public class ListarAlertasQueryHandlerTests
     {
         var dbContext = new TestAppDbContext();
         var informe = CrearInforme();
-        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "ABC123");
+        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "ABC123");
         dbContext.Informes.Add(informe);
         dbContext.Vehiculos.Add(vehiculo);
         dbContext.Alertas.Add(Alerta.PorCargaHuerfana(vehiculo.Id, personaId: null, informe.Id));

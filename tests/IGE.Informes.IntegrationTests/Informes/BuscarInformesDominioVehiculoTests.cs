@@ -53,7 +53,7 @@ public class BuscarInformesDominioVehiculoTests : IAsyncLifetime
             setupContext.Dependencias.Add(dependencia);
 
             var vehiculo = new Vehiculo(
-                "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "IAK 796");
+                "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "IAK 796");
             setupContext.Vehiculos.Add(vehiculo);
             await setupContext.SaveChangesAsync();
 

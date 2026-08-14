@@ -32,6 +32,8 @@ public sealed class ObtenerVehiculoPorIdQueryHandler(IAppDbContext dbContext, IA
             vehiculo.AvisarA,
             vehiculo.FechaBaja,
             vehiculo.Caracteristicas,
+            vehiculo.TipoVehiculo,
+            vehiculo.Cilindrada,
             vehiculo.CategoriasAlertaIds);
     }
 }

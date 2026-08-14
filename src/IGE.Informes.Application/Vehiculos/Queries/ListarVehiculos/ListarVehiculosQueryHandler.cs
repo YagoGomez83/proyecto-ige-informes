@@ -29,7 +29,7 @@ public sealed class ListarVehiculosQueryHandler(IAppDbContext dbContext, IAuditL
         var vehiculos = await query
             .Skip((request.Pagina - 1) * request.TamanioPagina)
             .Take(request.TamanioPagina)
-            .Select(v => new VehiculoResumenDto(v.Id, v.Marca, v.Modelo, v.Dominio, v.Estado, v.AccionARealizar))
+            .Select(v => new VehiculoResumenDto(v.Id, v.Marca, v.Modelo, v.Dominio, v.Estado, v.AccionARealizar, v.TipoVehiculo))
             .ToListAsync(cancellationToken);
 
         await auditLogger.RegistrarAccesoAsync("Listado", nameof(Vehiculo), null, cancellationToken);

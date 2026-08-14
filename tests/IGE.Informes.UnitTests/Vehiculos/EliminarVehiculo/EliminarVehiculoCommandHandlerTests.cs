@@ -19,7 +19,7 @@ public class EliminarVehiculoCommandHandlerTests
     private static async Task<(TestAppDbContext DbContext, Vehiculo Vehiculo)> PrepararAsync()
     {
         var dbContext = new TestAppDbContext();
-        var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°");
+        var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°", TipoVehiculo.Auto);
         dbContext.Vehiculos.Add(vehiculo);
         await dbContext.SaveChangesAsync();
 

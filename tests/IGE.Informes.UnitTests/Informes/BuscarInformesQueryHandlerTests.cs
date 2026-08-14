@@ -112,9 +112,9 @@ public class BuscarInformesQueryHandlerTests
         var dependenciaId = Guid.NewGuid();
 
         var vehiculoBuscado = new Vehiculo(
-            "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "IAK796");
+            "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "IAK796");
         var otroVehiculo = new Vehiculo(
-            "Renault", "Clio", "Azul", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "ABC123");
+            "Renault", "Clio", "Azul", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "ABC123");
         dbContext.Vehiculos.Add(vehiculoBuscado);
         dbContext.Vehiculos.Add(otroVehiculo);
 
@@ -151,7 +151,7 @@ public class BuscarInformesQueryHandlerTests
         var dependenciaId = Guid.NewGuid();
 
         var vehiculo = new Vehiculo(
-            "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "IAK 796");
+            "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "IAK 796");
         dbContext.Vehiculos.Add(vehiculo);
 
         var informe = CrearInforme("1/2026", new DateOnly(2026, 1, 10), dependenciaId);

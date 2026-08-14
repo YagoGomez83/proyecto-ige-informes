@@ -43,9 +43,9 @@ public class ListarVehiculosOrdenTests : IAsyncLifetime
 
         await using (var setupContext = new AppDbContext(options))
         {
-            var zeta = new Vehiculo("Zeta", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría");
-            var alfa = new Vehiculo("Alfa", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría");
-            var beta = new Vehiculo("Beta", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría");
+            var zeta = new Vehiculo("Zeta", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto);
+            var alfa = new Vehiculo("Alfa", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto);
+            var beta = new Vehiculo("Beta", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto);
             beta.MarcarIdentificado();
 
             // Orden de inserción deliberadamente distinto al orden esperado.
@@ -79,8 +79,8 @@ public class ListarVehiculosOrdenTests : IAsyncLifetime
 
         await using (var setupContext = new AppDbContext(options))
         {
-            var vigente = new Vehiculo("Vigente", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría");
-            var identificado = new Vehiculo("Identificado", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría");
+            var vigente = new Vehiculo("Vigente", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto);
+            var identificado = new Vehiculo("Identificado", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto);
             identificado.MarcarIdentificado();
 
             setupContext.Vehiculos.AddRange(vigente, identificado);
@@ -111,8 +111,8 @@ public class ListarVehiculosOrdenTests : IAsyncLifetime
 
         await using (var setupContext = new AppDbContext(options))
         {
-            var zeta = new Vehiculo("Zeta", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría");
-            var alfa = new Vehiculo("Alfa", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría");
+            var zeta = new Vehiculo("Zeta", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto);
+            var alfa = new Vehiculo("Alfa", "Uno", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto);
             alfa.MarcarIdentificado();
 
             setupContext.Vehiculos.AddRange(zeta, alfa);

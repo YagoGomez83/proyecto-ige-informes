@@ -96,7 +96,7 @@ public class ObtenerInformePorIdQueryHandlerTests
         var informe = new Informe("290/2026", new DateOnly(2026, 7, 21), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         dbContext.Informes.Add(informe);
 
-        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "ABC123");
+        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "ABC123");
         var persona = new Persona(RolPersona.Testigo, nombre: "Juan Pérez");
         dbContext.Vehiculos.Add(vehiculo);
         dbContext.Personas.Add(persona);

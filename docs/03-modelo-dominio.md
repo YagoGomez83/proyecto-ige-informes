@@ -134,6 +134,8 @@ erDiagram
         string color
         string dominio "nullable"
         string dominio_certeza "Confirmado|Parcial|Incierto"
+        string tipo_vehiculo "Auto|Moto|Camioneta|Camion"
+        string cilindrada "nullable, obligatoria solo si tipo_vehiculo=Moto"
         string estado "Vigente|Identificado"
         string accion_a_realizar "Detener|Identificar"
         string avisar_a
@@ -586,3 +588,31 @@ erDiagram
     registrar `Accion = "BajaLogica"` en ese caso específico, distinto de
     `"Alta"`/`"Modificacion"`/`"Baja"` (esta última reservada al DELETE
     físico real, ej. `Dependencia`).
+- **`Vehiculo.TipoVehiculo` y `Vehiculo.Cilindrada`** (pedido del usuario,
+  clasificar vehículos por tipo de rodado):
+  - `TipoVehiculo` (`Auto`, `Moto`, `Camioneta`, `Camion`) es un **enum
+    fijo** en el dominio, no un catálogo administrable como
+    `MarcaVehiculo`/`ColorVehiculo`/`TipoCausa` — decisión explícita del
+    usuario, mismo patrón que `EstadoVehiculo`/`AccionARealizar`. Agregar
+    un tipo nuevo en el futuro requiere código + migración, no una
+    pantalla CRUD.
+  - `Cilindrada` (`string?`) es obligatoria **solo** cuando
+    `TipoVehiculo == Moto` — validado como invariante en el constructor
+    de `Vehiculo` (`ArgumentException` si falta), no solo en el
+    Validator/UI. Para cualquier otro `TipoVehiculo`, el constructor
+    fuerza `Cilindrada = null` aunque se pase un valor (evita datos
+    inconsistentes tipo "Auto con cilindrada").
+  - Alcance de esta primera iteración: **solo alta**. No existe ningún
+    Command de edición de `Vehiculo` (Marca/Modelo/Tipo) hoy — no se
+    agregó uno nuevo para poder editar `TipoVehiculo`/`Cilindrada`
+    después de creado el Vehículo; queda como posible HU futura si hace
+    falta corregir el dato post-alta.
+  - Los ~1110 `Vehiculo` ya migrados del Excel histórico (incluida la
+    hoja `MOTOCICLETAS`, ver `docs/03-modelo-dominio.md` sección
+    "Alcance de migración de datos") quedaron con `TipoVehiculo = Auto`
+    por defecto al aplicar la migración EF (`HasDefaultValue(Auto)` en
+    `VehiculoConfiguration`, columna `NOT NULL DEFAULT 'Auto'`) —
+    decisión explícita del usuario de no inferir el tipo real desde la
+    hoja de origen del Excel. El atajo "+ Nuevo Vehículo" en
+    `Informes/Editar.razor` (alta rápida sin formulario completo) también
+    crea siempre con `TipoVehiculo.Auto` fijo, mismo criterio.

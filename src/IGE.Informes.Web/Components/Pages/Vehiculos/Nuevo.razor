@@ -80,6 +80,24 @@
         </div>
 
         <div class="mb-3">
+            <label class="label-md" for="tipoVehiculo">Tipo</label>
+            <InputSelect id="tipoVehiculo" class="form-control" @bind-Value="_input.TipoVehiculo">
+                <option value="@TipoVehiculo.Auto">Auto</option>
+                <option value="@TipoVehiculo.Moto">Moto</option>
+                <option value="@TipoVehiculo.Camioneta">Camioneta</option>
+                <option value="@TipoVehiculo.Camion">Camión</option>
+            </InputSelect>
+        </div>
+
+        @if (_input.TipoVehiculo == TipoVehiculo.Moto)
+        {
+            <div class="mb-3">
+                <label class="label-md" for="cilindrada">Cilindrada</label>
+                <InputText id="cilindrada" class="form-control" @bind-Value="_input.Cilindrada" />
+            </div>
+        }
+
+        <div class="mb-3">
             <label class="label-md" for="color">Color</label>
             <select id="color" class="form-control" @bind="_colorSeleccionado">
                 <option value="">Seleccionar...</option>
@@ -327,6 +345,12 @@
             return;
         }
 
+        if (_input.TipoVehiculo == TipoVehiculo.Moto && string.IsNullOrWhiteSpace(_input.Cilindrada))
+        {
+            _errorMessage = "La cilindrada es obligatoria para motocicletas.";
+            return;
+        }
+
         _guardando = true;
 
         try
@@ -338,8 +362,10 @@
                 _input.DominioCerteza,
                 _input.AccionARealizar,
                 _input.AvisarA,
+                _input.TipoVehiculo,
                 string.IsNullOrWhiteSpace(_input.Dominio) ? null : _input.Dominio,
                 string.IsNullOrWhiteSpace(_input.Caracteristicas) ? null : _input.Caracteristicas,
+                string.IsNullOrWhiteSpace(_input.Cilindrada) ? null : _input.Cilindrada,
                 _input.CategoriasAlertaIds));
 
             NavigationManager.NavigateTo($"vehiculos/{vehiculoId}");
@@ -375,6 +401,10 @@
 
         [Required(ErrorMessage = "El dato de a quién avisar es obligatorio.")]
         public string AvisarA { get; set; } = string.Empty;
+
+        public TipoVehiculo TipoVehiculo { get; set; } = TipoVehiculo.Auto;
+
+        public string? Cilindrada { get; set; }
 
         public string? Caracteristicas { get; set; }
 

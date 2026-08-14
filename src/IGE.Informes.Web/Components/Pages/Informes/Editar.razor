@@ -849,8 +849,10 @@ else
                 _nuevoVehiculoDominioCerteza,
                 _nuevoVehiculoAccionARealizar,
                 _nuevoVehiculoAvisarA,
+                TipoVehiculo.Auto,
                 string.IsNullOrWhiteSpace(_nuevoVehiculoDominio) ? null : _nuevoVehiculoDominio,
                 string.IsNullOrWhiteSpace(_nuevoVehiculoCaracteristicas) ? null : _nuevoVehiculoCaracteristicas,
+                null,
                 _nuevoVehiculoCategoriasAlertaIds));
         }
         catch (EntidadDuplicadaException ex)

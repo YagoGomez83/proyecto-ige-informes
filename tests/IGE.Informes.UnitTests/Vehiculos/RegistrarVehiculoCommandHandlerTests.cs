@@ -22,7 +22,7 @@ public class RegistrarVehiculoCommandHandlerTests
         var vehiculoId = await handler.Handle(
             new RegistrarVehiculoCommand(
                 "Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°",
-                "IAK 796", null, [robado.Id, narcotrafico.Id]),
+                TipoVehiculo.Auto, "IAK 796", null, null, [robado.Id, narcotrafico.Id]),
             CancellationToken.None);
 
         var vehiculo = await dbContext.Vehiculos.FindAsync(vehiculoId);
@@ -40,7 +40,7 @@ public class RegistrarVehiculoCommandHandlerTests
         await Assert.ThrowsAsync<EntidadNoEncontradaException>(() => handler.Handle(
             new RegistrarVehiculoCommand(
                 "Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°",
-                null, null, [Guid.NewGuid()]),
+                TipoVehiculo.Auto, null, null, null, [Guid.NewGuid()]),
             CancellationToken.None));
     }
 
@@ -53,7 +53,7 @@ public class RegistrarVehiculoCommandHandlerTests
         var vehiculoId = await handler.Handle(
             new RegistrarVehiculoCommand(
                 "Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°",
-                null, null, []),
+                TipoVehiculo.Auto, null, null, null, []),
             CancellationToken.None);
 
         var vehiculo = await dbContext.Vehiculos.FindAsync(vehiculoId);
@@ -66,7 +66,7 @@ public class RegistrarVehiculoCommandHandlerTests
         var dbContext = new TestAppDbContext();
         dbContext.Vehiculos.Add(new Vehiculo(
             "Volkswagen", "Gol", "Gris", CertezaDominio.Confirmado, AccionARealizar.Detener, "Comisaría 2°",
-            "IAK796", null));
+            TipoVehiculo.Auto, "IAK796", null));
         await dbContext.SaveChangesAsync();
 
         var handler = new RegistrarVehiculoCommandHandler(dbContext);
@@ -74,7 +74,7 @@ public class RegistrarVehiculoCommandHandlerTests
         await Assert.ThrowsAsync<EntidadDuplicadaException>(() => handler.Handle(
             new RegistrarVehiculoCommand(
                 "Ford", "Fiesta", "Rojo", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 3°",
-                "IAK796", null, []),
+                TipoVehiculo.Auto, "IAK796", null, null, []),
             CancellationToken.None));
     }
 
@@ -84,7 +84,7 @@ public class RegistrarVehiculoCommandHandlerTests
         var dbContext = new TestAppDbContext();
         dbContext.Vehiculos.Add(new Vehiculo(
             "Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°",
-            null, "Vehículo sin dominio identificado"));
+            TipoVehiculo.Auto, null, "Vehículo sin dominio identificado"));
         await dbContext.SaveChangesAsync();
 
         var handler = new RegistrarVehiculoCommandHandler(dbContext);
@@ -92,7 +92,7 @@ public class RegistrarVehiculoCommandHandlerTests
         var vehiculoId = await handler.Handle(
             new RegistrarVehiculoCommand(
                 "Ford", "Fiesta", "Rojo", CertezaDominio.Incierto, AccionARealizar.Identificar, "Comisaría 3°",
-                null, "Otro vehículo sin dominio identificado", []),
+                TipoVehiculo.Auto, null, "Otro vehículo sin dominio identificado", null, []),
             CancellationToken.None);
 
         var vehiculo = await dbContext.Vehiculos.FindAsync(vehiculoId);
@@ -109,12 +109,25 @@ public class RegistrarVehiculoCommandHandlerTests
         var vehiculoId = await handler.Handle(
             new RegistrarVehiculoCommand(
                 "Renault", "Clio", "Blanco", CertezaDominio.Confirmado, AccionARealizar.SinAccion, "Comisaría 4°",
-                "ABC123", "Vehículo de referencia, ya identificado en Caso anterior", []),
+                TipoVehiculo.Auto, "ABC123", "Vehículo de referencia, ya identificado en Caso anterior", null, []),
             CancellationToken.None);
 
         var vehiculo = await dbContext.Vehiculos.FindAsync(vehiculoId);
         Assert.NotNull(vehiculo);
         Assert.Equal(AccionARealizar.SinAccion, vehiculo.AccionARealizar);
         Assert.Equal(EstadoVehiculo.Vigente, vehiculo.Estado);
+    }
+
+    [Fact]
+    public async Task RegistrarVehiculo_TipoMotoSinCilindrada_DebeRechazarElAlta()
+    {
+        var dbContext = new TestAppDbContext();
+        var handler = new RegistrarVehiculoCommandHandler(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => handler.Handle(
+            new RegistrarVehiculoCommand(
+                "Honda", "Wave", "Roja", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°",
+                TipoVehiculo.Moto, null, null, null, []),
+            CancellationToken.None));
     }
 }

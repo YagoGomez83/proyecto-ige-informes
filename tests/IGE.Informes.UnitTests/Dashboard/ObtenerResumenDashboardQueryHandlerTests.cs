@@ -24,7 +24,7 @@ public class ObtenerResumenDashboardQueryHandlerTests
 
     private static Vehiculo CrearVehiculo(bool identificado)
     {
-        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Incierto, AccionARealizar.Identificar, "Comisaría", "ABC123");
+        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Incierto, AccionARealizar.Identificar, "Comisaría", TipoVehiculo.Auto, "ABC123");
 
         if (identificado)
         {

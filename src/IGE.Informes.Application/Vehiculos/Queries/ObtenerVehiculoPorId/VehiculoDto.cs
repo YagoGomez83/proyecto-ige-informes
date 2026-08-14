@@ -14,4 +14,6 @@ public sealed record VehiculoDto(
     string AvisarA,
     DateOnly? FechaBaja,
     string? Caracteristicas,
+    TipoVehiculo TipoVehiculo,
+    string? Cilindrada,
     IReadOnlyCollection<Guid> CategoriasAlertaIds);

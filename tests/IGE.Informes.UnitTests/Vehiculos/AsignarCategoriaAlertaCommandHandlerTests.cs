@@ -11,7 +11,7 @@ public class AsignarCategoriaAlertaCommandHandlerTests
     public async Task Asigna_la_categoria_al_vehiculo()
     {
         var dbContext = new TestAppDbContext();
-        var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°");
+        var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°", TipoVehiculo.Auto);
         var categoria = new CategoriaAlerta("Robado");
         dbContext.Vehiculos.Add(vehiculo);
         dbContext.CategoriasAlerta.Add(categoria);
@@ -42,7 +42,7 @@ public class AsignarCategoriaAlertaCommandHandlerTests
     public async Task Rechaza_una_categoria_de_alerta_inexistente()
     {
         var dbContext = new TestAppDbContext();
-        var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°");
+        var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°", TipoVehiculo.Auto);
         dbContext.Vehiculos.Add(vehiculo);
         await dbContext.SaveChangesAsync();
 

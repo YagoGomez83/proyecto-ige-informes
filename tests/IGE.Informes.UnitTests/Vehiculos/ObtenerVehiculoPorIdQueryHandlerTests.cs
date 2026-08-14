@@ -10,7 +10,7 @@ public class ObtenerVehiculoPorIdQueryHandlerTests
     public async Task Devuelve_el_vehiculo_y_registra_la_lectura_en_AuditLog()
     {
         var dbContext = new TestAppDbContext();
-        var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°");
+        var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°", TipoVehiculo.Auto);
         dbContext.Vehiculos.Add(vehiculo);
         await dbContext.SaveChangesAsync();
 

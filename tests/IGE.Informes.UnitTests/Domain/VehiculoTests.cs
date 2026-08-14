@@ -11,6 +11,7 @@ public class VehiculoTests
         CertezaDominio.Incierto,
         AccionARealizar.Detener,
         "Comisaría 2°",
+        TipoVehiculo.Auto,
         dominio);
 
     [Fact]
@@ -45,7 +46,34 @@ public class VehiculoTests
     public void Alta_rechaza_campos_obligatorios_vacios(string marca, string modelo, string color, string avisarA)
     {
         Assert.Throws<ArgumentException>(() => new Vehiculo(
-            marca, modelo, color, CertezaDominio.Incierto, AccionARealizar.Detener, avisarA));
+            marca, modelo, color, CertezaDominio.Incierto, AccionARealizar.Detener, avisarA, TipoVehiculo.Auto));
+    }
+
+    [Fact]
+    public void Alta_con_TipoVehiculo_Moto_sin_Cilindrada_lanza_ArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => new Vehiculo(
+            "Honda", "Wave", "Roja", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°", TipoVehiculo.Moto));
+    }
+
+    [Fact]
+    public void Alta_con_TipoVehiculo_Moto_y_Cilindrada_no_lanza()
+    {
+        var vehiculo = new Vehiculo(
+            "Honda", "Wave", "Roja", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°",
+            TipoVehiculo.Moto, cilindrada: "110cc");
+
+        Assert.Equal(TipoVehiculo.Moto, vehiculo.TipoVehiculo);
+        Assert.Equal("110cc", vehiculo.Cilindrada);
+    }
+
+    [Fact]
+    public void Alta_con_TipoVehiculo_distinto_de_Moto_ignora_Cilindrada()
+    {
+        var vehiculo = CrearVehiculo();
+
+        Assert.Equal(TipoVehiculo.Auto, vehiculo.TipoVehiculo);
+        Assert.Null(vehiculo.Cilindrada);
     }
 
     [Fact]

@@ -23,6 +23,14 @@ public sealed class VehiculoConfiguration : IEntityTypeConfiguration<Vehiculo>
         builder.Property(v => v.Estado).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(v => v.AccionARealizar).HasConversion<string>().HasMaxLength(20).IsRequired();
 
+        // HasDefaultValue: los Vehiculos ya existentes (migrados del Excel
+        // histórico, incluida la hoja "MOTOCICLETAS") quedan en Auto al
+        // aplicar la migración — decisión explícita del usuario, no se
+        // infiere el tipo real desde la hoja de origen.
+        builder.Property(v => v.TipoVehiculo).HasConversion<string>().HasMaxLength(20).IsRequired()
+            .HasDefaultValue(TipoVehiculo.Auto);
+        builder.Property(v => v.Cilindrada).HasMaxLength(20);
+
         builder.HasIndex(v => v.Dominio);
         builder.HasIndex(v => v.Estado);
 

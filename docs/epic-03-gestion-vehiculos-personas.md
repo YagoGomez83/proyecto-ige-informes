@@ -52,6 +52,16 @@ Característica: Gestión de vehículos
 > no se traduce igual en EF Core InMemory que en Npgsql real — probado
 > con Testcontainers/Postgres real (`ListarVehiculosOrdenTests`).
 
+> **Nota de implementación (extensión 2026-08-14)**: `Vehiculo` gana
+> `TipoVehiculo` (`Auto`|`Moto`|`Camioneta`|`Camion`, enum fijo,
+> obligatorio) y `Cilindrada` (texto libre, obligatoria solo si
+> `TipoVehiculo = Moto`, invariante validada en el constructor del
+> dominio). Alta únicamente por ahora — no hay Command de edición de
+> Vehículo hoy, así que Tipo/Cilindrada no se pueden corregir después de
+> creado el registro. Ver `docs/03-modelo-dominio.md`, "Decisiones ya
+> resueltas", para el detalle completo (incluye el default `Auto` para
+> los Vehículos ya migrados del Excel histórico).
+
 ---
 
 ## HU-09 · Alta/edición manual de persona

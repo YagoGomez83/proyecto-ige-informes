@@ -10,7 +10,7 @@ public class ListarPersonasVinculadasQueryHandlerTests
     public async Task Lista_las_personas_vinculadas_al_vehiculo()
     {
         var dbContext = new TestAppDbContext();
-        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
         var persona = new Persona(RolPersona.ConductorIdentificado, nombre: "Juan Pérez");
         dbContext.Vehiculos.Add(vehiculo);
         dbContext.Personas.Add(persona);
@@ -30,8 +30,8 @@ public class ListarPersonasVinculadasQueryHandlerTests
     public async Task No_incluye_personas_vinculadas_a_otro_vehiculo()
     {
         var dbContext = new TestAppDbContext();
-        var vehiculoBuscado = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
-        var otroVehiculo = new Vehiculo("Fiat", "Cronos", "Blanco", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+        var vehiculoBuscado = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
+        var otroVehiculo = new Vehiculo("Fiat", "Cronos", "Blanco", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
         var persona = new Persona(RolPersona.ConductorIdentificado, nombre: "Juan Pérez");
         dbContext.Vehiculos.Add(vehiculoBuscado);
         dbContext.Vehiculos.Add(otroVehiculo);

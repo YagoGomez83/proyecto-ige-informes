@@ -11,7 +11,7 @@ public class VincularVehiculoInformeCommandHandlerTests
         Informe.CrearMigrado("290/2026", new DateOnly(2026, 7, 21), Guid.NewGuid(), Guid.NewGuid());
 
     private static Vehiculo CrearVehiculo() =>
-        new("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+        new("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
 
     [Fact]
     public async Task Vincula_el_vehiculo_al_informe_arrancando_el_numero_de_imagen_en_1()

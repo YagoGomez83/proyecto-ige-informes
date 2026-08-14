@@ -66,7 +66,7 @@ public class AgregarImagenVehiculoAuditLogTests : IAsyncLifetime
 
         await using (var setupContext = new AppDbContext(options))
         {
-            var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+            var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
             setupContext.Vehiculos.Add(vehiculo);
             await setupContext.SaveChangesAsync();
 

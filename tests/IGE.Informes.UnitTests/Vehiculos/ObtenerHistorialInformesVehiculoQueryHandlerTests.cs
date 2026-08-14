@@ -20,7 +20,7 @@ public class ObtenerHistorialInformesVehiculoQueryHandlerTests
     private static Vehiculo CrearVehiculo(string dominio = "MRK064")
     {
         return new Vehiculo(
-            "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: dominio);
+            "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: dominio);
     }
 
     private static Informe CrearInforme(string idRegistro, DateOnly fechaAnalisis, Guid dependenciaDestinoId)

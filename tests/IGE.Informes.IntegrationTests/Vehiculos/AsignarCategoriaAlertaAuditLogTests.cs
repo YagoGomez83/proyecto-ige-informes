@@ -44,7 +44,7 @@ public class AsignarCategoriaAlertaAuditLogTests : IAsyncLifetime
 
         await using (var setupContext = new AppDbContext(options))
         {
-            var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°");
+            var vehiculo = new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°", TipoVehiculo.Auto);
             var categoria = new CategoriaAlerta("Robado");
             setupContext.Vehiculos.Add(vehiculo);
             setupContext.CategoriasAlerta.Add(categoria);

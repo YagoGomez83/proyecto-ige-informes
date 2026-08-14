@@ -27,6 +27,14 @@ public enum CertezaDominio
     Incierto,
 }
 
+public enum TipoVehiculo
+{
+    Auto,
+    Moto,
+    Camioneta,
+    Camion,
+}
+
 public sealed class Vehiculo : IAuditable, IEliminableLogicamente
 {
     private readonly List<Guid> _categoriasAlertaIds = [];
@@ -42,6 +50,8 @@ public sealed class Vehiculo : IAuditable, IEliminableLogicamente
     public string AvisarA { get; private set; } = string.Empty;
     public DateOnly? FechaBaja { get; private set; }
     public string? Caracteristicas { get; private set; }
+    public TipoVehiculo TipoVehiculo { get; private set; }
+    public string? Cilindrada { get; private set; }
     public bool Eliminado { get; private set; }
     public DateTime? FechaEliminacion { get; private set; }
 
@@ -58,8 +68,10 @@ public sealed class Vehiculo : IAuditable, IEliminableLogicamente
         CertezaDominio dominioCerteza,
         AccionARealizar accionARealizar,
         string avisarA,
+        TipoVehiculo tipoVehiculo,
         string? dominio = null,
-        string? caracteristicas = null)
+        string? caracteristicas = null,
+        string? cilindrada = null)
     {
         if (string.IsNullOrWhiteSpace(marca))
         {
@@ -81,6 +93,11 @@ public sealed class Vehiculo : IAuditable, IEliminableLogicamente
             throw new ArgumentException("El dato de a quién avisar es obligatorio.", nameof(avisarA));
         }
 
+        if (tipoVehiculo == TipoVehiculo.Moto && string.IsNullOrWhiteSpace(cilindrada))
+        {
+            throw new ArgumentException("La cilindrada es obligatoria para motocicletas.", nameof(cilindrada));
+        }
+
         Id = Guid.NewGuid();
         Marca = marca;
         Modelo = modelo;
@@ -91,6 +108,8 @@ public sealed class Vehiculo : IAuditable, IEliminableLogicamente
         AccionARealizar = accionARealizar;
         AvisarA = avisarA;
         Caracteristicas = caracteristicas;
+        TipoVehiculo = tipoVehiculo;
+        Cilindrada = tipoVehiculo == TipoVehiculo.Moto ? cilindrada : null;
     }
 
     public void MarcarIdentificado()

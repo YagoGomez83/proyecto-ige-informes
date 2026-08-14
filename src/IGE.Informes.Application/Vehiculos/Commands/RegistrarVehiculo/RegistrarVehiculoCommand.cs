@@ -12,6 +12,8 @@ public sealed record RegistrarVehiculoCommand(
     CertezaDominio DominioCerteza,
     AccionARealizar AccionARealizar,
     string AvisarA,
+    TipoVehiculo TipoVehiculo,
     string? Dominio,
     string? Caracteristicas,
+    string? Cilindrada,
     IReadOnlyCollection<Guid> CategoriasAlertaIds) : IRequest<Guid>;

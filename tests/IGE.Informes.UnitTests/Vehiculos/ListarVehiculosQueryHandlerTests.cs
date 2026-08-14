@@ -10,8 +10,8 @@ public class ListarVehiculosQueryHandlerTests
     public async Task Devuelve_todos_los_vehiculos_y_registra_el_acceso_de_listado()
     {
         var dbContext = new TestAppDbContext();
-        dbContext.Vehiculos.Add(new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°"));
-        dbContext.Vehiculos.Add(new Vehiculo("Ford", "Fiesta", "Rojo", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Fiscalía N°3"));
+        dbContext.Vehiculos.Add(new Vehiculo("Volkswagen", "Gol", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°", TipoVehiculo.Auto));
+        dbContext.Vehiculos.Add(new Vehiculo("Ford", "Fiesta", "Rojo", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Fiscalía N°3", TipoVehiculo.Auto));
         await dbContext.SaveChangesAsync();
 
         var auditLogger = new FakeAuditLogger();
@@ -31,7 +31,7 @@ public class ListarVehiculosQueryHandlerTests
         var dbContext = new TestAppDbContext();
         for (var i = 0; i < 5; i++)
         {
-            dbContext.Vehiculos.Add(new Vehiculo($"Marca{i}", "Modelo", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°"));
+            dbContext.Vehiculos.Add(new Vehiculo($"Marca{i}", "Modelo", "Gris", CertezaDominio.Incierto, AccionARealizar.Detener, "Comisaría 2°", TipoVehiculo.Auto));
         }
         await dbContext.SaveChangesAsync();
 

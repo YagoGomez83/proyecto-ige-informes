@@ -35,8 +35,10 @@ public sealed class RegistrarVehiculoCommandHandler(IAppDbContext dbContext) : I
             request.DominioCerteza,
             request.AccionARealizar,
             request.AvisarA,
+            request.TipoVehiculo,
             request.Dominio,
-            request.Caracteristicas);
+            request.Caracteristicas,
+            request.Cilindrada);
 
         foreach (var categoriaAlertaId in request.CategoriasAlertaIds)
         {

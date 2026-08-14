@@ -48,6 +48,7 @@ else
             <thead>
                 <tr>
                     <th class="label-md">Marca / Modelo</th>
+                    <th class="label-md">Tipo</th>
                     <th class="label-md">Dominio</th>
                     <th class="label-md">Estado</th>
                     <th class="label-md">Acción a realizar</th>
@@ -61,6 +62,16 @@ else
 
                     <tr>
                         <td class="body-md">@vehiculo.Marca @vehiculo.Modelo</td>
+                        <td class="body-md">
+                            @(vehiculo.TipoVehiculo switch
+                            {
+                                TipoVehiculo.Auto => "Auto",
+                                TipoVehiculo.Moto => "Moto",
+                                TipoVehiculo.Camioneta => "Camioneta",
+                                TipoVehiculo.Camion => "Camión",
+                                _ => vehiculo.TipoVehiculo.ToString(),
+                            })
+                        </td>
                         <td class="mono-data">@(vehiculo.Dominio ?? "—")</td>
                         <td><StatusChip Texto="@estadoChip.Texto" Semantica="estadoChip.Semantica" /></td>
                         <td class="body-md">

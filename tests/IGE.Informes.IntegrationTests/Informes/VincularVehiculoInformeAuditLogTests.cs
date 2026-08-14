@@ -45,7 +45,7 @@ public class VincularVehiculoInformeAuditLogTests : IAsyncLifetime
         await using (var setupContext = new AppDbContext(options))
         {
             var informe = Informe.CrearMigrado("290/2026", new DateOnly(2026, 7, 21), Guid.NewGuid(), Guid.NewGuid());
-            var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+            var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
             setupContext.Informes.Add(informe);
             setupContext.Vehiculos.Add(vehiculo);
             await setupContext.SaveChangesAsync();

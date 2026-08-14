@@ -53,9 +53,9 @@ public class ObtenerHistorialInformesVehiculoQueryHandlerTests : IAsyncLifetime
             setupContext.Dependencias.Add(dependencia);
 
             var vehiculoBuscado = new Vehiculo(
-                "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "MRK064");
+                "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "MRK064");
             var otroVehiculo = new Vehiculo(
-                "Renault", "Clio", "Azul", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "ABC123");
+                "Renault", "Clio", "Azul", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "ABC123");
             setupContext.Vehiculos.Add(vehiculoBuscado);
             setupContext.Vehiculos.Add(otroVehiculo);
             await setupContext.SaveChangesAsync();
@@ -110,7 +110,7 @@ public class ObtenerHistorialInformesVehiculoQueryHandlerTests : IAsyncLifetime
             setupContext.Dependencias.Add(dependencia);
 
             var vehiculo = new Vehiculo(
-                "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "MRK064");
+                "Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "MRK064");
             setupContext.Vehiculos.Add(vehiculo);
             await setupContext.SaveChangesAsync();
 

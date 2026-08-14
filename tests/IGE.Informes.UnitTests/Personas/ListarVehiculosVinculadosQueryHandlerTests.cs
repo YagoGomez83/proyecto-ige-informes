@@ -11,7 +11,7 @@ public class ListarVehiculosVinculadosQueryHandlerTests
     {
         var dbContext = new TestAppDbContext();
         var persona = new Persona(RolPersona.ConductorIdentificado, nombre: "Juan Pérez");
-        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", dominio: "ABC123");
+        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto, dominio: "ABC123");
         dbContext.Personas.Add(persona);
         dbContext.Vehiculos.Add(vehiculo);
         dbContext.PersonasVehiculo.Add(new PersonaVehiculo(persona.Id, vehiculo.Id));
@@ -32,7 +32,7 @@ public class ListarVehiculosVinculadosQueryHandlerTests
         var dbContext = new TestAppDbContext();
         var personaBuscada = new Persona(RolPersona.ConductorIdentificado, nombre: "Juan Pérez");
         var otraPersona = new Persona(RolPersona.Testigo, nombre: "Ana Gómez");
-        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°");
+        var vehiculo = new Vehiculo("Ford", "Fiesta", "Gris", CertezaDominio.Confirmado, AccionARealizar.Identificar, "Comisaría 2°", TipoVehiculo.Auto);
         dbContext.Personas.Add(personaBuscada);
         dbContext.Personas.Add(otraPersona);
         dbContext.Vehiculos.Add(vehiculo);
