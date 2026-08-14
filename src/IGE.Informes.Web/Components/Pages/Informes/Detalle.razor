@@ -45,7 +45,6 @@ else
         <div class="d-flex gap-2">
             @if (_informe.Estado == EstadoInforme.Borrador)
             {
-                <button type="button" class="btn-primary" @onclick="() => _mostrarConfirmacionPublicar = true" disabled="@_publicando">Publicar</button>
                 <a class="btn-secondary" href="@($"informes/{_informe.Id}/editar")">Editar</a>
             }
             @if (_informe.CasoAnalisisId is not null)
@@ -217,6 +216,13 @@ else
             </div>
         </div>
     </div>
+
+    @if (_informe.Estado == EstadoInforme.Borrador)
+    {
+        <div class="d-flex justify-content-end mt-3">
+            <button type="button" class="btn-primary" @onclick="() => _mostrarConfirmacionPublicar = true" disabled="@_publicando">Publicar</button>
+        </div>
+    }
 
     <ConfirmacionModal Visible="_mostrarConfirmacionPublicar"
                         Titulo="Publicar Informe"
