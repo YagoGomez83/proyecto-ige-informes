@@ -45,7 +45,7 @@
                 <input class="form-control mt-2" placeholder="Marca no listada" @bind="_input.Marca" @bind:event="oninput" />
             }
 
-            <AuthorizeView Roles="Admin" Context="authContext">
+            <AuthorizeView Roles="Analista,Supervisor,Admin" Context="authContext">
                 <Authorized>
                     @if (!_mostrandoNuevaMarca)
                     {
@@ -116,7 +116,7 @@
                 <input class="form-control mt-2" placeholder="Color no listado" @bind="_input.Color" @bind:event="oninput" />
             }
 
-            <AuthorizeView Roles="Admin" Context="authContext">
+            <AuthorizeView Roles="Analista,Supervisor,Admin" Context="authContext">
                 <Authorized>
                     @if (!_mostrandoNuevoColor)
                     {

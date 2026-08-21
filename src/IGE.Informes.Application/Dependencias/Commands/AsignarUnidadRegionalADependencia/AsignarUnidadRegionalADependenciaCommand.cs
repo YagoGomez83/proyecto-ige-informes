@@ -3,5 +3,5 @@ using MediatR;
 
 namespace IGE.Informes.Application.Dependencias.Commands.AsignarUnidadRegionalADependencia;
 
-[Autorizar(Roles.Admin)]
+[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
 public sealed record AsignarUnidadRegionalADependenciaCommand(Guid DependenciaId, Guid UnidadRegionalId) : IRequest;

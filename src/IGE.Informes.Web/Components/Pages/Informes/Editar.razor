@@ -75,7 +75,7 @@ else
                                       ValorSeleccionadoChanged="@(v => _dependenciaDestinoId = v ?? string.Empty)"
                                       Placeholder="Buscar Dependencia..." />
 
-                    <AuthorizeView Roles="Admin">
+                    <AuthorizeView Roles="Analista,Supervisor,Admin">
                         <Authorized>
                             @if (!_mostrandoNuevaDependencia)
                             {
@@ -128,7 +128,7 @@ else
                                       ValorSeleccionadoChanged="OnCausaSeleccionadaAsync"
                                       Placeholder="Buscar Carátula..." />
 
-                    <AuthorizeView Roles="Admin">
+                    <AuthorizeView Roles="Analista,Supervisor,Admin">
                         <Authorized>
                             @if (!_mostrandoNuevoTipoCausa)
                             {

@@ -3,5 +3,5 @@ using MediatR;
 
 namespace IGE.Informes.Application.Localidades.Commands.CrearLocalidad;
 
-[Autorizar(Roles.Admin)]
+[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
 public sealed record CrearLocalidadCommand(string Nombre) : IRequest<Guid>;

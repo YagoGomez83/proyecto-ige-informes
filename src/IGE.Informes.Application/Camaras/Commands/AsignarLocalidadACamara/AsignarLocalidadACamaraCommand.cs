@@ -3,5 +3,5 @@ using MediatR;
 
 namespace IGE.Informes.Application.Camaras.Commands.AsignarLocalidadACamara;
 
-[Autorizar(Roles.Admin)]
+[Autorizar(Roles.Analista, Roles.Supervisor, Roles.Admin)]
 public sealed record AsignarLocalidadACamaraCommand(Guid CamaraId, Guid LocalidadId) : IRequest;
