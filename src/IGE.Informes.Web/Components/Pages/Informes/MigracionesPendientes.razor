@@ -62,11 +62,16 @@ else
                         </td>
                         <td class="body-sm">
                             @(migracion.CausaCaratula ?? "—")
+                            @if (!string.IsNullOrWhiteSpace(migracion.PiezaSumarial))
+                            {
+                                <span class="mono-data"> (@migracion.PiezaSumarial)</span>
+                            }
                             @if (ObtenerCausaSeleccionada(migracion.Id) is { } causaElegida)
                             {
                                 <div class="mt-1">
                                     <span class="status-chip status-chip--safe">
-                                        Vinculada a: @causaElegida.Caratula (@(causaElegida.NroPiezaSumarial ?? "sin pieza sumarial"))
+                                        Se va a compartir la Causa existente "@causaElegida.Caratula"
+                                        (N° @(causaElegida.NroPiezaSumarial ?? "sin pieza sumarial") — de otro Informe ya cargado)
                                     </span>
                                     <button type="button" class="btn-secondary mt-1 d-block" @onclick="@(() => QuitarCausaSeleccionada(migracion.Id))">Quitar</button>
                                 </div>
@@ -76,13 +81,16 @@ else
                                 @if (sugerencias.Count > 0)
                                 {
                                     <div class="mt-1">
-                                        <p class="label-md mb-1">Causas existentes parecidas:</p>
+                                        <p class="label-md mb-1">
+                                            Causas existentes con carátula parecida — elegir una las vincula
+                                            como la misma Causa, no copia su N° de Pieza Sumarial acá:
+                                        </p>
                                         @foreach (var sugerencia in sugerencias)
                                         {
                                             <button type="button" class="btn-secondary mb-1 d-block"
                                                     @onclick="@(() => ElegirCausaSugerida(migracion.Id, sugerencia))">
                                                 @sugerencia.Caratula
-                                                <span class="mono-data">(@(sugerencia.NroPiezaSumarial ?? "sin pieza sumarial"))</span>
+                                                <span class="mono-data">(N° @(sugerencia.NroPiezaSumarial ?? "sin pieza sumarial"))</span>
                                             </button>
                                         }
                                     </div>
