@@ -8,6 +8,8 @@ public sealed class FakeFileStorage : IFileStorage
 
     public List<string> ArchivosEliminados { get; } = [];
 
+    public Dictionary<string, byte[]> ContenidoPorClave { get; } = [];
+
     public Task<string> SubirAsync(string nombreArchivo, Stream contenido, string tipoMime, CancellationToken cancellationToken = default)
     {
         var clave = $"fake/{nombreArchivo}";
@@ -17,6 +19,9 @@ public sealed class FakeFileStorage : IFileStorage
 
     public Task<string> ObtenerUrlDescargaAsync(string clave, CancellationToken cancellationToken = default) =>
         Task.FromResult($"https://fake-storage.local/{clave}");
+
+    public Task<byte[]> DescargarAsync(string clave, CancellationToken cancellationToken = default) =>
+        Task.FromResult(ContenidoPorClave.GetValueOrDefault(clave, []));
 
     public Task EliminarAsync(string clave, CancellationToken cancellationToken = default)
     {

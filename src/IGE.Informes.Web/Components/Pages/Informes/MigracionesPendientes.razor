@@ -3,6 +3,7 @@
 @using IGE.Informes.Application.Common.Security
 @using IGE.Informes.Application.Informes.Commands.CrearInformeDesdeMigracionPendiente
 @using IGE.Informes.Application.Informes.Queries.ListarMigracionesPendientes
+@using IGE.Informes.Application.Informes.Queries.ReprocesarMigracionPendiente
 @using IGE.Informes.Application.Informes.Queries.SugerirCausas
 @using MediatR
 @inject ISender Sender
@@ -105,9 +106,15 @@ else
                                    @onchange="@(e => ActualizarFechaIngresada(migracion.Id, e.Value?.ToString()))" />
                         </td>
                         <td class="body-sm">
-                            <button type="button" class="btn-secondary"
+                            <button type="button" class="btn-secondary d-block mb-1"
                                     @onclick="@(() => AlternarVisorPdf(migracion.Id))">
                                 @(_migracionIdConVisorAbierto == migracion.Id ? "Ocultar PDF" : "Ver PDF")
+                            </button>
+                            <button type="button" class="btn-secondary d-block"
+                                    @onclick="@(() => ReintentarAsync(migracion))"
+                                    disabled="@(_reprocesando.Contains(migracion.Id))"
+                                    title="Volver a leer el PDF con el parser actualizado">
+                                @(_reprocesando.Contains(migracion.Id) ? "Reintentando..." : "Reintentar")
                             </button>
                         </td>
                         <td class="body-sm">
@@ -141,10 +148,52 @@ else
     private bool _procesando;
     private string? _errorMessage;
     private Guid? _migracionIdConVisorAbierto;
+    private readonly HashSet<Guid> _reprocesando = [];
 
     private void AlternarVisorPdf(Guid id)
     {
         _migracionIdConVisorAbierto = _migracionIdConVisorAbierto == id ? null : id;
+    }
+
+    // Vuelve a leer el PDF ya guardado con la versión actual del parser
+    // (ver ReprocesarMigracionPendienteQuery) — no persiste nada por sí
+    // solo, solo precarga los campos que todavía faltan para que el usuario
+    // confirme con "Completar" como siempre. Existe porque el parser se
+    // sigue corrigiendo con el tiempo (ver docs/06-seguridad-amenazas.md) y
+    // las Migraciones Pendientes ya creadas no se benefician solas de esos
+    // fixes sin volver a subir el archivo.
+    private async Task ReintentarAsync(MigracionPendienteDto migracion)
+    {
+        _reprocesando.Add(migracion.Id);
+        _errorMessage = null;
+
+        try
+        {
+            var resultado = await Sender.Send(new ReprocesarMigracionPendienteQuery(migracion.Id));
+
+            if (migracion.IdRegistro is null && resultado.IdRegistro is not null)
+            {
+                ActualizarIdRegistroIngresado(migracion.Id, resultado.IdRegistro);
+            }
+
+            if (resultado.FechaAnalisis is not null)
+            {
+                ActualizarFechaIngresada(migracion.Id, resultado.FechaAnalisis.Value.ToString("yyyy-MM-dd"));
+            }
+
+            if (resultado.IdRegistro is null && resultado.FechaAnalisis is null)
+            {
+                _errorMessage = "El reintento no reconoció ningún dato nuevo en el PDF.";
+            }
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo reprocesar el PDF. Intentá de nuevo.";
+        }
+        finally
+        {
+            _reprocesando.Remove(migracion.Id);
+        }
     }
 
     protected override async Task OnInitializedAsync()

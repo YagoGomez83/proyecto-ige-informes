@@ -30,6 +30,9 @@ public class MigracionPendienteAuditLogTests : IAsyncLifetime
         public Task<string> ObtenerUrlDescargaAsync(string clave, CancellationToken cancellationToken = default) =>
             Task.FromResult($"https://fake.local/{clave}");
 
+        public Task<byte[]> DescargarAsync(string clave, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Array.Empty<byte>());
+
         public Task EliminarAsync(string clave, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
     }

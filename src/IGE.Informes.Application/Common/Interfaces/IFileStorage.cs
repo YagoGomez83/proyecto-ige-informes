@@ -22,6 +22,13 @@ public interface IFileStorage
     Task<string> ObtenerUrlDescargaAsync(string clave, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Descarga el contenido del archivo identificado por su clave — para
+    /// procesamiento server-side (ej. re-parsear un PDF ya guardado), no
+    /// para exponerlo al cliente (eso sigue siendo <see cref="ObtenerUrlDescargaAsync"/>).
+    /// </summary>
+    Task<byte[]> DescargarAsync(string clave, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Elimina el archivo identificado por su clave. Idempotente: no falla
     /// si la clave ya no existe.
     /// </summary>
