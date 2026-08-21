@@ -160,6 +160,45 @@ public class CrearInformeDesdeMigracionPendienteCommandHandlerTests
     }
 
     [Fact]
+    public async Task CompletarMigracionPendiente_ConCausaIdElegidaPorElUsuario_VinculaEsaCausaSinCrearUnaNueva()
+    {
+        // Carátula extraída ("AV. HURTO CALIFICADO") no matchea exacto por
+        // Pieza Sumarial contra ninguna Causa existente — el usuario eligió
+        // a mano una Causa parecida sugerida por SugerirCausasQuery en la UI.
+        var (dbContext, _, migracionPendiente) = await PrepararAsync(causaCaratula: "AV. HURTO CALIFICADO", piezaSumarial: "111/2023");
+        var causaElegida = new Causa("AV.HURTO CALIFICADO", "110/2023", "Primera Circunscripción");
+        dbContext.Causas.Add(causaElegida);
+        await dbContext.SaveChangesAsync();
+        var cantidadCausasAntes = dbContext.Causas.Count();
+
+        var auditLogger = new FakeAuditLogger();
+        var handler = CrearHandler(dbContext, auditLogger);
+        var command = new CrearInformeDesdeMigracionPendienteCommand(migracionPendiente.Id, new DateOnly(2023, 8, 8), null, causaElegida.Id);
+
+        var informeId = await handler.Handle(command, CancellationToken.None);
+
+        var informe = await dbContext.Informes.FindAsync(informeId);
+        Assert.NotNull(informe);
+        Assert.Equal(causaElegida.Id, informe.CausaId);
+        Assert.Equal(cantidadCausasAntes, dbContext.Causas.Count());
+
+        // A diferencia del auto-match silencioso, una Causa elegida a mano
+        // por el usuario ya tuvo revisión humana — no debe marcarse como
+        // "auto-asignada" en el reporte de revisión posterior.
+        Assert.DoesNotContain(auditLogger.Registros, r => r.Accion == "CausaAutoAsignadaMigracion");
+    }
+
+    [Fact]
+    public async Task CompletarMigracionPendiente_ConCausaIdInexistente_RechazaConEntidadNoEncontrada()
+    {
+        var (dbContext, _, migracionPendiente) = await PrepararAsync();
+        var handler = CrearHandler(dbContext);
+        var command = new CrearInformeDesdeMigracionPendienteCommand(migracionPendiente.Id, new DateOnly(2022, 6, 15), null, Guid.NewGuid());
+
+        await Assert.ThrowsAsync<EntidadNoEncontradaException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task CompletarMigracionPendiente_SinCausaExtraidaPorElParser_CreaElInformeSinCausaAsociada()
     {
         var (dbContext, _, migracionPendiente) = await PrepararAsync(causaCaratula: null, piezaSumarial: null);

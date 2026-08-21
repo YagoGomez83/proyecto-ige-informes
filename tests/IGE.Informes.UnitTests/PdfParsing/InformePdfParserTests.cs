@@ -62,6 +62,22 @@ public class InformePdfParserTests
     }
 
     [Fact]
+    public void Reconoce_fecha_de_analisis_con_DEL_antes_del_anio()
+    {
+        // Formato real visto en PDFs históricos: "08 DE AGOSTO DEL 2023"
+        // — variante de "DE" con "L" antes del año, distinta de la ya
+        // cubierta arriba (segundo "DE" ausente por completo).
+        using var pdf = GeneradorPdfDePrueba.GenerarPdf([
+            "FECHA DE ANÁLISIS: 08 DE AGOSTO DEL 2023",
+            "ID REGISTRO: 111/2023",
+        ]);
+
+        var resultado = InformePdfParser.Parsear(pdf);
+
+        Assert.Equal(new DateOnly(2023, 8, 8), resultado.FechaAnalisis);
+    }
+
+    [Fact]
     public void IdRegistro_no_reconocido_marca_para_revision_manual()
     {
         using var pdf = GeneradorPdfDePrueba.GenerarPdf([

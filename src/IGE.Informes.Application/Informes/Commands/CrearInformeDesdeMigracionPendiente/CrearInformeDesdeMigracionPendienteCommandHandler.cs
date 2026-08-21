@@ -47,15 +47,32 @@ public sealed class CrearInformeDesdeMigracionPendienteCommandHandler(
             throw new EntidadDuplicadaException(nameof(Informe), nameof(Informe.IdRegistro), idRegistroFinal);
         }
 
-        // Mismo criterio de auto-match que MigrarInformesCommandHandler: si
-        // la Carátula/Pieza Sumarial que el parser extrajo (guardadas en la
-        // MigracionPendiente) coinciden exacto con una Causa ya existente,
-        // se vincula sin esperar a que el Admin la complete a mano después.
-        Guid? causaId = null;
-        if (!string.IsNullOrWhiteSpace(migracionPendiente.CausaCaratula) && !string.IsNullOrWhiteSpace(migracionPendiente.PiezaSumarial))
+        // Si el usuario eligió explícitamente una Causa sugerida en la UI
+        // (ver SugerirCausasQuery), se usa esa directamente — evita crear
+        // una Causa duplicada cuando la Pieza Sumarial no matchea exacto
+        // pero la Carátula sí es, a criterio del usuario, el mismo
+        // expediente. Se valida que exista para no vincular un Id
+        // arbitrario que el cliente podría manipular.
+        Guid? causaId;
+        if (request.CausaId is not null)
         {
+            var causaSeleccionada = await dbContext.Causas.FirstOrDefaultAsync(c => c.Id == request.CausaId, cancellationToken)
+                ?? throw new EntidadNoEncontradaException(nameof(Causa), request.CausaId.Value);
+            causaId = causaSeleccionada.Id;
+        }
+        else if (!string.IsNullOrWhiteSpace(migracionPendiente.CausaCaratula) && !string.IsNullOrWhiteSpace(migracionPendiente.PiezaSumarial))
+        {
+            // Mismo criterio de auto-match que MigrarInformesCommandHandler:
+            // si la Carátula/Pieza Sumarial que el parser extrajo (guardadas
+            // en la MigracionPendiente) coinciden exacto con una Causa ya
+            // existente, se vincula sin esperar a que el usuario la elija a
+            // mano.
             var causaExistente = await CausaMatcher.BuscarPorPiezaSumarialAsync(dbContext, migracionPendiente.PiezaSumarial, cancellationToken);
             causaId = causaExistente?.Id;
+        }
+        else
+        {
+            causaId = null;
         }
 
         var informe = migracionPendiente.CrearInformeMigrado(request.FechaAnalisis, idRegistroFinal, causaId);
@@ -86,15 +103,17 @@ public sealed class CrearInformeDesdeMigracionPendienteCommandHandler(
 
         await auditLogger.RegistrarAccesoAsync("CompletarMigracionPendiente", nameof(Informe), informe.Id, cancellationToken);
 
-        // Marca distinguible de "CompletarMigracionPendiente": ningún
-        // humano vio ni confirmó esta vinculación en el momento (a
-        // diferencia de la edición manual, donde el usuario ve la
-        // sugerencia antes de aceptarla) — permite armar un reporte de
-        // "Causas auto-asignadas en migración" para revisión posterior sin
-        // tener que abrir cada Informe uno por uno (hallazgo del
-        // security-reviewer: colisión accidental de N° de Pieza Sumarial
-        // vincularía en silencio al expediente equivocado).
-        if (causaId is not null)
+        // Marca distinguible de "CompletarMigracionPendiente": solo cuando
+        // el auto-match silencioso por Pieza Sumarial exacta vinculó la
+        // Causa (nadie la vio ni la confirmó en el momento) — a diferencia
+        // de una Causa elegida explícitamente por el usuario en la UI
+        // (request.CausaId), donde ya hubo revisión humana antes de
+        // guardar. Permite armar un reporte de "Causas auto-asignadas en
+        // migración" para revisión posterior sin tener que abrir cada
+        // Informe uno por uno (hallazgo del security-reviewer: colisión
+        // accidental de N° de Pieza Sumarial vincularía en silencio al
+        // expediente equivocado).
+        if (causaId is not null && request.CausaId is null)
         {
             await auditLogger.RegistrarAccesoAsync("CausaAutoAsignadaMigracion", nameof(Informe), informe.Id, cancellationToken);
         }

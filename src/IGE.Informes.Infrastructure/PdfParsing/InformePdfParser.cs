@@ -366,12 +366,14 @@ public static partial class InformePdfParser
     [GeneratedRegex(@"FECHA\s*DE\s*AN[ÁA]LISIS\s*:\s*([^:]+?)(?=\s*CAUSA\s*:|\s*DESTINO\s*:|\s*ID\s*REGISTRO\s*:|\s*ELEVA\s*:|$)", RegexOptions.IgnoreCase)]
     private static partial Regex FechaAnalisisRegex();
 
-    // El segundo "DE" es opcional: algunos PDFs históricos escriben la
-    // fecha como "9 DE SEPTIEMBRE 2022" en vez de "9 DE SEPTIEMBRE DE
-    // 2022" — sin esto, esos archivos quedaban "Con advertencia" en la
-    // migración masiva y no se guardaban (deuda detectada en el primer
-    // despliegue a producción, ver docs/08-plan-implementacion.md).
-    [GeneratedRegex(@"(\d{1,2})\s*DE\s*([A-ZÁÉÍÓÚ]+)\s*(?:DE\s*)?(\d{4})", RegexOptions.IgnoreCase)]
+    // El segundo "DE"/"DEL" es opcional y admite ambas formas: algunos PDFs
+    // históricos escriben la fecha como "9 DE SEPTIEMBRE 2022" (sin nada)
+    // o "08 DE AGOSTO DEL 2023" (con "DEL" en vez de "DE") en vez de
+    // "9 DE SEPTIEMBRE DE 2022" — sin esto, esos archivos quedaban "Con
+    // advertencia" en la migración masiva y no se guardaban (deuda
+    // detectada en el primer despliegue a producción, ver
+    // docs/08-plan-implementacion.md).
+    [GeneratedRegex(@"(\d{1,2})\s*DE\s*([A-ZÁÉÍÓÚ]+)\s*(?:DEL?\s*)?(\d{4})", RegexOptions.IgnoreCase)]
     private static partial Regex FechaTextualRegex();
 
     [GeneratedRegex(@"CAUSA\s*:\s*[""']?([^""'\n]+?)[""']?\s*(?=DESTINO\s*:|ELEVA\s*:|ID\s*REGISTRO\s*:|$)", RegexOptions.IgnoreCase)]

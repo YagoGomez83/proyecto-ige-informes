@@ -3,6 +3,7 @@
 @using IGE.Informes.Application.Common.Security
 @using IGE.Informes.Application.Informes.Commands.CrearInformeDesdeMigracionPendiente
 @using IGE.Informes.Application.Informes.Queries.ListarMigracionesPendientes
+@using IGE.Informes.Application.Informes.Queries.SugerirCausas
 @using MediatR
 @inject ISender Sender
 @inject NavigationManager NavigationManager
@@ -58,7 +59,46 @@ else
                                        @onchange="@(e => ActualizarIdRegistroIngresado(migracion.Id, e.Value?.ToString()))" />
                             }
                         </td>
-                        <td class="body-sm">@(migracion.CausaCaratula ?? "—")</td>
+                        <td class="body-sm">
+                            @(migracion.CausaCaratula ?? "—")
+                            @if (ObtenerCausaSeleccionada(migracion.Id) is { } causaElegida)
+                            {
+                                <div class="mt-1">
+                                    <span class="status-chip status-chip--safe">
+                                        Vinculada a: @causaElegida.Caratula (@(causaElegida.NroPiezaSumarial ?? "sin pieza sumarial"))
+                                    </span>
+                                    <button type="button" class="btn-secondary mt-1 d-block" @onclick="@(() => QuitarCausaSeleccionada(migracion.Id))">Quitar</button>
+                                </div>
+                            }
+                            else if (ObtenerSugerenciasCausa(migracion.Id) is { } sugerencias)
+                            {
+                                @if (sugerencias.Count > 0)
+                                {
+                                    <div class="mt-1">
+                                        <p class="label-md mb-1">Causas existentes parecidas:</p>
+                                        @foreach (var sugerencia in sugerencias)
+                                        {
+                                            <button type="button" class="btn-secondary mb-1 d-block"
+                                                    @onclick="@(() => ElegirCausaSugerida(migracion.Id, sugerencia))">
+                                                @sugerencia.Caratula
+                                                <span class="mono-data">(@(sugerencia.NroPiezaSumarial ?? "sin pieza sumarial"))</span>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="body-sm mt-1">Sin Causas parecidas en el catálogo.</p>
+                                }
+                            }
+                            else if (!string.IsNullOrWhiteSpace(migracion.CausaCaratula))
+                            {
+                                <button type="button" class="btn-secondary mt-1 d-block"
+                                        @onclick="@(() => MostrarSugerenciasDeCausaAsync(migracion))">
+                                    Buscar Causas parecidas
+                                </button>
+                            }
+                        </td>
                         <td class="body-sm">
                             <input type="date" class="form-control"
                                    value="@ObtenerFechaIngresada(migracion.Id)"
@@ -96,6 +136,8 @@ else
     private IReadOnlyCollection<MigracionPendienteDto>? _migraciones;
     private readonly Dictionary<Guid, string> _fechasIngresadas = [];
     private readonly Dictionary<Guid, string> _idsRegistroIngresados = [];
+    private readonly Dictionary<Guid, IReadOnlyCollection<CausaSugeridaDto>> _sugerenciasCausaPorMigracion = [];
+    private readonly Dictionary<Guid, CausaSugeridaDto> _causaSeleccionadaPorMigracion = [];
     private bool _procesando;
     private string? _errorMessage;
     private Guid? _migracionIdConVisorAbierto;
@@ -113,6 +155,43 @@ else
     private async Task CargarAsync()
     {
         _migraciones = await Sender.Send(new ListarMigracionesPendientesQuery());
+    }
+
+    // Sugerencias por similitud de carátula (pg_trgm, mismo motor que Editar
+    // Informe usa) cargadas bajo demanda por fila, no todas juntas al abrir
+    // la pantalla — con cientos de Migraciones Pendientes reales, disparar
+    // una query similarity() por cada una al cargar sería una ráfaga de
+    // consultas a Postgres sin ningún tope (hallazgo del security-reviewer).
+    // No se filtra por Pieza Sumarial acá (a diferencia de
+    // BuscarSugerenciasDeCausaAsync en Editar.razor) porque en esta pantalla
+    // el auto-match exacto ya corre server-side al completar — estas
+    // sugerencias son solo para el caso en que ese auto-match no encuentre
+    // nada.
+    private async Task MostrarSugerenciasDeCausaAsync(MigracionPendienteDto migracion)
+    {
+        if (string.IsNullOrWhiteSpace(migracion.CausaCaratula) || _sugerenciasCausaPorMigracion.ContainsKey(migracion.Id))
+        {
+            return;
+        }
+
+        var sugerencias = await Sender.Send(new SugerirCausasQuery(migracion.CausaCaratula));
+        _sugerenciasCausaPorMigracion[migracion.Id] = sugerencias;
+    }
+
+    private IReadOnlyCollection<CausaSugeridaDto>? ObtenerSugerenciasCausa(Guid migracionId) =>
+        _sugerenciasCausaPorMigracion.GetValueOrDefault(migracionId);
+
+    private CausaSugeridaDto? ObtenerCausaSeleccionada(Guid migracionId) =>
+        _causaSeleccionadaPorMigracion.GetValueOrDefault(migracionId);
+
+    private void ElegirCausaSugerida(Guid migracionId, CausaSugeridaDto sugerencia)
+    {
+        _causaSeleccionadaPorMigracion[migracionId] = sugerencia;
+    }
+
+    private void QuitarCausaSeleccionada(Guid migracionId)
+    {
+        _causaSeleccionadaPorMigracion.Remove(migracionId);
     }
 
     private string ObtenerFechaIngresada(Guid id) => _fechasIngresadas.GetValueOrDefault(id, string.Empty);
@@ -170,8 +249,9 @@ else
 
         try
         {
+            var causaSeleccionada = ObtenerCausaSeleccionada(migracion.Id);
             var informeId = await Sender.Send(new CrearInformeDesdeMigracionPendienteCommand(
-                migracion.Id, fechaAnalisis, string.IsNullOrWhiteSpace(idRegistroIngresado) ? null : idRegistroIngresado));
+                migracion.Id, fechaAnalisis, string.IsNullOrWhiteSpace(idRegistroIngresado) ? null : idRegistroIngresado, causaSeleccionada?.Id));
             NavigationManager.NavigateTo($"informes/{informeId}");
         }
         catch (Exception)
